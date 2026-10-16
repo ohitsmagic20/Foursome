@@ -7,8 +7,8 @@ let client: SupabaseClient | null = null;
 
 export function db(): SupabaseClient {
   if (client) return client;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+  const key = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
   if (!url || !key) throw new HttpError(500, 'The server is missing SUPABASE_URL or SUPABASE_SECRET_KEY. Add them to your environment variables.');
   client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   return client;
@@ -24,8 +24,24 @@ export function handle(fn: () => Promise<Response>): Promise<Response> {
   return fn().catch((e: unknown) => {
     if (e instanceof HttpError) return Response.json({ error: e.message }, { status: e.status });
     console.error(e);
-    return Response.json({ error: 'Something went wrong on the server. Try again.' }, { status: 500 });
+    return Response.json({ error: `Something went wrong on the server: ${explain(e)}` }, { status: 500 });
   });
+}
+
+/** Turn a database or network error into a message that says what to fix. Never includes keys. */
+export function explain(e: unknown): string {
+  const err = (e && typeof e === 'object' ? e : {}) as { message?: string; code?: string; cause?: { code?: string; message?: string } };
+  const msg = String(err.message || e || '');
+  if (err.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) {
+    return 'the database tables are missing. Run supabase/schema.sql in the Supabase SQL Editor for this project.';
+  }
+  if (/Invalid API key|JWT|apikey|Unauthorized|invalid.*key/i.test(msg)) {
+    return 'Supabase rejected the key. Check that SUPABASE_SECRET_KEY is the secret (sb_secret_...) or service_role key, with no spaces.';
+  }
+  if (/fetch failed|ENOTFOUND|getaddrinfo|Invalid URL|ECONNREFUSED/i.test(msg + (err.cause?.code || '') + (err.cause?.message || ''))) {
+    return 'the server could not reach Supabase. Check that SUPABASE_URL looks like https://abcd.supabase.co with nothing after .co.';
+  }
+  return msg.slice(0, 200) || 'unknown error';
 }
 
 /** Short, readable, hard to guess. No 0/O/1/l. */
