@@ -32,8 +32,14 @@ export function handle(fn: () => Promise<Response>): Promise<Response> {
 export function explain(e: unknown): string {
   const err = (e && typeof e === 'object' ? e : {}) as { message?: string; code?: string; cause?: { code?: string; message?: string } };
   const msg = String(err.message || e || '');
+  if (err.code === 'PGRST205' || /schema cache/i.test(msg)) {
+    return `the database can't see the tables yet (${err.code || 'schema cache'}). In the Supabase SQL Editor, run: notify pgrst, 'reload schema';`;
+  }
   if (err.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(msg)) {
     return 'the database tables are missing. Run supabase/schema.sql in the Supabase SQL Editor for this project.';
+  }
+  if (err.code === '42501' || /permission denied/i.test(msg)) {
+    return `the server key isn't allowed to use the tables (${msg.slice(0, 80)}).`;
   }
   if (/Invalid API key|JWT|apikey|Unauthorized|invalid.*key/i.test(msg)) {
     return 'Supabase rejected the key. Check that SUPABASE_SECRET_KEY is the secret (sb_secret_...) or service_role key, with no spaces.';
