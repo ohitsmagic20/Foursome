@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, clockLabel, isoDay, money, parseDay, pickOf, rangeLabel } from '@/lib/shared';
+import { addDays, clockLabel, destAirports, isoDay, money, parseDay, pickOf, rangeLabel } from '@/lib/shared';
 import { api, firstName } from '@/lib/client';
 import { Callout, Chip, useTrip } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
@@ -23,19 +23,22 @@ export function FlightsTab() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
+  const [toPick, setToPick] = useState('');
 
   if (!me) return null;
-  const ready = date.option && dest.option?.data.airport && me.airport;
+  const airports = dest.option ? destAirports(dest.option.data) : [];
+  const to = airports.includes(toPick) ? toPick : airports[0] || '';
+  const ready = date.option && to && me.airport;
   const outDate = date.option?.data.start;
   const backDate = outDate ? isoDay(addDays(parseDay(outDate), state.trip.nights)) : '';
-  const gflights = ready ? `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${me.airport} to ${dest.option!.data.airport} on ${outDate} through ${backDate}`)}` : '';
+  const gflights = ready ? `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${me.airport} to ${to} on ${outDate} through ${backDate}`)}` : '';
 
   async function search() {
     setErr('');
     setBusy(true);
     setResult(null);
     try {
-      setResult(await api<SearchResult>(`/api/trips/${state.trip.code}/flights`, { code: state.trip.code, body: {} }));
+      setResult(await api<SearchResult>(`/api/trips/${state.trip.code}/flights`, { code: state.trip.code, body: { destination: to } }));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Search failed.');
     } finally {
@@ -79,14 +82,19 @@ export function FlightsTab() {
       </section>
 
       <section className="section">
-        <div className="section-head"><h2>Search</h2>{me.airport && dest.option?.data.airport && <span className="sub">{me.airport} → {dest.option.data.airport}</span>}</div>
+        <div className="section-head"><h2>Search</h2>{me.airport && to && <span className="sub">{me.airport} → {to}</span>}</div>
         {!me.airport && <Callout kind="warn">Add your home airport first. <button className="link-btn" onClick={() => meSheet(ctx)}>Add it</button></Callout>}
         {!date.option && <Callout kind="warn">There are no dates to search yet. Suggest some on the Vote tab.</Callout>}
-        {date.option && !dest.option?.data.airport && <Callout kind="warn">The destination needs an airport code before flights can be searched. Add it on the Vote tab.</Callout>}
+        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport code before flights can be searched. Add it on the Vote tab.</Callout>}
         {ready && (!date.locked || !dest.locked) && <Callout>The group hasn’t locked {!date.locked && !dest.locked ? 'the dates or destination' : !date.locked ? 'the dates' : 'the destination'} yet, so this searches the current leader. Prices are a preview.</Callout>}
         {ready && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="row-title">{rangeLabel(outDate!, state.trip.nights)} · round trip, 1 adult, economy</div>
+            {airports.length > 1 && (
+              <div className="seg" role="group" aria-label="Fly into">
+                {airports.map((a) => <button key={a} type="button" aria-pressed={a === to} onClick={() => { setToPick(a); setResult(null); }}>{a}</button>)}
+              </div>
+            )}
             <button className="btn primary block" onClick={search} disabled={busy}>{busy ? <><span className="spinner" /> Searching airlines…</> : 'Search flights'}</button>
             <div className="btn-row">
               <a className="btn small" href={gflights} target="_blank" rel="noopener noreferrer">Compare on Google Flights</a>

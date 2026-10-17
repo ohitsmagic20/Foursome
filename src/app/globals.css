@@ -203,3 +203,11 @@ tr.me .mark.none { border-color: var(--green); }
 .link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .link-grid .btn { flex-direction: column; gap: 0; min-height: 52px; line-height: 1.2; }
 .mini-select { min-height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); padding: 0 8px; font-size: 13px; font-weight: 600; }
+
+/* airport picker */
+.airport-list { display: flex; flex-direction: column; gap: 6px; }
+.airport { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); text-align: left; }
+.airport .code { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 20px; letter-spacing: .04em; min-width: 46px; }
+.airport .check { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+.airport[aria-pressed="true"] { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.airport[aria-pressed="true"] .check { background: var(--green); border-color: var(--green); color: var(--green-ink); }

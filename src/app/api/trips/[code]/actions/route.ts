@@ -21,7 +21,10 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
     case 'destination': {
       const name = str(d.name, 80);
       if (!name) throw new HttpError(400, 'Enter a destination.');
-      return { name, airport: airport(d.airport) };
+      // Up to 4 airports; `airport` stays as the first one for older code paths.
+      const list = (Array.isArray(d.airports) ? d.airports : [d.airport])
+        .map((a) => airport(a)).filter((a, i, arr) => a.length === 3 && arr.indexOf(a) === i).slice(0, 4);
+      return { name, airport: list[0] || '', airports: list };
     }
     case 'lodging': {
       const name = str(d.name, 100);

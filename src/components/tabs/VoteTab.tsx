@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, VoteValue } from '@/lib/shared';
-import { leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor } from '@/lib/shared';
+import { destAirports, leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor } from '@/lib/shared';
 import { WeatherCredit, WeatherStrip } from '../live';
 import { firstName } from '@/lib/client';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
@@ -98,7 +98,7 @@ function Where() {
           <div className="opt-head">
             <div style={{ minWidth: 0 }}>
               <div className="row-title" style={{ fontSize: 17 }}>{d.data.name}</div>
-              <div className="row-meta">{d.data.airport ? `Fly into ${d.data.airport}` : 'No airport code yet: flight search needs one'}</div>
+              <div className="row-meta">{destAirports(d.data).length ? `Fly into ${destAirports(d.data).join(' or ')}` : 'No airport yet: tap Edit to pick one'}</div>
             </div>
             {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && tally(state, d.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
           </div>

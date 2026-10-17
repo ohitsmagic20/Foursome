@@ -50,8 +50,11 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
     if (!date) throw new HttpError(400, 'Add date options first so there are dates to search.');
     if (!dest?.data.airport) throw new HttpError(400, 'The destination needs an airport code, like MYR for Myrtle Beach. Edit it on the Vote tab.');
     const origin = airport(b.origin) || me.airport;
+    const destAirports = dest.data.airports?.length ? dest.data.airports : [dest.data.airport];
+    const wanted = airport(b.destination);
+    const to = destAirports.includes(wanted) ? wanted : destAirports[0];
     if (!origin) throw new HttpError(400, 'Add your home airport first.');
-    if (origin === dest.data.airport) throw new HttpError(400, 'Your home airport is the destination airport.');
+    if (origin === to) throw new HttpError(400, 'Your home airport is the destination airport.');
 
     const outDate = date.data.start;
     const backDate = isoDay(addDays(parseDay(outDate), trip.nights));
@@ -67,8 +70,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       body: JSON.stringify({
         data: {
           slices: [
-            { origin, destination: dest.data.airport, departure_date: outDate },
-            { origin: dest.data.airport, destination: origin, departure_date: backDate },
+            { origin, destination: to, departure_date: outDate },
+            { origin: to, destination: origin, departure_date: backDate },
           ],
           passengers: [{ type: 'adult' }],
           cabin_class: 'economy',
@@ -104,7 +107,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
     if (earliest && !top.some((o) => o.id === earliest.id)) top.push(earliest);
 
     return Response.json({
-      query: { origin, destination: dest.data.airport, outDate, backDate, datesLocked: date.locked, destLocked: !!dest.locked },
+      query: { origin, destination: to, outDate, backDate, datesLocked: date.locked, destLocked: !!dest.locked },
       offers: top,
       testMode: token.startsWith('duffel_test'),
     });

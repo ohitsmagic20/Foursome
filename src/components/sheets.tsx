@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
+import type { NearbyAirport, NearbyCourse } from '@/lib/shared';
+import { destAirports } from '@/lib/shared';
 import { api, todayLabel } from '@/lib/client';
 import { ConfirmButton, Field, Select, SheetForm } from './ui';
 
@@ -62,21 +64,98 @@ export function dateSheet(ctx: TripCtx) {
   });
 }
 
+function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationData> }) {
+  const [name, setName] = useState(opt?.data.name || '');
+  const [found, setFound] = useState<NearbyAirport[]>([]);
+  const [picked, setPicked] = useState<string[]>(opt ? destAirports(opt.data) : []);
+  const [placeLabel, setPlaceLabel] = useState('');
+  const [courses, setCourses] = useState<NearbyCourse[] | null>(null);
+  const [status, setStatus] = useState<'' | 'looking' | 'notfound'>('');
+  const [extra, setExtra] = useState('');
+  const touched = useRef(!!opt);
+  const lastQuery = useRef('');
+
+  useEffect(() => {
+    const q = name.trim();
+    if (q.length < 2 || q === lastQuery.current) return;
+    const t = setTimeout(async () => {
+      lastQuery.current = q;
+      setStatus('looking');
+      setCourses(null);
+      try {
+        const r = await api<{ place: string; airports: NearbyAirport[] }>(`/api/airports?place=${encodeURIComponent(q)}`);
+        if (lastQuery.current !== q) return;
+        setFound(r.airports);
+        setPlaceLabel(r.place);
+        setStatus('');
+        if (!touched.current) setPicked(r.airports.filter((a) => a.suggested).map((a) => a.code));
+        api<{ courses: NearbyCourse[] }>(`/api/courses?place=${encodeURIComponent(q)}&miles=30`)
+          .then((c) => lastQuery.current === q && setCourses(c.courses.filter((x) => !x.isPrivate)))
+          .catch(() => setCourses([]));
+      } catch {
+        if (lastQuery.current === q) { setFound([]); setStatus('notfound'); }
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [name]);
+
+  const toggle = (code: string) => {
+    touched.current = true;
+    setPicked((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code].slice(0, 4)));
+  };
+  const shown = [...found, ...picked.filter((c) => !found.some((f) => f.code === c)).map((c) => ({ code: c, name: 'Added by hand', city: '', miles: -1, major: false, suggested: false }))];
+
+  return (
+    <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
+      onSubmit={() => {
+        if (!picked.length) throw new Error('Pick at least one airport to fly into.');
+        const data = { name: name.trim(), airports: picked };
+        return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'destination', data }, 'Destination added');
+      }}
+      extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
+      <div className="field">
+        <label htmlFor="f-name">Destination</label>
+        <input id="f-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Myrtle Beach, SC" required autoComplete="off" />
+      </div>
+      {status === 'looking' && <p className="hint">Finding airports near {name.trim()}…</p>}
+      {status === 'notfound' && <p className="hint">Couldn’t find that on the map. Try “City, ST”, or add an airport code below.</p>}
+      {shown.length > 0 && (
+        <div className="field">
+          <label>Fly into {placeLabel && <span style={{ fontWeight: 500 }}>· near {placeLabel}</span>}</label>
+          <div className="airport-list">
+            {shown.map((a) => (
+              <button type="button" key={a.code} className="airport" aria-pressed={picked.includes(a.code)} onClick={() => toggle(a.code)}>
+                <span className="code">{a.code}</span>
+                <span className="grow" style={{ textAlign: 'left' }}>
+                  <span className="row-title" style={{ display: 'block' }}>{a.name}</span>
+                  <span className="row-meta">{a.miles >= 0 ? `${a.miles} mi away` : ''}{a.major && a.miles >= 0 ? ' · major airport' : ''}</span>
+                </span>
+                <span className="check" aria-hidden="true">{picked.includes(a.code) ? '✓' : ''}</span>
+              </button>
+            ))}
+          </div>
+          <p className="hint">Pick one or more. Each person can search flights into any of them.</p>
+        </div>
+      )}
+      <div className="field">
+        <label htmlFor="f-extra">Another airport code</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input id="f-extra" value={extra} onChange={(e) => setExtra(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))} placeholder="SNA" style={{ flex: 1 }} />
+          <button type="button" className="btn" disabled={extra.length !== 3} onClick={() => { toggle(extra); setExtra(''); }}>Add</button>
+        </div>
+      </div>
+      {courses && courses.length > 0 && (
+        <div className="callout good" style={{ fontSize: 13 }}>
+          <div><strong>{courses.length}{courses.length >= 40 ? '+' : ''} public courses within 30 miles</strong>, including {courses.slice(0, 4).map((c) => c.name).join(', ')}. You’ll see them all on the Golf tab.</div>
+        </div>
+      )}
+      {courses && courses.length === 0 && <p className="hint">No golf courses showed up within 30 miles of this spot.</p>}
+    </SheetForm>
+  );
+}
+
 export function destSheet(ctx: TripCtx, opt?: Option<DestinationData>) {
-  ctx.sheet({
-    title: opt ? 'Edit destination' : 'Suggest a destination',
-    body: (
-      <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
-        onSubmit={(fd) => opt
-          ? save(ctx, 'update_option', { optionId: opt.id, data: { name: fd.name, airport: fd.airport } }, 'Saved')
-          : save(ctx, 'add_option', { kind: 'destination', data: { name: fd.name, airport: fd.airport } }, 'Destination added')}
-        extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
-        <Field name="name" label="Destination" defaultValue={opt?.data.name} placeholder="Myrtle Beach, SC" required />
-        <Field name="airport" label="Closest airport code" defaultValue={opt?.data.airport} placeholder="MYR" autoCapitalize="characters" maxLength={3} />
-        <p className="hint">The airport code is what flight search uses for everyone.</p>
-      </SheetForm>
-    ),
-  });
+  ctx.sheet({ title: opt ? 'Edit destination' : 'Suggest a destination', body: <DestinationForm ctx={ctx} opt={opt} /> });
 }
 
 function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) {

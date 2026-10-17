@@ -28,7 +28,9 @@ export interface Member {
 }
 
 export interface DateData { start: string }
-export interface DestinationData { name: string; airport: string }
+export interface DestinationData { name: string; airport: string; airports?: string[] }
+export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
+export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
 export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number }
 export interface RoundData { course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string }
 
