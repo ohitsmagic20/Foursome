@@ -26,7 +26,7 @@ export function StayTab() {
       <Callout>The group needs <strong>{need} beds</strong>: {state.members.filter((m) => m.bed === 'own').length} want their own and {state.members.filter((m) => m.bed === 'share').length} will share.</Callout>
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
-        : <p className="hint">Once there are dates and a destination on the Vote tab, you’ll get one-tap searches on Airbnb, Vrbo, Booking.com and Expedia here.</p>}
+        : <p className="hint">Once there are dates and a destination on the Trip tab, you’ll get one-tap searches on Airbnb, Vrbo, Booking.com and Expedia here.</p>}
       {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>Suggest the first place to stay.</button>}
       {shown.map((o) => {
         const fits = !o.data.beds || o.data.beds >= need;

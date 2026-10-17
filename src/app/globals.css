@@ -222,7 +222,7 @@ tr.me .mark.none { border-color: var(--green); }
 .quick-times::-webkit-scrollbar { display: none; }
 .quick-times button { flex: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .quick-times button.on { background: var(--green); border-color: var(--green); color: var(--green-ink); }
-.tab { font-size: 10.5px; letter-spacing: -.01em; white-space: nowrap; }
+.tab { white-space: nowrap; }
 .price-hint { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft); }
 .price-tag { font-size: 12px; font-weight: 600; color: var(--good); }
 .your-turn { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--flag-soft); }

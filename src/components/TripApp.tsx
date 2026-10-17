@@ -13,8 +13,8 @@ import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'trip', label: 'Overview' },
-  { id: 'vote', label: 'When & Where' },
+  { id: 'trip', label: 'Home' },
+  { id: 'vote', label: 'Trip' },
   { id: 'stay', label: 'Stay' },
   { id: 'golf', label: 'Golf' },
   { id: 'flights', label: 'Flights' },

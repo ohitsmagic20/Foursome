@@ -11,7 +11,7 @@ const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', mayb
 const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
 
 export function VoteTab() {
-  return (<><When /><Where /></>);
+  return (<><Where /><When /></>);
 }
 
 function When() {

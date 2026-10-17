@@ -38,7 +38,7 @@ export function GolfTab() {
       {wx.data && <WeatherCredit />}
       {destOpt
         ? <CoursesNearby dest={destOpt.data.name} />
-        : <p className="hint">Pick a destination on the Vote tab to see golf courses nearby.</p>}
+        : <p className="hint">Pick a destination on the Trip tab to see golf courses nearby.</p>}
     </>
   );
 }

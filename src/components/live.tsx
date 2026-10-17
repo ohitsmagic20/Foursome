@@ -50,7 +50,7 @@ const VERDICT: Record<WeatherReport['verdict'], [string, 'good' | 'warn' | 'bad'
 };
 const deg = (n: number | null) => (n === null ? '–' : `${n}°`);
 
-/** One line summary for a destination and dates. Used to compare destinations on the Vote tab. */
+/** One line summary for a destination and dates. Used to compare destinations on the Trip tab. */
 export function WeatherStrip({ place, start, nights }: { place: string; start: string; nights: number }) {
   const { data, error, loading } = useWeather(place, start, nights);
   if (loading) return <div className="wx muted">Checking the weather…</div>;

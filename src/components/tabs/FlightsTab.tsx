@@ -84,8 +84,8 @@ export function FlightsTab() {
       <section className="section">
         <div className="section-head"><h2>Search</h2>{me.airport && to && <span className="sub">{me.airport} → {to}</span>}</div>
         {!me.airport && <Callout kind="warn">Add your home airport first. <button className="link-btn" onClick={() => meSheet(ctx)}>Add it</button></Callout>}
-        {!date.option && <Callout kind="warn">There are no dates to search yet. Suggest some on the Vote tab.</Callout>}
-        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport code before flights can be searched. Add it on the Vote tab.</Callout>}
+        {!date.option && <Callout kind="warn">There are no dates to search yet. Suggest some on the Trip tab.</Callout>}
+        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport code before flights can be searched. Add it on the Trip tab.</Callout>}
         {ready && (!date.locked || !dest.locked) && <Callout>The group hasn’t locked {!date.locked && !dest.locked ? 'the dates or destination' : !date.locked ? 'the dates' : 'the destination'} yet, so this searches the current leader. Prices are a preview.</Callout>}
         {ready && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
