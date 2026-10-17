@@ -22,8 +22,10 @@ export function cleanEmail(v: unknown): string {
   return e;
 }
 
-export async function sendCode(email: string) {
-  const { error } = await authClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+export async function sendCode(email: string, origin?: string) {
+  // If the email template still sends a link instead of a code, the link comes back to the app and signs in too.
+  const emailRedirectTo = origin ? `${origin}/signin` : undefined;
+  const { error } = await authClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo } });
   if (!error) return;
   const msg = error.message || '';
   if (/not authorized/i.test(msg)) {
@@ -40,8 +42,17 @@ export async function verifyCode(email: string, code: string): Promise<{ profile
   if (token.length < 6) throw new HttpError(400, 'Enter the 6-digit code from the email.');
   const { data, error } = await authClient().auth.verifyOtp({ email, token, type: 'email' });
   if (error || !data.user) throw new HttpError(400, 'That code didn’t work. Check the newest email, or send a new code.');
-  const userId = data.user.id;
+  return startSession(data.user.id, email);
+}
 
+/** Sign-in from the emailed link: the link hands the app a Supabase access token. */
+export async function verifyLinkToken(accessToken: string) {
+  const { data, error } = await authClient().auth.getUser(accessToken);
+  if (error || !data.user?.email) throw new HttpError(400, 'That sign-in link has expired. Send a new code.');
+  return startSession(data.user.id, data.user.email.toLowerCase());
+}
+
+async function startSession(userId: string, email: string): Promise<{ profile: Profile; session: string; isNew: boolean }> {
   let { data: profile, error: pErr } = await db().from('profiles').select(PROFILE_COLS).eq('id', userId).maybeSingle();
   if (pErr) throw pErr;
   let isNew = false;
