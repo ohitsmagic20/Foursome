@@ -28,5 +28,13 @@ export async function GET() {
       report.database_detail = String((e as { code?: string }).code || '') + ' ' + String((e as Error).message || '').slice(0, 160);
     }
   }
+  if (url && key) {
+    const missing: string[] = [];
+    for (const t of ['profiles', 'sessions']) {
+      const { error } = await db().from(t).select('*').limit(1);
+      if (error) missing.push(t);
+    }
+    report.accounts = missing.length ? `not set up: run supabase/002_accounts.sql (missing ${missing.join(', ')})` : 'ready';
+  }
   return Response.json(report, { headers: { 'Cache-Control': 'no-store' } });
 }

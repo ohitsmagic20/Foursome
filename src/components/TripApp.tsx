@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
 import { openVotes, pickOf, rangeLabel } from '@/lib/shared';
-import { api, getToken, rememberTrip, setToken, firstName } from '@/lib/client';
-import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx, Field, Select } from './ui';
+import { api, rememberTrip, setToken, firstName, initials } from '@/lib/client';
+import { ProfileForm, SignIn, useMe } from './account';
+import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
 import { TripTab } from './tabs/TripTab';
 import { VoteTab } from './tabs/VoteTab';
 import { StayTab } from './tabs/StayTab';
@@ -13,7 +14,7 @@ import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'trip', label: 'Home' },
+  { id: 'trip', label: 'Clubhouse' },
   { id: 'vote', label: 'Trip' },
   { id: 'stay', label: 'Stay' },
   { id: 'golf', label: 'Golf' },
@@ -100,7 +101,7 @@ export default function TripApp({ code }: { code: string }) {
   if (!state || !ctx) {
     return <div className="app no-tabs"><div className="empty" style={{ paddingTop: 80 }}><span className="spinner" style={{ display: 'inline-block' }} /></div></div>;
   }
-  if (!state.meId || !getToken(code)) {
+  if (!state.meId) {
     return <JoinScreen state={state} code={code} onJoined={load} />;
   }
 
@@ -119,7 +120,10 @@ export default function TripApp({ code }: { code: string }) {
             <div className="eyebrow">{eyebrow}</div>
             <h1>{state.trip.name}</h1>
           </div>
-          {me?.is_organizer && <button className="icon-btn" aria-label="Edit trip" onClick={() => tripSheet(ctx)}>{Icon.edit}</button>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {me?.is_organizer && <button className="icon-btn" aria-label="Edit trip" onClick={() => tripSheet(ctx)}>{Icon.edit}</button>}
+            <a className="avatar-btn" href={`/profile?back=/t/${code}`} aria-label="Your profile">{initials(me?.name || '?')}</a>
+          </div>
         </header>
         <main className="stack">
           {tab === 'trip' && <TripTab />}
@@ -152,9 +156,25 @@ function unvoted(state: TripState, tab: TabId): number {
 }
 
 function JoinScreen({ state, code, onJoined }: { state: TripState; code: string; onJoined: () => void }) {
+  const { me, setMe, reload } = useMe();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const org = state.members.find((m) => m.is_organizer);
+
+  async function join() {
+    setErr('');
+    setBusy(true);
+    try {
+      const r = await api<{ token: string }>(`/api/trips/${code}/join`, { body: {} });
+      setToken(code, r.token);
+      rememberTrip(code, state.trip.name);
+      onJoined();
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : 'Could not join.');
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="app no-tabs">
       <div className="hero">
@@ -162,32 +182,28 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
         <h1>{state.trip.name}</h1>
         <p>{org ? `${firstName(org.name)} is organizing` : 'A golf trip'} with {state.members.length} {state.members.length === 1 ? 'person' : 'people'} so far. Join to vote on dates, where to stay and where to play.</p>
       </div>
-      <form className="form card" onSubmit={async (e) => {
-        e.preventDefault();
-        setErr('');
-        setBusy(true);
-        try {
-          const fd = Object.fromEntries(new FormData(e.currentTarget));
-          const r = await api<{ token: string }>(`/api/trips/${code}/join`, { body: fd });
-          setToken(code, r.token);
-          rememberTrip(code, state.trip.name);
-          onJoined();
-        } catch (x) {
-          setErr(x instanceof Error ? x.message : 'Could not join.');
-        } finally {
-          setBusy(false);
-        }
-      }}>
-        <Field name="name" label="Your name" required autoComplete="name" placeholder="First and last" />
-        <div className="grid2">
-          <Field name="airport" label="Home airport" placeholder="ORD" autoCapitalize="characters" maxLength={3} />
-          <Field name="budget" label="Budget, all-in ($)" type="number" placeholder="1500" />
+      {me === undefined && <div className="empty"><span className="spinner" style={{ display: 'inline-block' }} /></div>}
+      {me === null && <SignIn title="Sign in to join" note="Use your email. No password; we’ll send a 6-digit code." onDone={() => reload()} />}
+      {me && !me.complete && (
+        <div className="card">
+          <ProfileForm profile={me.profile} submitLabel="Save and continue" intro={<p className="sub">Quick setup, once. Every trip you join uses these details.</p>} onSaved={(r) => setMe({ ...me, ...r })} />
         </div>
-        <Select name="bed" label="Sleeping" defaultValue="own" options={[['own', 'I want my own bed'], ['share', 'I’m fine sharing a bed']]} />
-        <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
-        {err && <p className="error" role="alert">{err}</p>}
-        <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Join the trip'}</button>
-      </form>
+      )}
+      {me && me.complete && (
+        <div className="card form">
+          <div className="join-me">
+            <div className="avatar big">{initials(me.profile.name)}</div>
+            <div>
+              <div className="row-title" style={{ fontSize: 17 }}>{me.profile.name}</div>
+              <div className="row-meta">Flying from {me.profile.airport} · {me.profile.bed === 'own' ? 'own bed' : 'fine sharing'}{me.profile.budget ? ` · budget $${me.profile.budget.toLocaleString()}` : ''}</div>
+            </div>
+          </div>
+          {err && <p className="error" role="alert">{err}</p>}
+          <button className="btn primary block" onClick={join} disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
+          <a className="btn small ghost" href={`/profile?back=/t/${code}`}>Edit my details first</a>
+          <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
+        </div>
+      )}
     </div>
   );
 }

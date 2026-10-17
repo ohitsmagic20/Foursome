@@ -92,18 +92,42 @@ export async function tripByCode(code: string): Promise<Trip> {
   return data as Trip;
 }
 
+/** The profile id behind an `x-session` header, or null. Tolerates the accounts tables not existing yet. */
+export async function sessionProfileId(req: Request): Promise<string | null> {
+  const session = req.headers.get('x-session') || '';
+  if (!session) return null;
+  const { data, error } = await db().from('sessions').select('profile_id').eq('token', session).maybeSingle();
+  if (error) return null;
+  return (data?.profile_id as string) || null;
+}
+
+/** Who is asking, on this trip: by the trip token on this phone, or by their signed-in account on any phone.
+ *  If both point the same way and the token's member has no account yet, the account is attached to it. */
 export async function memberFromRequest(req: Request, tripId: string, required: true): Promise<Member>;
 export async function memberFromRequest(req: Request, tripId: string, required?: false): Promise<Member | null>;
 export async function memberFromRequest(req: Request, tripId: string, required = false): Promise<Member | null> {
   const token = req.headers.get('x-member-token') || '';
-  if (!token) {
-    if (required) throw new HttpError(401, 'Join the trip first.');
-    return null;
+  const profileId = await sessionProfileId(req);
+  type Found = Member & { profile_id?: string | null };
+  let member: Found | null = null;
+
+  if (token) {
+    const { data, error } = await db().from('members').select(`${MEMBER_COLS},profile_id`).eq('trip_id', tripId).eq('token', token).maybeSingle();
+    if (error && !/profile_id/.test(error.message)) throw error;
+    member = (data as Found | null) || null;
   }
-  const { data, error } = await db().from('members').select(MEMBER_COLS).eq('trip_id', tripId).eq('token', token).maybeSingle();
-  if (error) throw error;
-  if (!data && required) throw new HttpError(401, 'You are not on this trip on this device. Open the invite link and join again.');
-  return (data as Member) || null;
+  if (profileId) {
+    if (member && !member.profile_id) {
+      const { count } = await db().from('members').select('id', { count: 'exact', head: true }).eq('trip_id', tripId).eq('profile_id', profileId);
+      if (!count) await db().from('members').update({ profile_id: profileId }).eq('id', member.id);
+    } else if (!member) {
+      const { data } = await db().from('members').select(MEMBER_COLS).eq('trip_id', tripId).eq('profile_id', profileId).maybeSingle();
+      member = (data as Member) || null;
+    }
+  }
+  if (!member && required) throw new HttpError(401, 'Join the trip first.');
+  if (member) delete member.profile_id;
+  return member;
 }
 
 export async function loadState(trip: Trip, me: Member | null): Promise<TripState> {

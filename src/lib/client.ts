@@ -26,10 +26,24 @@ export function rememberTrip(code: string, name: string) {
   } catch { /* storage blocked */ }
 }
 
+// Signed-in session for this phone (one per person, works across all their trips).
+const SESSION_KEY = 'foursome:session';
+export function getSession(): string | null {
+  try { return localStorage.getItem(SESSION_KEY); } catch { return null; }
+}
+export function setSession(token: string) {
+  try { localStorage.setItem(SESSION_KEY, token); } catch { /* storage blocked */ }
+}
+export function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* storage blocked */ }
+}
+
 export async function api<T = unknown>(path: string, opts: { code?: string; body?: unknown; method?: string } = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = opts.code ? getToken(opts.code) : null;
   if (token) headers['x-member-token'] = token;
+  const session = getSession();
+  if (session) headers['x-session'] = session;
   const res = await fetch(path, {
     method: opts.method || (opts.body !== undefined ? 'POST' : 'GET'),
     headers,

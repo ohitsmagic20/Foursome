@@ -230,3 +230,10 @@ tr.me .mark.none { border-color: var(--green); }
 .your-turn-head { display: flex; align-items: center; gap: 12px; }
 .badge-big { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--flag); color: #1b1608; display: grid; place-items: center; font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 22px; }
 .btn.ghost.danger { border-color: transparent; }
+
+/* accounts */
+.avatar.big { width: 48px; height: 48px; font-size: 19px; }
+.avatar-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--green); color: var(--green-ink); display: grid; place-items: center; font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 15px; text-decoration: none; flex: none; }
+.join-me { display: flex; align-items: center; gap: 12px; }
+.code-input { font-family: var(--font-display), sans-serif !important; font-size: 30px !important; font-weight: 700; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; }
+.field input:disabled { color: var(--muted); background: var(--soft); }

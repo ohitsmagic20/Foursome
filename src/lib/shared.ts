@@ -215,3 +215,7 @@ export const isWeekendDay = (weekday: number) => weekday === 0 || weekday === 5 
 
 export interface PriceRange { low: number; high: number; median: number; count: number }
 export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string }
+
+/* ---------- accounts ---------- */
+export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed }
+export interface MyTrip { code: string; name: string; nights: number; start: string | null; destination: string | null; members: number; organizer: boolean }

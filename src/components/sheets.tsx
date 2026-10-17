@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
 import type { CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
 import { addDays, dayLabel, destAirports, isWeekendDay, parseDay, pickOf } from '@/lib/shared';
-import { api, todayLabel } from '@/lib/client';
+import { api, getSession, todayLabel } from '@/lib/client';
 import { ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
 async function save(ctx: TripCtx, type: string, payload: Record<string, unknown>, msg: string) {
@@ -33,6 +33,8 @@ export function tripSheet(ctx: TripCtx) {
 }
 
 export function meSheet(ctx: TripCtx) {
+  // Signed-in people edit their profile, which updates them on every trip.
+  if (getSession()) { location.href = `/profile?back=${encodeURIComponent(location.pathname + location.hash)}`; return; }
   const m = ctx.me!;
   ctx.sheet({
     title: 'Your details',
