@@ -1,7 +1,8 @@
 'use client';
 
-import type { LodgingData } from '@/lib/shared';
-import { bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, tally } from '@/lib/shared';
+import type { DateData, DestinationData, LodgingData } from '@/lib/shared';
+import { bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
+import { StaySearch } from '../live';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
 
@@ -14,6 +15,8 @@ export function StayTab() {
   const need = bedsNeeded(state.members);
   const own = state.members.find((m) => m.bed === 'own');
   const share = state.members.find((m) => m.bed === 'share');
+  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const date = pickOf<DateData>(state, 'date').option;
   const shown = locked ? [locked, ...opts.filter((o) => o.id !== locked.id)] : opts.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
 
   return (
@@ -21,6 +24,9 @@ export function StayTab() {
       <div className="section-head"><h2>Where we stay</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
       <p className="sub">Paste an Airbnb, Vrbo or hotel link and add the total for your dates. The group votes, then the organizer books it on that site.</p>
       <Callout>The group needs <strong>{need} beds</strong>: {state.members.filter((m) => m.bed === 'own').length} want their own and {state.members.filter((m) => m.bed === 'share').length} will share.</Callout>
+      {dest && date
+        ? <StaySearch dest={dest.data.name} start={date.data.start} />
+        : <p className="hint">Once there are dates and a destination on the Vote tab, you’ll get one-tap searches on Airbnb, Vrbo, Booking.com and Expedia here.</p>}
       {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>Suggest the first place to stay.</button>}
       {shown.map((o) => {
         const fits = !o.data.beds || o.data.beds >= need;

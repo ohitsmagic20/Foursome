@@ -125,7 +125,7 @@ export function lodgingSheet(ctx: TripCtx, opt?: Option<LodgingData>) {
   ctx.sheet({ title: opt ? 'Edit place' : 'Suggest a place to stay', body: <LodgingForm ctx={ctx} opt={opt} /> });
 }
 
-export function roundSheet(ctx: TripCtx, opt?: Option<RoundData>, day = 1) {
+export function roundSheet(ctx: TripCtx, opt?: Option<RoundData>, day = 1, prefillCourse?: string) {
   const days = ctx.state.trip.nights + 1;
   const d = opt?.data;
   ctx.sheet({
@@ -138,7 +138,7 @@ export function roundSheet(ctx: TripCtx, opt?: Option<RoundData>, day = 1) {
           return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
         }}
         extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
-        <Field name="course" label="Course" defaultValue={d?.course} placeholder="Course name" required />
+        <Field name="course" label="Course" defaultValue={d?.course ?? prefillCourse} placeholder="Course name" required />
         <div className="grid2">
           <Select name="day" label="Day" defaultValue={d?.day || day} options={Array.from({ length: days }, (_, i) => [i + 1, `Day ${i + 1}`])} />
           <Field name="time" label="First tee time" defaultValue={d?.time || '9:00 AM'} placeholder="8:30 AM" />

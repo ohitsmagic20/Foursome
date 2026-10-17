@@ -4,6 +4,7 @@ import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared'
 import { dayLabel, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded } from '@/lib/shared';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { roundSheet } from '../sheets';
+import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 
 export function GolfTab() {
   const ctx = useTrip();
@@ -13,6 +14,8 @@ export function GolfTab() {
   const date = pickOf<DateData>(state, 'date').option;
   const rounds = optionsOf<RoundData>(state, 'round');
   const plan = plannedRounds(state);
+  const destOpt = pickOf<DestinationData>(state, 'destination').option;
+  const wx = useWeather(destOpt?.data.name, date?.data.start, state.trip.nights);
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
 
   return (
@@ -25,13 +28,17 @@ export function GolfTab() {
         const planned = plan.filter((r) => r.data.day === d).length;
         return (
           <section className="section" key={d}>
-            <div className="day-label">Day {d}{date ? ` · ${dayLabel(date.data.start, d)}` : ''}{planned >= 2 && <Chip kind="plain">36 holes</Chip>}</div>
+            <div className="day-label">Day {d}{date ? ` · ${dayLabel(date.data.start, d)}` : ''}{planned >= 2 && <Chip kind="plain">36 holes</Chip>}{wx.data && <DayWeather day={wx.data.days[d - 1]} mode={wx.data.mode} />}</div>
             {rs.length === 0
               ? <button className="card empty dashed" onClick={() => roundSheet(ctx, undefined, d)}>{d === 1 ? 'Arrival day' : d === days ? 'Travel home day' : 'Open day'}: suggest a round</button>
               : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} />)}
           </section>
         );
       })}
+      {wx.data && <WeatherCredit />}
+      {destOpt
+        ? <CoursesNearby dest={destOpt.data.name} />
+        : <p className="hint">Pick a destination on the Vote tab to see golf courses nearby.</p>}
     </>
   );
 }

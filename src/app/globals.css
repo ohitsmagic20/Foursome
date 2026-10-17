@@ -191,3 +191,15 @@ tr.me .mark.none { border-color: var(--green); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* weather, booking searches, nearby courses */
+.wx { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.wx.muted { color: var(--muted); font-size: 13px; }
+.wx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wx-temp { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; }
+.wx-temp small { font-size: 16px; color: var(--muted); font-weight: 600; }
+.wx-day { margin-left: auto; font-family: var(--font-body), sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--muted); white-space: nowrap; }
+.day-label .wx-day { order: 3; }
+.link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.link-grid .btn { flex-direction: column; gap: 0; min-height: 52px; line-height: 1.2; }
+.mini-select { min-height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); padding: 0 8px; font-size: 13px; font-weight: 600; }

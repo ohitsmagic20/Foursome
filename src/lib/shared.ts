@@ -159,3 +159,28 @@ export function costOf(state: TripState, m: Member) {
   return { flight, stay, golf, food, total: flight + stay + golf + food };
 }
 export const teeTimesNeeded = (n: number) => Math.max(1, Math.ceil(n / 4));
+
+/* ---------- weather and courses (from /api/weather and /api/courses) ---------- */
+export interface WeatherDay { date: string; hi: number | null; lo: number | null; rain: number | null; wind: number | null }
+export interface WeatherReport {
+  mode: 'forecast' | 'typical';
+  years: number;              // how many past years the "typical" numbers average
+  days: WeatherDay[];
+  hi: number | null; lo: number | null; rain: number | null; wind: number | null;
+  verdict: 'good' | 'mixed' | 'wet' | 'cold' | 'hot';
+  place?: string;
+}
+export interface NearbyCourse { name: string; miles: number; website: string; phone: string; holes: string; isPrivate: boolean; lat: number; lon: number }
+
+/* ---------- prefilled searches on booking sites ---------- */
+export function lodgingSearchLinks(dest: string, checkIn: string, nights: number, guests: number, minBedrooms: number) {
+  const out = isoDay(addDays(parseDay(checkIn), nights));
+  const q = encodeURIComponent(dest);
+  const rooms = Math.max(1, minBedrooms);
+  return [
+    { site: 'Airbnb', kind: 'Houses', url: `https://www.airbnb.com/s/${q}/homes?checkin=${checkIn}&checkout=${out}&adults=${guests}&min_bedrooms=${rooms}` },
+    { site: 'Vrbo', kind: 'Houses', url: `https://www.vrbo.com/search?destination=${q}&startDate=${checkIn}&endDate=${out}&adults=${guests}&minBedrooms=${rooms}` },
+    { site: 'Booking.com', kind: 'Hotels', url: `https://www.booking.com/searchresults.html?ss=${q}&checkin=${checkIn}&checkout=${out}&group_adults=${guests}&no_rooms=${Math.ceil(guests / 2)}` },
+    { site: 'Expedia', kind: 'Hotels', url: `https://www.expedia.com/Hotel-Search?destination=${q}&startDate=${checkIn}&endDate=${out}&adults=${guests}` },
+  ];
+}

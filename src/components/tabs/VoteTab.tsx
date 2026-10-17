@@ -1,7 +1,8 @@
 'use client';
 
 import type { DateData, DestinationData, VoteValue } from '@/lib/shared';
-import { leaderOf, lockedOf, optionsOf, rangeLabel, tally, votesFor } from '@/lib/shared';
+import { leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor } from '@/lib/shared';
+import { WeatherCredit, WeatherStrip } from '../live';
 import { firstName } from '@/lib/client';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { dateSheet, destSheet } from '../sheets';
@@ -85,6 +86,7 @@ function Where() {
   const dests = optionsOf<DestinationData>(state, 'destination');
   const locked = lockedOf<DestinationData>(state, 'destination');
   const leader = leaderOf<DestinationData>(state, 'destination');
+  const wxDate = pickOf<DateData>(state, 'date').option?.data.start;
   const shown = locked ? [locked, ...dests.filter((d) => d.id !== locked.id)] : dests.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
   return (
     <section className="section">
@@ -100,6 +102,7 @@ function Where() {
             </div>
             {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && tally(state, d.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
           </div>
+          {wxDate && <WeatherStrip place={d.data.name} start={wxDate} nights={state.trip.nights} />}
           {!locked && <VoteControl option={d} />}
           <Tally option={d} />
           {(me?.is_organizer || canEdit(me, d)) && (
@@ -110,6 +113,9 @@ function Where() {
           )}
         </div>
       ))}
+      {dests.length > 0 && (wxDate
+        ? <WeatherCredit />
+        : <p className="hint">Suggest dates above to see the weather at each destination for those days.</p>)}
     </section>
   );
 }
