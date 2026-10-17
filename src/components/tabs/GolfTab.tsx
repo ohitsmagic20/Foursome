@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
-import { dayLabel, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded } from '@/lib/shared';
+import { dayLabel, isWeekendDay, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded } from '@/lib/shared';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
@@ -57,7 +57,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         <div className="tee">{r.data.time.replace(/\s*(AM|PM)/i, '')}<small>{ap}</small></div>
         <div style={{ minWidth: 0 }}>
           <div className="row-title">{r.data.course}</div>
-          <div className="row-meta">{r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}</div>
+          <div className="row-meta">{r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
         </div>
         <div className="fee">{money(r.data.fee)}<small>per player</small></div>
       </div>
@@ -69,7 +69,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">
-        <a className="btn small" href={search} target="_blank" rel="noopener noreferrer">Find tee times</a>
+        <a className="btn small" href={r.data.url || search} target="_blank" rel="noopener noreferrer">{r.data.url ? 'Book on course site' : 'Find tee times'}</a>
         <LockButton option={r} lockLabel="Add to plan" unlockLabel="Take out of plan" />
         {me?.is_organizer && r.locked && (
           <button className="btn small ghost" onClick={() => act('update_option', { optionId: r.id, data: { ...r.data, booked: !r.data.booked } })}>{r.data.booked ? 'Mark not booked' : 'Mark booked'}</button>

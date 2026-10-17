@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { bedsNeeded, clockLabel, costOf, dayLabel, money, parseDay, pickOf, plannedRounds, rangeLabel, teeMinutes, teeTimesNeeded } from '@/lib/shared';
+import { bedsNeeded, clockLabel, openVotes, costOf, dayLabel, money, parseDay, pickOf, plannedRounds, rangeLabel, teeMinutes, teeTimesNeeded } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
@@ -44,10 +44,12 @@ export function TripTab() {
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
 
+      <YourTurn />
+
       {n < 2 && me?.is_organizer && <Callout>Invite your group first. Everything else is decided by their votes. <InviteButton ctx={ctx} className="link-btn" label="Share the invite link" /></Callout>}
 
       <section className="section">
-        <div className="section-head"><h2>Where things stand</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
+        <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
         <div className="list">
           {steps.map((s) => (
             <button key={s.title} className="row" onClick={() => go(s.tab)}>
@@ -69,6 +71,37 @@ export function TripTab() {
 
       <Crew />
     </>
+  );
+}
+
+/** Everything still waiting on my vote, across every tab. */
+function YourTurn() {
+  const { state, go } = useTrip();
+  const o = openVotes(state);
+  const rows = [
+    { n: o.date, tab: 'vote' as const, one: 'date option', many: 'date options' },
+    { n: o.destination, tab: 'vote' as const, one: 'destination', many: 'destinations' },
+    { n: o.lodging, tab: 'stay' as const, one: 'place to stay', many: 'places to stay' },
+    { n: o.round, tab: 'golf' as const, one: 'round of golf', many: 'rounds of golf' },
+  ].filter((r) => r.n > 0);
+  const total = rows.reduce((s, r) => s + r.n, 0);
+  if (!state.options.length) return null;
+  if (!total) return <Callout kind="good">You’ve voted on everything. Nice.</Callout>;
+  return (
+    <section className="your-turn">
+      <div className="your-turn-head">
+        <span className="badge-big">{total}</span>
+        <div><div className="row-title">Your vote is needed</div><div className="row-meta">The group can’t lock things in until everyone weighs in.</div></div>
+      </div>
+      <div className="list">
+        {rows.map((r) => (
+          <button key={r.one} className="row" onClick={() => go(r.tab)}>
+            <div className="grow row-title">{r.n} {r.n === 1 ? r.one : r.many}</div>
+            <span className="row-meta">Vote</span>{Icon.chev}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

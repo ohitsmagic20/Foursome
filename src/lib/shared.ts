@@ -32,7 +32,7 @@ export interface DestinationData { name: string; airport: string; airports?: str
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
 export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number }
-export interface RoundData { course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string }
+export interface RoundData { course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string }
 
 export interface Option<T = unknown> {
   id: string;
@@ -186,3 +186,32 @@ export function lodgingSearchLinks(dest: string, checkIn: string, nights: number
     { site: 'Expedia', kind: 'Hotels', url: `https://www.expedia.com/Hotel-Search?destination=${q}&startDate=${checkIn}&endDate=${out}&adults=${guests}` },
   ];
 }
+
+/** Open options that still need my vote, by kind. A kind with a locked winner has nothing open (except rounds, which lock one by one). */
+export function openVotes(state: TripState): Record<Kind, number> {
+  const out: Record<Kind, number> = { date: 0, destination: 0, lodging: 0, round: 0 };
+  if (!state.meId) return out;
+  const settled = new Set(state.options.filter((o) => o.locked && o.kind !== 'round').map((o) => o.kind));
+  for (const o of state.options) {
+    if (o.locked || settled.has(o.kind)) continue;
+    if (!state.votes.some((v) => v.option_id === o.id && v.member_id === state.meId)) out[o.kind]++;
+  }
+  return out;
+}
+
+/* ---------- tee times ---------- */
+export function parseTee(t: string | undefined): { h: number; m: number; ap: 'AM' | 'PM' } {
+  const x = String(t || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!x) return { h: 9, m: 0, ap: 'AM' };
+  let h = Number(x[1]);
+  let ap: 'AM' | 'PM' = x[3] ? (x[3].toUpperCase() as 'AM' | 'PM') : h >= 12 ? 'PM' : 'AM';
+  if (!x[3] && h > 12) h -= 12;
+  if (h === 0) { h = 12; ap = 'AM'; }
+  return { h: Math.min(12, Math.max(1, h)), m: Math.min(59, Math.max(0, Number(x[2]))), ap };
+}
+export const formatTee = (h: number, m: number, ap: string) => `${h}:${String(m).padStart(2, '0')} ${ap}`;
+/** Fri, Sat and Sun are weekend rates at most courses. */
+export const isWeekendDay = (weekday: number) => weekday === 0 || weekday === 5 || weekday === 6;
+
+export interface PriceRange { low: number; high: number; median: number; count: number }
+export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string }

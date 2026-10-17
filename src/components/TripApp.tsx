@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
-import { pickOf, rangeLabel } from '@/lib/shared';
+import { openVotes, pickOf, rangeLabel } from '@/lib/shared';
 import { api, getToken, rememberTrip, setToken, firstName } from '@/lib/client';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx, Field, Select } from './ui';
 import { TripTab } from './tabs/TripTab';
@@ -13,8 +13,8 @@ import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'trip', label: 'Trip' },
-  { id: 'vote', label: 'Vote' },
+  { id: 'trip', label: 'Overview' },
+  { id: 'vote', label: 'When & Where' },
   { id: 'stay', label: 'Stay' },
   { id: 'golf', label: 'Golf' },
   { id: 'flights', label: 'Flights' },
@@ -147,10 +147,8 @@ export default function TripApp({ code }: { code: string }) {
 
 /** How many open options on a tab still need my vote. */
 function unvoted(state: TripState, tab: TabId): number {
-  const kinds = tab === 'vote' ? ['date', 'destination'] : tab === 'stay' ? ['lodging'] : tab === 'golf' ? ['round'] : [];
-  const lockedKinds = new Set(state.options.filter((o) => o.locked && o.kind !== 'round').map((o) => o.kind));
-  return state.options.filter((o) => kinds.includes(o.kind) && !lockedKinds.has(o.kind) && !o.locked &&
-    !state.votes.some((v) => v.option_id === o.id && v.member_id === state.meId)).length;
+  const o = openVotes(state);
+  return tab === 'vote' ? o.date + o.destination : tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
 }
 
 function JoinScreen({ state, code, onJoined }: { state: TripState; code: string; onJoined: () => void }) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
+import type { CoursePrices, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
 import { bedsNeeded, lodgingSearchLinks, rangeLabel } from '@/lib/shared';
 import { Chip, useTrip } from './ui';
 import { roundSheet } from './sheets';
@@ -119,6 +119,8 @@ export function CoursesNearby({ dest }: { dest: string }) {
   const { data, error, loading } = useLoad<{ place: string; courses: NearbyCourse[] }>(`/api/courses?place=${encodeURIComponent(dest)}&miles=${radius}`);
   const suggested = new Set(ctx.state.options.filter((o) => o.kind === 'round').map((o) => String((o.data as { course?: string }).course || '').toLowerCase()));
   const list = (data?.courses || []).filter((c) => showPrivate || !c.isPrivate);
+  const names = list.slice(0, limit).map((c) => c.name).join('|');
+  const priced = useLoad<{ prices: Record<string, CoursePrices> }>(names ? `/api/course-prices?courses=${encodeURIComponent(names)}` : null).data?.prices || {};
 
   return (
     <section className="section">
@@ -141,6 +143,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
                   <div>
                     <div className="row-title">{c.name}</div>
                     <div className="row-meta">{c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}{c.isPrivate ? ' · Private' : ''}</div>
+                    {priced[c.name]?.all && <div className="price-tag">Groups paid ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
                   </div>
                   <div className="btn-row">
                     {c.website && <a className="btn small ghost" href={c.website} target="_blank" rel="noopener noreferrer">Website</a>}
@@ -148,7 +151,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
                   </div>
                 </div>
                 {already ? <Chip kind="good">Suggested</Chip>
-                  : <button className="btn small" onClick={() => roundSheet(ctx, undefined, 2, c.name)}>Suggest</button>}
+                  : <button className="btn small" onClick={() => roundSheet(ctx, undefined, Math.min(2, ctx.state.trip.nights + 1), c.name, c.website)}>Suggest</button>}
               </div>
             );
           })}
@@ -160,7 +163,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
           <button className="btn small ghost" onClick={() => setShowPrivate(!showPrivate)}>{showPrivate ? 'Hide private clubs' : 'Show private clubs'}</button>
         )}
       </div>
-      <p className="hint">Course list from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Greens fees and tee times aren’t included yet: tap Tee times to check, then enter the price when you suggest the round.</p>
+      <p className="hint">Course list from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Prices shown are what other Foursome groups entered. Tap Tee times for today’s rates.</p>
     </section>
   );
 }

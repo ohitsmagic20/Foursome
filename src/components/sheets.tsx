@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
-import type { NearbyAirport, NearbyCourse } from '@/lib/shared';
-import { destAirports } from '@/lib/shared';
+import type { CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
+import { addDays, dayLabel, destAirports, isWeekendDay, parseDay, pickOf } from '@/lib/shared';
 import { api, todayLabel } from '@/lib/client';
-import { ConfirmButton, Field, Select, SheetForm } from './ui';
+import { ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
 async function save(ctx: TripCtx, type: string, payload: Record<string, unknown>, msg: string) {
   if (await ctx.act(type, payload)) {
@@ -204,29 +204,91 @@ export function lodgingSheet(ctx: TripCtx, opt?: Option<LodgingData>) {
   ctx.sheet({ title: opt ? 'Edit place' : 'Suggest a place to stay', body: <LodgingForm ctx={ctx} opt={opt} /> });
 }
 
-export function roundSheet(ctx: TripCtx, opt?: Option<RoundData>, day = 1, prefillCourse?: string) {
-  const days = ctx.state.trip.nights + 1;
+function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx: TripCtx; opt?: Option<RoundData>; day: number; prefillCourse?: string; prefillUrl?: string }) {
+  const { state } = ctx;
+  const days = state.trip.nights + 1;
   const d = opt?.data;
-  ctx.sheet({
-    title: opt ? 'Edit round' : 'Suggest a round',
-    body: (
-      <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
-        onSubmit={(fd) => {
-          const priceChanged = !d || Number(fd.fee) !== Number(d.fee);
-          const data = { course: fd.course, day: num(fd.day), time: fd.time, fee: num(fd.fee), booked: d?.booked || false, checked: priceChanged ? todayLabel() : d?.checked || todayLabel() };
-          return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
-        }}
-        extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
-        <Field name="course" label="Course" defaultValue={d?.course ?? prefillCourse} placeholder="Course name" required />
-        <div className="grid2">
-          <Select name="day" label="Day" defaultValue={d?.day || day} options={Array.from({ length: days }, (_, i) => [i + 1, `Day ${i + 1}`])} />
-          <Field name="time" label="First tee time" defaultValue={d?.time || '9:00 AM'} placeholder="8:30 AM" />
+  const date = pickOf<DateData>(state, 'date').option;
+  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const [course, setCourse] = useState(d?.course ?? prefillCourse ?? '');
+  const [url, setUrl] = useState(d?.url ?? prefillUrl ?? '');
+  const [day, setDay] = useState(d?.day || startDay);
+  const [fee, setFee] = useState(d?.fee ? String(d.fee) : '');
+  const [nearby, setNearby] = useState<NearbyCourse[]>([]);
+  const [prices, setPrices] = useState<CoursePrices | null>(null);
+
+  const weekday = date ? addDays(parseDay(date.data.start), day - 1).getDay() : -1;
+  const weekend = weekday >= 0 && isWeekendDay(weekday);
+  const dayName = date ? dayLabel(date.data.start, day) : '';
+
+  useEffect(() => {
+    if (!dest) return;
+    api<{ courses: NearbyCourse[] }>(`/api/courses?place=${encodeURIComponent(dest.data.name)}&miles=30`).then((r) => setNearby(r.courses)).catch(() => {});
+  }, [dest?.data.name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const c = course.trim();
+    setPrices(null);
+    if (c.length < 4) return;
+    const t = setTimeout(() => {
+      api<{ prices: CoursePrices | null }>(`/api/course-prices?course=${encodeURIComponent(c)}`).then((r) => setPrices(r.prices)).catch(() => {});
+    }, 500);
+    return () => clearTimeout(t);
+  }, [course]);
+
+  const range = prices ? (weekday < 0 ? prices.all : (weekend ? prices.weekend : prices.weekday) || prices.all) : null;
+  const rangeLabel = !prices || weekday < 0 || (weekend ? !prices.weekend : !prices.weekday) ? '' : weekend ? ' on weekends' : ' on weekdays';
+  const teeSearch = `https://www.google.com/search?q=${encodeURIComponent(`${course || 'golf'} ${dest?.data.name || ''} tee times ${dayName}`)}`;
+
+  return (
+    <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
+      onSubmit={(fd) => {
+        const priceChanged = !d || Number(fd.fee) !== Number(d.fee);
+        const data = {
+          course: course.trim(), url, day, time: fd.time, fee: num(fd.fee), booked: d?.booked || false, weekday,
+          checked: priceChanged ? todayLabel() : d?.checked || todayLabel(),
+          checkedAt: priceChanged ? new Date().toISOString() : d?.checkedAt || '',
+        };
+        return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
+      }}
+      extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
+      <div className="field">
+        <label htmlFor="f-course">Course</label>
+        <input id="f-course" name="course" value={course} list="nearby-courses" autoComplete="off" required placeholder={nearby[0] ? `e.g. ${nearby[0].name}` : 'Course name'}
+          onChange={(e) => { const v = e.target.value; setCourse(v); const hit = nearby.find((c) => c.name === v); if (hit) setUrl(hit.website); }} />
+        <datalist id="nearby-courses">{nearby.filter((c) => !c.isPrivate).map((c) => <option key={c.name} value={c.name}>{`${c.miles} mi`}</option>)}</datalist>
+      </div>
+      <div className="field">
+        <label htmlFor="f-day">Day</label>
+        <select id="f-day" value={day} onChange={(e) => setDay(Number(e.target.value))}>
+          {Array.from({ length: days }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{`Day ${n}${date ? ` · ${dayLabel(date.data.start, n)}` : ''}`}</option>)}
+        </select>
+      </div>
+      <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `Your group needs ${Math.ceil(state.members.length / 4)} tee times in a row starting here.` : undefined} />
+      <div className="field">
+        <label htmlFor="f-fee">Greens fee per player, with cart ($)</label>
+        <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" required value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? String(range.median) : '150'} />
+      </div>
+      {range && (
+        <div className="price-hint">
+          <div>
+            <div className="row-title">${range.low === range.high ? range.low : `${range.low}–${range.high}`}{rangeLabel}</div>
+            <div className="row-meta">What Foursome groups paid · {range.count} {range.count === 1 ? 'report' : 'reports'}{prices?.latest ? ` · latest ${prices.latest}` : ''}</div>
+          </div>
+          <button type="button" className="btn small" onClick={() => setFee(String(range.median))}>Use ${range.median}</button>
         </div>
-        <Field name="fee" label="Greens fee per player, with cart ($)" type="number" defaultValue={d?.fee ?? ''} required />
-        <p className="hint">Check the course’s booking page for the real rate. Saving a new price records today, {todayLabel()}, as the date it was checked.</p>
-      </SheetForm>
-    ),
-  });
+      )}
+      <div className="btn-row">
+        {url && <a className="btn small" href={url} target="_blank" rel="noopener noreferrer">Course website</a>}
+        <a className="btn small" href={teeSearch} target="_blank" rel="noopener noreferrer">Check live tee times{dayName ? ` for ${dayName}` : ''}</a>
+      </div>
+      <p className="hint">Enter the rate you see for your day and time. It helps the next group: Foursome remembers prices so courses show typical weekday and weekend ranges.</p>
+    </SheetForm>
+  );
+}
+
+export function roundSheet(ctx: TripCtx, opt?: Option<RoundData>, day = 1, prefillCourse?: string, prefillUrl?: string) {
+  ctx.sheet({ title: opt ? 'Edit round' : 'Suggest a round', body: <RoundForm ctx={ctx} opt={opt} day={day} prefillCourse={prefillCourse} prefillUrl={prefillUrl} /> });
 }
 
 export function manualFlightSheet(ctx: TripCtx) {

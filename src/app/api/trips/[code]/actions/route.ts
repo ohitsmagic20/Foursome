@@ -48,6 +48,11 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         fee: int(d.fee, 0, 5000, 0),
         booked: d.booked === true,
         checked: str(d.checked, 24),
+        // When the price was checked and which day of the week it was for (0 = Sunday, -1 = unknown).
+        // These feed the shared greens-fee ranges other trips see.
+        checkedAt: /^\d{4}-\d{2}-\d{2}T/.test(str(d.checkedAt, 30)) ? str(d.checkedAt, 30) : '',
+        weekday: int(d.weekday, -1, 6, -1),
+        url: url(d.url),
       };
     }
   }
