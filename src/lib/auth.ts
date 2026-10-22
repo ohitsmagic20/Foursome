@@ -22,11 +22,14 @@ export function cleanEmail(v: unknown): string {
   return e;
 }
 
-export async function sendCode(email: string, origin?: string) {
-  // If the email template still sends a link instead of a code, the link comes back to the app and signs in too.
-  const emailRedirectTo = origin ? `${origin}/signin` : undefined;
+export async function sendCode(email: string, origin?: string): Promise<string> {
+  // The email has a link (and a code once a custom email sender is set up). The link carries a one-time
+  // `nonce` so the device that asked — even a home-screen app — signs in when the link is opened anywhere.
+  const nonce = newToken();
+  await db().from('login_requests').insert({ nonce, email });
+  const emailRedirectTo = origin ? `${origin}/signin?n=${nonce}` : undefined;
   const { error } = await authClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo } });
-  if (!error) return;
+  if (!error) return nonce;
   const msg = error.message || '';
   if (/not authorized/i.test(msg)) {
     throw new HttpError(400, 'Sign-in emails can only go to the app owner’s team right now. The owner needs to set up a custom email sender in Supabase.');
@@ -45,11 +48,32 @@ export async function verifyCode(email: string, code: string): Promise<{ profile
   return startSession(data.user.id, email);
 }
 
-/** Sign-in from the emailed link: the link hands the app a Supabase access token. */
-export async function verifyLinkToken(accessToken: string) {
+/** Sign-in from the emailed link: the link hands the app a Supabase access token.
+ *  Also signs in the device that asked for the link, if it's still waiting. */
+export async function verifyLinkToken(accessToken: string, nonce?: string) {
   const { data, error } = await authClient().auth.getUser(accessToken);
-  if (error || !data.user?.email) throw new HttpError(400, 'That sign-in link has expired. Send a new code.');
-  return startSession(data.user.id, data.user.email.toLowerCase());
+  if (error || !data.user?.email) throw new HttpError(400, 'That sign-in link has expired. Go back and send a new one.');
+  const email = data.user.email.toLowerCase();
+  const here = await startSession(data.user.id, email);
+  if (nonce) {
+    const { data: req } = await db().from('login_requests').select('email,session,created_at').eq('nonce', nonce).maybeSingle();
+    const fresh = req && !req.session && req.email === email && Date.now() - Date.parse(req.created_at) < 60 * 60 * 1000;
+    if (fresh) {
+      const waiting = await startSession(data.user.id, email);
+      await db().from('login_requests').update({ session: waiting.session }).eq('nonce', nonce);
+    }
+  }
+  return here;
+}
+
+/** The waiting device checks whether its link has been opened. */
+export async function pollLogin(nonce: string): Promise<{ session: string; profile: Profile } | null> {
+  const { data } = await db().from('login_requests').select('session').eq('nonce', nonce).maybeSingle();
+  if (!data?.session) return null;
+  await db().from('login_requests').delete().eq('nonce', nonce);
+  const { data: s } = await db().from('sessions').select(`profiles(${PROFILE_COLS})`).eq('token', data.session).maybeSingle();
+  const profile = (s as unknown as { profiles?: Profile } | null)?.profiles;
+  return profile ? { session: data.session, profile } : null;
 }
 
 async function startSession(userId: string, email: string): Promise<{ profile: Profile; session: string; isNew: boolean }> {

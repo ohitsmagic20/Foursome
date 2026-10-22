@@ -89,3 +89,12 @@ create index if not exists members_profile_idx on members(profile_id);
 create unique index if not exists members_trip_profile_uniq on members(trip_id, profile_id) where profile_id is not null;
 alter table profiles enable row level security;
 alter table sessions enable row level security;
+
+-- Sign-in links: the device that asked waits on `nonce`; opening the emailed link (in any browser) fills `session`.
+create table if not exists login_requests (
+  nonce       text primary key,
+  email       text not null,
+  session     text,
+  created_at  timestamptz not null default now()
+);
+alter table login_requests enable row level security;

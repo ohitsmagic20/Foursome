@@ -237,3 +237,4 @@ tr.me .mark.none { border-color: var(--green); }
 .join-me { display: flex; align-items: center; gap: 12px; }
 .code-input { font-family: var(--font-display), sans-serif !important; font-size: 30px !important; font-weight: 700; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; }
 .field input:disabled { color: var(--muted); background: var(--soft); }
+.waiting { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--soft); color: var(--muted); font-weight: 600; font-size: 14px; }

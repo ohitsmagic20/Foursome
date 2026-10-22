@@ -33,15 +33,33 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [resent, setResent] = useState(false);
+  const [nonce, setNonce] = useState('');
+  const [showCode, setShowCode] = useState(false);
   const codeRef = useRef<HTMLInputElement>(null);
+
+  // While waiting, check every few seconds whether the emailed link was opened (in Mail, Safari, anywhere).
+  useEffect(() => {
+    if (step !== 'code' || !nonce) return;
+    let live = true;
+    const tick = async () => {
+      try {
+        const r = await api<{ done: boolean; session?: string; profile?: Profile; complete?: boolean }>(`/api/auth/poll?n=${encodeURIComponent(nonce)}`);
+        if (live && r.done && r.session && r.profile) { setSession(r.session); onDone({ profile: r.profile, complete: !!r.complete }); }
+      } catch { /* keep waiting */ }
+    };
+    const t = setInterval(tick, 2500);
+    const vis = () => document.visibilityState === 'visible' && tick();
+    document.addEventListener('visibilitychange', vis);
+    return () => { live = false; clearInterval(t); document.removeEventListener('visibilitychange', vis); };
+  }, [step, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function send() {
     setErr(''); setBusy(true);
     try {
-      await api('/api/auth/start', { body: { email } });
+      const r = await api<{ nonce?: string }>('/api/auth/start', { body: { email } });
+      setNonce(r.nonce || '');
       setStep('code');
-      setTimeout(() => codeRef.current?.focus(), 50);
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Couldn’t send the code.'); }
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Couldn’t send the email.'); }
     finally { setBusy(false); }
   }
   async function verify(c = code) {
@@ -58,7 +76,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
       <div>
         <h2>{step === 'email' ? title : 'Check your email'}</h2>
         <p className="sub" style={{ marginTop: 4 }}>
-          {step === 'email' ? (note || 'No password. We’ll email you a 6-digit code.') : <>We sent a 6-digit code to <strong>{email}</strong>.</>}
+          {step === 'email' ? (note || 'No password. We’ll email you a sign-in link.') : <>We sent a sign-in link to <strong>{email}</strong>. Tap it, then come back here. This screen signs you in by itself.</>}
         </p>
       </div>
       {step === 'email' ? (
@@ -68,20 +86,22 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
             <input id="f-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
           {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Email me a code'}</button>
+          <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Email me a sign-in link'}</button>
         </form>
       ) : (
         <form className="form" onSubmit={(e) => { e.preventDefault(); verify(); }}>
-          <div className="field">
+          <div className="waiting"><span className="spinner" /> Waiting for you to tap the link…</div>
+          {!showCode && <button type="button" className="btn small ghost" onClick={() => { setShowCode(true); setTimeout(() => codeRef.current?.focus(), 50); }}>Got a 6-digit code instead?</button>}
+          {showCode && <div className="field">
             <label htmlFor="f-code">Code</label>
             <input id="f-code" ref={codeRef} className="code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={8}
               value={code} onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setCode(v); if (v.length === 6) verify(v); }} placeholder="••••••" />
-          </div>
+          </div>}
           {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn primary block" disabled={busy || code.length < 6}>{busy ? <span className="spinner" /> : 'Sign in'}</button>
+          {showCode && <button className="btn primary block" disabled={busy || code.length < 6}>{busy ? <span className="spinner" /> : 'Sign in'}</button>}
           <div className="btn-row" style={{ justifyContent: 'space-between' }}>
             <button type="button" className="btn small ghost" onClick={() => { setStep('email'); setCode(''); setErr(''); }}>Use a different email</button>
-            <button type="button" className="btn small ghost" disabled={busy || resent} onClick={async () => { await send(); setResent(true); }}>{resent ? 'Code sent again' : 'Send a new code'}</button>
+            <button type="button" className="btn small ghost" disabled={busy || resent} onClick={async () => { await send(); setResent(true); }}>{resent ? 'Sent again' : 'Send it again'}</button>
           </div>
         </form>
       )}

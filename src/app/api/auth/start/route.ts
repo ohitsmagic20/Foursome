@@ -5,7 +5,7 @@ import { body, handle } from '@/lib/server';
 export function POST(req: Request) {
   return handle(async () => {
     const email = cleanEmail((await body(req)).email);
-    await sendCode(email, new URL(req.url).origin);
-    return Response.json({ ok: true });
+    const nonce = await sendCode(email, new URL(req.url).origin);
+    return Response.json({ ok: true, nonce });
   });
 }
