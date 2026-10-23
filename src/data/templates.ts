@@ -52,13 +52,13 @@ export const TEMPLATES: TripTemplate[] = [
     airportNote: 'Milwaukee (MKE) is within about an hour of both Kohler and Erin Hills, which are about an hour’s drive from each other.',
     nights: 3,
     bestMonths: 'Late May to mid-October (peak June–September)',
-    tagline: 'Two U.S. Open–caliber venues and a Ryder Cup course on Lake Michigan.',
+    tagline: 'A U.S. Open venue and a Ryder Cup course on Lake Michigan.',
     summary: 'The Midwest’s bucket-list trip: the Straits course at Whistling Straits, Erin Hills, and a round on the Irish course or Blackwolf Run. Big fees, walking-only courses, unforgettable golf.',
     rounds: [
       { day: 1, time: '1:00 PM', course: 'Blackwolf Run (Meadow Valleys)', fee: { low: 200, high: 300, asOf: 'estimate', verified: false }, access: 'Carts allowed. A good warm-up on arrival day.' },
       { day: 2, time: '8:00 AM', course: 'Whistling Straits (Straits)', fee: { low: 545, high: 645, asOf: '2025 rates', verified: true, note: 'Peak June to early October; shoulder about $100 less.' }, access: 'Walking only, caddie required (about $80 plus a $60–80 tip). Non-resort guests get a short booking window; stay-and-play packages guarantee tee times.' },
-      { day: 3, time: '9:00 AM', course: 'Erin Hills', fee: { low: 435, high: 555, asOf: '2027 rates', verified: true, note: '$555 May 28–Sept 26; $435 in May and October.' }, access: 'Walking only, no push carts. Optional caddie $65 plus suggested $75+ tip.', url: 'https://erinhills.com/golf/rates-fees/' },
-      { day: 4, time: '8:00 AM', course: 'Whistling Straits (Irish)', fee: { low: 280, high: 380, asOf: '2025 rates', verified: true }, access: 'Carts allowed (about $45).' },
+      { day: 3, time: '9:00 AM', course: 'Erin Hills', fee: { low: 435, high: 555, asOf: '2027 rates', verified: true, note: '$555 May 28–Sept 26; $435 May 3–16 and Sept 27–Oct 16.' }, access: 'Walking only, no push carts. Optional caddie $65 plus suggested $75+ tip.', url: 'https://erinhills.com/golf/rates-fees/' },
+      { day: 4, time: '8:00 AM', course: 'Whistling Straits (Irish)', fee: { low: 380, high: 380, asOf: '2025 peak rate', verified: true }, access: 'Carts allowed (about $45).' },
     ],
     lodging: { note: 'The American Club in Kohler, or a rental house in Sheboygan or Elkhart Lake split by the group. Erin Hills also has on-site cottages and lodges.', perNight: { low: 90, high: 200, asOf: 'estimate', verified: false } },
     tips: [
@@ -90,7 +90,7 @@ export const TEMPLATES: TripTemplate[] = [
       { day: 3, time: '8:00 AM', course: 'Sand Valley', fee: { low: 235, high: 325, asOf: '2026 rates', verified: true }, access: 'Caddies $100 per bag plus tip; push carts $10.', url: 'https://sandvalley.com/' },
       { day: 4, time: '8:00 AM', course: 'Sedge Valley', fee: { low: 150, high: 235, asOf: 'estimate', verified: false }, url: 'https://sandvalley.com/' },
     ],
-    lodging: { note: 'On-site rooms, casitas and cottages. The 8-bed Lake Leopold Cottage works well for a foursome-of-foursomes.', perNight: { low: 220, high: 325, asOf: '2025 posted rates', verified: true, note: '8-bed cottage $1,760–2,280 a night plus 13.5% tax, split 8 ways.' } },
+    lodging: { note: 'On-site rooms, casitas and cottages. The 8-bed Lake Leopold Cottage works well for a foursome-of-foursomes.', perNight: { low: 250, high: 325, asOf: '2025 posted rates', verified: true, note: '8-bed cottage $1,760–2,280 a night plus 13.5% tax, split 8 ways.' } },
     tips: [
       'The Lido is only open to resort guests, Sunday through Thursday, with limited tee times.',
       'Book caddies at least a week ahead.',
@@ -118,7 +118,7 @@ export const TEMPLATES: TripTemplate[] = [
       { day: 1, time: '2:00 PM', course: 'Arcadia Bluffs (South)', fee: { low: 100, high: 185, asOf: '2026 rates', verified: true, note: '$185 June 1–Oct 4. Includes cart.' }, url: 'https://arcadiabluffs.com/' },
       { day: 2, time: '8:00 AM', course: 'Arcadia Bluffs (Bluffs)', fee: { low: 135, high: 285, asOf: '2026 rates', verified: true, note: '$285 June 1–Oct 4. Includes cart.' }, access: 'Caddies $100 per bag plus tip, on request.', url: 'https://arcadiabluffs.com/' },
       { day: 3, time: '9:00 AM', course: 'Forest Dunes', fee: { low: 160, high: 230, asOf: '2027 rates', verified: true, note: 'Peak $200 Mon–Wed, $230 Thu–Sun. Carts $30.' }, url: 'https://forestdunesgolf.com/' },
-      { day: 4, time: '8:00 AM', course: 'The Loop (Forest Dunes)', fee: { low: 160, high: 230, asOf: '2027 rates', verified: true }, access: 'Plays clockwise on even days and counterclockwise on odd days.', url: 'https://forestdunesgolf.com/' },
+      { day: 4, time: '8:00 AM', course: 'The Loop (Forest Dunes)', fee: { low: 160, high: 230, asOf: '2027 rates', verified: true }, access: 'Reversible: the routing switches between even and odd calendar dates.', url: 'https://forestdunesgolf.com/' },
     ],
     lodging: { note: 'A rental house near Arcadia for two nights, then Forest Dunes’ on-site lodge, or a house in Traverse City.', perNight: { low: 75, high: 175, asOf: 'estimate', verified: false } },
     tips: [
