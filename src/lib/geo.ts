@@ -112,12 +112,12 @@ export function airportCoords(code: string): { lat: number; lon: number } | null
 
 /** Find a golf course by name near a point (within about 100 miles), from OpenStreetMap. Cached for a month.
  *  Prefers places tagged as golf courses, and the one closest to the destination when several share a name. */
-export async function findCourse(name: string, near: { lat: number; lon: number }): Promise<{ lat: number; lon: number } | null> {
+export async function findCourse(name: string, near: { lat: number; lon: number }, exact = false): Promise<{ lat: number; lon: number } | null> {
   const base = name.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
   const inside = (name.match(/\((.*?)\)/) || [])[1] || '';
   const generic = /^(north|south|east|west|old|new|irish|straits|river|lake|ridge|judge|stadium|monument|saguaro|cholla|bluffs|links|dye course|meadow valleys)$/i;
   const short = base.replace(/\b(inn|lodge|resort)\b\s*&?\s*/gi, '').replace(/\b(golf (club|course|links|resort)|golf & (country club|cc)|country club|golf club|club|gc|cc)\b\.?/gi, '').replace(/[&,]+\s*$/, '').trim();
-  const tries = [...new Set([
+  const tries = exact ? [name] : [...new Set([
     inside && !generic.test(inside) ? `${base} ${inside}` : '',
     inside && !generic.test(inside) ? inside : '',
     base, short, `${short} golf`,
@@ -136,7 +136,7 @@ export async function findCourse(name: string, near: { lat: number; lon: number 
         });
         if (!res.ok) continue;
         const hits = ((await res.json()) as Hit[]).sort((a, b) => dist(a) - dist(b));
-        const golf = hits.find((h) => h.type === 'golf_course');
+        const golf = hits.find((h) => h.type === 'golf_course') || (exact ? hits[0] : undefined);
         if (golf) return { lat: Number(golf.lat), lon: Number(golf.lon) };
         fallback ||= hits.find((h) => h.category === 'leisure') || null;
       } catch { /* try the next wording */ }

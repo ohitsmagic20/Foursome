@@ -6,6 +6,7 @@ import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip }
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { TripMap } from '../TripMap';
+import { templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
 export function GolfTab() {
@@ -27,7 +28,7 @@ export function GolfTab() {
         <TripMap
           place={destOpt.data.name}
           airport={destAirports(destOpt.data)[0]}
-          stops={(plan.length ? plan : rounds).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time)).map((r, i) => ({ name: r.data.course, label: String(i + 1) }))}
+          stops={(plan.length ? plan : rounds).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time)).map((r, i) => ({ name: r.data.course, label: String(i + 1), search: r.data.fromTemplate ? templateBySlug(r.data.fromTemplate)?.rounds.find((x) => x.course === r.data.course)?.mapAs : undefined }))}
         />
       )}
       <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>

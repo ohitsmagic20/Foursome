@@ -45,7 +45,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
           <a className="btn primary block" href={`/?template=${t.slug}#start`}>Start a trip from this</a>
         </section>
 
-        <TripMap place={t.destination} airport={t.airports[0]} stops={t.rounds.map((r, i) => ({ name: r.course, label: String(i + 1) }))} />
+        <TripMap place={t.destination} airport={t.airports[0]} stops={t.rounds.map((r, i) => ({ name: r.course, label: String(i + 1), search: r.mapAs }))} />
 
         <section className="section">
           <h2>The itinerary</h2>

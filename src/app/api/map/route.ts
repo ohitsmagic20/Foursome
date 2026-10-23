@@ -19,8 +19,10 @@ export function GET(req: Request) {
     // One lookup at a time: OpenStreetMap's search asks for at most one request per second (answers are cached).
     for (const [i, name] of names.entries()) {
       if (i) await new Promise((r) => setTimeout(r, 1000));
-      const at = await findCourse(name, place);
-      if (at) courses.push({ name, ...at });
+      // "Course name::what to search" when the map name differs (a resort, or the hotel on the course).
+      const [label, search] = name.split('::');
+      const at = await findCourse(search || label, place, !!search);
+      if (at) courses.push({ name: label, ...at });
     }
     return Response.json(
       { center: { lat: place.lat, lon: place.lon }, airport: airport ? { code, ...airport } : null, courses },

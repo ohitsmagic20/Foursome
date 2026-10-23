@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 
-interface Stop { name: string; label: string }
+interface Stop { name: string; label: string; search?: string }
 interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: { name: string; lat: number; lon: number }[] }
 
 const R = 3958.8;
@@ -20,7 +20,7 @@ export function TripMap({ place, airport, stops }: { place: string; airport?: st
   const el = useRef<HTMLDivElement>(null);
   const [data, setData] = useState<MapData | null>(null);
   const [failed, setFailed] = useState(false);
-  const names = [...new Set(stops.map((s) => s.name))];
+  const names = [...new Set(stops.map((s) => (s.search ? `${s.name}::${s.search}` : s.name)))];
   const key = `${place}|${airport || ''}|${names.join('|')}`;
 
   useEffect(() => {

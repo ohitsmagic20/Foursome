@@ -20,6 +20,8 @@ export interface TemplateRound {
   access?: string;
   /** The course's own site, only when we've confirmed it. */
   url?: string;
+  /** What to search on the map when OpenStreetMap doesn't list the course by name (e.g. the resort). */
+  mapAs?: string;
 }
 
 export interface TripTemplate {
@@ -85,10 +87,10 @@ export const TEMPLATES: TripTemplate[] = [
     tagline: 'Sand-dune golf in the middle of Wisconsin. Stay on site and play all day.',
     summary: 'Mammoth Dunes and Sand Valley are two of the most fun public courses in the country, with Sedge Valley, the 12-hole Commons and the Sandbox par 3 for replays. Everything is on one property, so the group never needs a car after check-in.',
     rounds: [
-      { day: 1, time: '2:00 PM', course: 'The Commons (Sand Valley)', fee: { low: 110, high: 150, asOf: '2026 rates', verified: true, note: '12 holes, opened 2026.' } },
-      { day: 2, time: '8:00 AM', course: 'Mammoth Dunes', fee: { low: 235, high: 325, asOf: '2026 rates', verified: true, note: '$325 peak; $235 Apr 28–May 20 and Oct 5–18.' }, access: 'Caddies $100 per bag plus tip; push carts $10.', url: 'https://sandvalley.com/' },
-      { day: 3, time: '8:00 AM', course: 'Sand Valley', fee: { low: 235, high: 325, asOf: '2026 rates', verified: true }, access: 'Caddies $100 per bag plus tip; push carts $10.', url: 'https://sandvalley.com/' },
-      { day: 4, time: '8:00 AM', course: 'Sedge Valley', fee: { low: 150, high: 235, asOf: 'estimate', verified: false }, url: 'https://sandvalley.com/' },
+      { day: 1, time: '2:00 PM', course: 'The Commons (Sand Valley)', mapAs: 'Sand Valley Golf Resort', fee: { low: 110, high: 150, asOf: '2026 rates', verified: true, note: '12 holes, opened 2026.' } },
+      { day: 2, time: '8:00 AM', course: 'Mammoth Dunes', mapAs: 'Sand Valley Golf Resort', fee: { low: 235, high: 325, asOf: '2026 rates', verified: true, note: '$325 peak; $235 Apr 28–May 20 and Oct 5–18.' }, access: 'Caddies $100 per bag plus tip; push carts $10.', url: 'https://sandvalley.com/' },
+      { day: 3, time: '8:00 AM', course: 'Sand Valley', mapAs: 'Sand Valley Golf Resort', fee: { low: 235, high: 325, asOf: '2026 rates', verified: true }, access: 'Caddies $100 per bag plus tip; push carts $10.', url: 'https://sandvalley.com/' },
+      { day: 4, time: '8:00 AM', course: 'Sedge Valley', mapAs: 'Sand Valley Golf Resort', fee: { low: 150, high: 235, asOf: 'estimate', verified: false }, url: 'https://sandvalley.com/' },
     ],
     lodging: { note: 'On-site rooms, casitas and cottages. The 8-bed Lake Leopold Cottage works well for a foursome-of-foursomes.', perNight: { low: 250, high: 325, asOf: '2025 posted rates', verified: true, note: '8-bed cottage $1,760–2,280 a night plus 13.5% tax, split 8 ways.' } },
     tips: [
@@ -232,7 +234,7 @@ export const TEMPLATES: TripTemplate[] = [
     summary: 'Five 18-hole courses and two par-3 courses on the cliffs above the Pacific. Stay on site, walk everything, and take the half-price replay rounds when your legs allow.',
     rounds: [
       { day: 1, time: '3:00 PM', course: 'Bandon Preserve', fee: { low: 90, high: 125, asOf: '2026–2027 rates', verified: true, note: '13-hole par 3. Proceeds go to charity.' }, url: 'https://bandondunesgolf.com/' },
-      { day: 2, time: '8:00 AM', course: 'Pacific Dunes', fee: { low: 210, high: 370, asOf: '2026–2027 resort guest rates', verified: true, note: '$350–370 June–Sept; $210–325 in April, May and October.' }, access: 'Walking only. Non-guests pay about $45–50 more, and more again for times booked over 21 days ahead.', url: 'https://bandondunesgolf.com/' },
+      { day: 2, time: '8:00 AM', course: 'Pacific Dunes', mapAs: 'Bandon Dunes Golf Resort', fee: { low: 210, high: 370, asOf: '2026–2027 resort guest rates', verified: true, note: '$350–370 June–Sept; $210–325 in April, May and October.' }, access: 'Walking only. Non-guests pay about $45–50 more, and more again for times booked over 21 days ahead.', url: 'https://bandondunesgolf.com/' },
       { day: 3, time: '8:00 AM', course: 'Bandon Dunes', fee: { low: 210, high: 370, asOf: '2026–2027 resort guest rates', verified: true }, access: 'Walking only.', url: 'https://bandondunesgolf.com/' },
       { day: 4, time: '8:00 AM', course: 'Sheep Ranch', fee: { low: 210, high: 370, asOf: '2026–2027 resort guest rates', verified: true }, access: 'Walking only.', url: 'https://bandondunesgolf.com/' },
     ],
@@ -261,7 +263,7 @@ export const TEMPLATES: TripTemplate[] = [
     rounds: [
       { day: 1, time: '1:00 PM', course: 'Oxmoor Valley (Ridge)', fee: { low: 115, high: 115, asOf: 'fall 2026 package', verified: true, note: 'Per day with cart, 2+ day RTJ package.' }, url: 'https://www.rtjgolf.com/' },
       { day: 2, time: '8:30 AM', course: 'Ross Bridge', fee: { low: 190, high: 190, asOf: 'fall 2026 package', verified: true }, url: 'https://www.rtjgolf.com/' },
-      { day: 3, time: '8:30 AM', course: 'Capitol Hill (Judge)', fee: { low: 130, high: 130, asOf: 'fall 2026 package', verified: true, note: 'Includes the $15 Judge surcharge.' }, url: 'https://www.rtjgolf.com/' },
+      { day: 3, time: '8:30 AM', course: 'Capitol Hill (Judge)', mapAs: 'Montgomery Marriott Prattville Hotel', fee: { low: 130, high: 130, asOf: 'fall 2026 package', verified: true, note: 'Includes the $15 Judge surcharge.' }, url: 'https://www.rtjgolf.com/' },
       { day: 4, time: '8:00 AM', course: 'Grand National (Lake)', fee: { low: 115, high: 115, asOf: 'fall 2026 package', verified: true }, url: 'https://www.rtjgolf.com/' },
     ],
     lodging: { note: 'Several Trail sites have hotels right on the course (like the Renaissance at Ross Bridge). Two to a room keeps it cheap.', perNight: { low: 75, high: 175, asOf: 'estimate', verified: false } },
