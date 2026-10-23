@@ -149,3 +149,20 @@ export async function loadState(trip: Trip, me: Member | null): Promise<TripStat
   }
   return { trip, members: (m.data || []) as Member[], options, votes, meId: me?.id ?? null };
 }
+
+/* ---------- spam limits ---------- */
+/** The caller's IP, hashed (we never store raw IPs). */
+export function ipKey(req: Request): string {
+  const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'unknown';
+  return createHash('sha256').update(`ip:${ip}`).digest('base64url').slice(0, 16);
+}
+
+/** Allow at most `max` events per `minutes` for this bucket; records the event when allowed.
+ *  If the rate table doesn't exist yet, nothing is limited. */
+export async function rateLimit(bucket: string, max: number, minutes: number, message: string) {
+  const since = new Date(Date.now() - minutes * 60000).toISOString();
+  const { count, error } = await db().from('rate_events').select('id', { count: 'exact', head: true }).eq('bucket', bucket).gte('at', since);
+  if (error) return;
+  if ((count || 0) >= max) throw new HttpError(429, message);
+  await db().from('rate_events').insert({ bucket });
+}

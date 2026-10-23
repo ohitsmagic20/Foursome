@@ -70,10 +70,11 @@ export function NotifyCard() {
   async function nudge() {
     setBusy(true);
     try {
-      const r = await api<{ waiting: number; reachable: number }>(`/api/trips/${code}/actions`, { code, body: { type: 'nudge' } });
-      toast(r.reachable
-        ? `Nudged ${r.reachable} of the ${r.waiting} who still need to vote.`
-        : `${r.waiting} still need to vote, but none have notifications on. Send a group text instead.`);
+      const r = await api<{ waiting: number; reachable: number; emailed?: number }>(`/api/trips/${code}/actions`, { code, body: { type: 'nudge' } });
+      const how = [r.reachable ? `${r.reachable} by notification` : '', r.emailed ? `${r.emailed} by email` : ''].filter(Boolean).join(' and ');
+      toast(how
+        ? `Nudged ${how}. ${r.waiting} still need to vote.`
+        : `${r.waiting} still need to vote, but none have notifications or trip emails on. Send a group text instead.`);
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Couldn’t send the nudge.');
     } finally { setBusy(false); }

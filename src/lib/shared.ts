@@ -25,12 +25,17 @@ export interface Member {
   flight_depart_at: string | null;
 }
 
-export interface DateData { start: string }
+/** A date option. `nights` lets one option be a long weekend and another a full week; without it the trip's default applies. */
+export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
 export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number }
-export interface RoundData { course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string }
+export interface RoundData {
+  course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
+  /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
+  groups?: string[][];
+}
 
 export interface Option<T = unknown> {
   id: string;
@@ -52,6 +57,8 @@ export interface TripState {
   preview?: { organizer: string; count: number };
   /** Read-only key for this person's calendar feed. */
   calKey?: string;
+  /** Live flight search is on (a live Duffel token). In test mode the app only offers Google Flights and manual entry. */
+  flightSearch?: boolean;
 }
 
 export interface FlightLeg { depart: string; arrive: string; from: string; to: string; stops: number; carrier: string }
@@ -139,6 +146,13 @@ export function pickOf<T>(state: TripState, kind: Kind): { option: Option<T> | n
   return l ? { option: l, locked: true } : { option: leaderOf<T>(state, kind), locked: false };
 }
 
+/** Nights for one date option. */
+export const nightsOf = (trip: Trip, d?: DateData | null) => (d?.nights && d.nights > 0 ? d.nights : trip.nights);
+/** Nights for the trip as planned: the locked (or leading) dates, else the trip default. */
+export function tripNights(state: TripState): number {
+  return nightsOf(state.trip, pickOf<DateData>(state, 'date').option?.data);
+}
+
 /* ---------- costs ---------- */
 const BED_WEIGHT: Record<Bed, number> = { own: 1, share: 0.75 };
 
@@ -163,6 +177,28 @@ export function costOf(state: TripState, m: Member) {
   return { flight, stay, golf, food, total: flight + stay + golf + food };
 }
 export const teeTimesNeeded = (n: number) => Math.max(1, Math.ceil(n / 4));
+
+/* ---------- pairings ---------- */
+/** Group i's tee time: the round's time plus 10 minutes per group. */
+export function teeAfter(time: string, i: number): string {
+  if (!/\d{1,2}:\d{2}/.test(time)) return `Group ${i + 1}`;
+  const t = teeMinutes(time) + i * 10;
+  const h24 = Math.floor(t / 60) % 24, m = t % 60;
+  return formatTee(h24 % 12 || 12, m, h24 >= 12 ? 'PM' : 'AM');
+}
+/** Saved pairings as "Al, Bo, Cy, Di" per group, skipping people who left. */
+export function groupNames(state: TripState, groups?: string[][]): string[] {
+  return (groups || []).map((g) => g.map((id) => state.members.find((m) => m.id === id)?.name.split(/\s+/)[0]).filter(Boolean).join(', ')).filter(Boolean);
+}
+/** Split people into foursomes as evenly as possible (9 → 3,3,3 rather than 4,4,1), shuffled. */
+export function autoGroups(ids: string[]): string[][] {
+  const a = ids.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  const n = Math.max(1, Math.ceil(a.length / 4));
+  const out: string[][] = Array.from({ length: n }, () => []);
+  a.forEach((id, i) => out[i % n].push(id));
+  return out;
+}
 
 /* ---------- weather and courses (from /api/weather and /api/courses) ---------- */
 export interface WeatherDay { date: string; hi: number | null; lo: number | null; rain: number | null; wind: number | null }
@@ -219,5 +255,5 @@ export interface PriceRange { low: number; high: number; median: number; count: 
 export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string }
 
 /* ---------- accounts ---------- */
-export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed }
+export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed; email_updates?: boolean }
 export interface MyTrip { code: string; name: string; nights: number; start: string | null; destination: string | null; members: number; organizer: boolean }

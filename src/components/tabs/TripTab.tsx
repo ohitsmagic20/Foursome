@@ -1,8 +1,9 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { bedsNeeded, clockLabel, openVotes, costOf, dayLabel, money, parseDay, pickOf, plannedRounds, rangeLabel, teeMinutes, teeTimesNeeded } from '@/lib/shared';
-import { clearToken, firstName, initials } from '@/lib/client';
+import { bedsNeeded, clockLabel, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { api, clearToken, firstName, initials } from '@/lib/client';
+import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
 import { NotifyCard } from '../notify';
@@ -27,7 +28,7 @@ export function TripTab() {
 
   const status = (done: boolean, open: string) => done ? <Chip kind="good">Done</Chip> : <Chip kind="warn">{open}</Chip>;
   const steps = [
-    { tab: 'vote' as const, title: 'Dates', meta: date.option ? `${rangeLabel(date.option.data.start, state.trip.nights)} ${date.locked ? 'locked' : 'leading'}` : 'Nobody has suggested dates yet', chip: status(date.locked, date.option ? 'Voting' : 'To do') },
+    { tab: 'vote' as const, title: 'Dates', meta: date.option ? `${rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data))} ${date.locked ? 'locked' : 'leading'}` : 'Nobody has suggested dates yet', chip: status(date.locked, date.option ? 'Voting' : 'To do') },
     { tab: 'vote' as const, title: 'Destination', meta: dest.option ? `${dest.option.data.name} ${dest.locked ? 'locked' : 'leading'}` : 'Nobody has suggested a place yet', chip: status(dest.locked, dest.option ? 'Voting' : 'To do') },
     { tab: 'stay' as const, title: 'Where we’re staying', meta: stay.option ? `${stay.option.data.name} ${stay.locked ? 'locked' : 'leading'}` : 'Suggest a house or hotel', chip: status(stay.locked, stay.option ? 'Voting' : 'To do') },
     { tab: 'golf' as const, title: 'Tee times', meta: rounds.length ? `${booked} of ${rounds.length} rounds booked · ${teeTimesNeeded(n)} tee times each` : 'No rounds in the plan yet', chip: status(rounds.length > 0 && booked === rounds.length, rounds.length ? `${rounds.length - booked} to book` : 'To do') },
@@ -39,7 +40,7 @@ export function TripTab() {
   return (
     <>
       <div className="summary">
-        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, state.trip.nights) : 'Still voting'}</span></div>
+        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : 'Still voting'}</span></div>
         <div className="stat"><span className="k">Crew</span><span className="v">{n}</span><span className="n">{teeTimesNeeded(n)} foursome{teeTimesNeeded(n) > 1 ? 's' : ''}</span></div>
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
@@ -48,7 +49,7 @@ export function TripTab() {
       <YourTurn />
       <NotifyCard />
 
-      {n < 2 && me?.is_organizer && <Callout>Invite your group first. Everything else is decided by their votes. <InviteButton ctx={ctx} className="link-btn" label="Share the invite link" /></Callout>}
+      <GetStarted />
 
       <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
@@ -93,7 +94,7 @@ function TripPlan() {
 
   const shareText = [
     `⛳ ${state.trip.name}`,
-    `${rangeLabel(start, state.trip.nights)} · ${dest.option.data.name}`,
+    `${rangeLabel(start, tripNights(state))} · ${dest.option.data.name}`,
     stay.option ? `Staying: ${stay.option.data.name}${stay.locked ? '' : ' (leading)'}` : '',
     ...rounds.map((r) => `${dayLabel(start, r.data.day)} ${r.data.time}: ${r.data.course}${r.data.booked ? '' : ' (not booked yet)'}`),
   ].filter(Boolean).join('\n');
@@ -103,16 +104,16 @@ function TripPlan() {
       <div className="plan-head">
         <div className="eyebrow">The plan</div>
         <div className="plan-title">{dest.option.data.name}</div>
-        <div className="row-meta">{rangeLabel(start, state.trip.nights)} · {state.trip.nights} nights · {state.members.length} {state.members.length === 1 ? 'golfer' : 'golfers'}</div>
+        <div className="row-meta">{rangeLabel(start, tripNights(state))} · {tripNights(state)} nights · {state.members.length} {state.members.length === 1 ? 'golfer' : 'golfers'}</div>
       </div>
       <div className="plan-rows">
         <div className="plan-row"><span className="k">Stay</span><span>{stay.option ? <>{stay.option.data.url ? <a href={stay.option.data.url} target="_blank" rel="noopener noreferrer">{stay.option.data.name}</a> : stay.option.data.name}{!stay.locked && <span className="row-meta"> · still voting</span>}</> : <span className="row-meta">Not picked yet</span>}</span></div>
-        {Array.from({ length: state.trip.nights + 1 }, (_, i) => i + 1).map((d) => {
+        {Array.from({ length: tripNights(state) + 1 }, (_, i) => i + 1).map((d) => {
           const rs = rounds.filter((r) => r.data.day === d);
           return (
             <div className="plan-row" key={d}>
               <span className="k">{dayLabel(start, d)}</span>
-              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="row-meta"> · not booked</span>}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === state.trip.nights + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
+              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="row-meta"> · not booked</span>}{groupNames(state, r.data.groups).map((g, i) => <span key={i} className="row-meta" style={{ display: 'block' }}>{teeAfter(r.data.time, i)}: {g}</span>)}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === tripNights(state) + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
             </div>
           );
         })}
@@ -122,6 +123,7 @@ function TripPlan() {
       <div className="btn-row">
         {cal && <a className="btn small" href={cal}>Add to Calendar</a>}
         <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>
+        {me?.is_organizer && <EmailPlan />}
       </div>
     </section>
   );
@@ -272,7 +274,7 @@ function GroupUpdate({ ctx }: { ctx: TripCtx }) {
       const waiting = state.members.filter((m) => !state.votes.some((v) => v.member_id === m.id)).map((m) => firstName(m.name));
       const lines = [
         `⛳ ${state.trip.name}`,
-        date.option ? `Dates: ${rangeLabel(date.option.data.start, state.trip.nights)}${date.locked ? ' (locked)' : ' (leading)'}` : 'Dates: suggest some',
+        date.option ? `Dates: ${rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data))}${date.locked ? ' (locked)' : ' (leading)'}` : 'Dates: suggest some',
         dest.option ? `Where: ${dest.option.data.name}${dest.locked ? ' (locked)' : ' (leading)'}` : 'Where: suggest a place',
         stay.option ? `Stay: ${stay.option.data.name}${stay.locked ? ' (locked)' : ' (leading)'}` : '',
         waiting.length ? `Still need votes from: ${waiting.join(', ')}` : '',
@@ -309,5 +311,67 @@ function RemoveMember({ ctx }: { ctx: TripCtx }) {
         ))}
       </div>
     </details>
+  );
+}
+
+/** Organizer: email everyone with an account the plan, with their own cost. */
+function EmailPlan() {
+  const { state, toast } = useTrip();
+  const [busy, setBusy] = useState(false);
+  const code = state.trip.code;
+  return (
+    <button className="btn small" disabled={busy} onClick={async () => {
+      setBusy(true);
+      try {
+        const r = await api<{ sent: number; of: number }>(`/api/trips/${code}/actions`, { code, body: { type: 'email_plan' } });
+        toast(r.sent ? `Emailed the plan to ${r.sent} of ${r.of}. Guests without an account need the share link.` : 'Nobody on the trip has an account with trip emails on yet. Use Share the plan instead.');
+      } catch (e) { toast(e instanceof Error ? e.message : 'Couldn’t email the plan.'); }
+      setBusy(false);
+    }}>{busy ? <span className="spinner" /> : 'Email the plan'}</button>
+  );
+}
+
+/** First-time guide on a new trip: what to do, in order, with ticks as things get done. Hides once
+ *  dates and destination are locked, or when dismissed on this phone. */
+function GetStarted() {
+  const ctx = useTrip();
+  const { state, me, go } = ctx;
+  const key = `foursome:intro:${state.trip.code}`;
+  const [hidden, setHidden] = useState(true);
+  useEffect(() => { try { setHidden(localStorage.getItem(key) === '1'); } catch { setHidden(false); } }, [key]);
+  const date = pickOf<DateData>(state, 'date');
+  const dest = pickOf<DestinationData>(state, 'destination');
+  if (hidden || !me || (date.locked && dest.locked)) return null;
+  const has = (k: string) => state.options.some((o) => o.kind === k);
+  const voted = (k: string) => state.options.some((o) => o.kind === k && state.votes.some((v) => v.option_id === o.id && v.member_id !== o.created_by));
+  const org = me.is_organizer;
+  const steps: { done: boolean; title: string; meta: string; action?: React.ReactNode }[] = [
+    { done: state.members.length > 1, title: 'Invite the group', meta: 'One link. Friends join with their name and home city, no app or password.',
+      action: org ? <InviteButton ctx={ctx} className="btn small" label="Share invite link" /> : undefined },
+    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Go to Trip tab</button> },
+    { done: has('date'), title: 'Suggest when', meta: 'Add a few date options. Each can be a different length: a long weekend next to a full week.' },
+    { done: voted('date') || voted('destination'), title: 'Everyone votes', meta: 'Tap in, maybe or out on each option. You can see who hasn’t answered.' },
+    { done: date.locked || dest.locked, title: org ? 'Lock the winners' : 'The organizer locks the winners', meta: 'Then pick a place to stay, add rounds of golf, and line up flights.' },
+  ];
+  const next = steps.findIndex((s) => !s.done);
+  return (
+    <section className="card get-started">
+      <div className="section-head">
+        <h2>Get started</h2>
+        <button className="link-btn" onClick={() => { try { localStorage.setItem(key, '1'); } catch { /* ignore */ } setHidden(true); }}>Hide</button>
+      </div>
+      <ol className="gs-steps">
+        {steps.map((s, i) => (
+          <li key={s.title} className={s.done ? 'done' : i === next ? 'next' : ''}>
+            <span className="gs-mark" aria-hidden>{s.done ? '✓' : i + 1}</span>
+            <div className="grow">
+              <div className="row-title">{s.title}{s.done && <span className="sr-only"> (done)</span>}</div>
+              {!s.done && <div className="row-meta">{s.meta}</div>}
+              {!s.done && i === next && s.action && <div style={{ marginTop: 8 }}>{s.action}</div>}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

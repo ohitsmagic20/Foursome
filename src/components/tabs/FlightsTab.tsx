@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, clockLabel, destAirports, isoDay, money, parseDay, pickOf, rangeLabel } from '@/lib/shared';
+import { addDays, clockLabel, destAirports, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
 import { api, firstName } from '@/lib/client';
 import { Callout, Chip, useTrip } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
@@ -30,7 +30,7 @@ export function FlightsTab() {
   const to = airports.includes(toPick) ? toPick : airports[0] || '';
   const ready = date.option && to && me.airport;
   const outDate = date.option?.data.start;
-  const backDate = outDate ? isoDay(addDays(parseDay(outDate), state.trip.nights)) : '';
+  const backDate = outDate ? isoDay(addDays(parseDay(outDate), tripNights(state))) : '';
   const gflights = ready ? `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${me.airport} to ${to} on ${outDate} through ${backDate}`)}` : '';
 
   async function search() {
@@ -77,7 +77,7 @@ export function FlightsTab() {
             </div>
           </div>
         ) : (
-          <p className="sub">Search from your home airport, or enter a flight you already booked so the group can see when you land.</p>
+          <p className="sub">Look up flights from your home airport, then enter the one you pick so the group can see when you land.</p>
         )}
       </section>
 
@@ -89,19 +89,22 @@ export function FlightsTab() {
         {ready && (!date.locked || !dest.locked) && <Callout>The group hasn’t locked {!date.locked && !dest.locked ? 'the dates or destination' : !date.locked ? 'the dates' : 'the destination'} yet, so this searches the current leader. Prices are a preview.</Callout>}
         {ready && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="row-title">{rangeLabel(outDate!, state.trip.nights)} · round trip, 1 adult, economy</div>
+            <div className="row-title">{rangeLabel(outDate!, tripNights(state))} · round trip, 1 adult, economy</div>
             {airports.length > 1 && (
               <div className="seg" role="group" aria-label="Fly into">
                 {airports.map((a) => <button key={a} type="button" aria-pressed={a === to} onClick={() => { setToPick(a); setResult(null); }}>{a}</button>)}
               </div>
             )}
-            <button className="btn primary block" onClick={search} disabled={busy}>{busy ? <><span className="spinner" /> Searching airlines…</> : 'Search flights'}</button>
+            {state.flightSearch
+              ? <button className="btn primary block" onClick={search} disabled={busy}>{busy ? <><span className="spinner" /> Searching airlines…</> : 'Search flights'}</button>
+              : <a className="btn primary block" href={gflights} target="_blank" rel="noopener noreferrer">Find flights on Google Flights</a>}
             <div className="btn-row">
-              <a className="btn small" href={gflights} target="_blank" rel="noopener noreferrer">Compare on Google Flights</a>
+              {state.flightSearch && <a className="btn small" href={gflights} target="_blank" rel="noopener noreferrer">Compare on Google Flights</a>}
               <button className="btn small ghost" onClick={() => manualFlightSheet(ctx)}>Enter a flight myself</button>
               <button className="btn small ghost" onClick={async () => { if (await act('set_flight', { price: 0, summary: 'Driving' })) toast('Saved: you’re driving'); }}>I’m driving</button>
             </div>
             {busy && <p className="hint">This can take up to 20 seconds while airlines respond.</p>}
+            {!state.flightSearch && <p className="hint">Found one you like? Tap “Enter a flight myself” with the price and landing time so the group can see when you arrive.</p>}
           </div>
         )}
         {err && <Callout kind="bad">{err}</Callout>}

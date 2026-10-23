@@ -1,6 +1,6 @@
 import { calendarKey, db, handle, HttpError, loadState, str, tripByCode } from '@/lib/server';
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { addDays, isoDay, parseDay, pickOf, plannedRounds, teeMinutes } from '@/lib/shared';
+import { addDays, isoDay, nightsOf, parseDay, pickOf, plannedRounds, teeMinutes } from '@/lib/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +33,7 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
 
     add(`trip-${trip.code}`, [
       `DTSTART;VALUE=DATE:${day(start)}`,
-      `DTEND;VALUE=DATE:${day(isoDay(addDays(parseDay(start), trip.nights + 1)))}`,
+      `DTEND;VALUE=DATE:${day(isoDay(addDays(parseDay(start), nightsOf(trip, date.data) + 1)))}`,
       `SUMMARY:${esc(`⛳ ${trip.name}${where ? ` · ${where}` : ''}`)}`,
       ...(stay ? [`DESCRIPTION:${esc(`Staying at ${stay.data.name}${stay.data.url ? `\n${stay.data.url}` : ''}`)}`] : []),
       ...(where ? [`LOCATION:${esc(where)}`] : []),

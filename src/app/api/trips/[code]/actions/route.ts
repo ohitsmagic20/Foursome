@@ -1,8 +1,10 @@
 import { after } from 'next/server';
 import type { Kind, Member, Trip } from '@/lib/shared';
-import { openVotes, rangeLabel } from '@/lib/shared';
-import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, str, tripByCode } from '@/lib/server';
+import type { DateData } from '@/lib/shared';
+import { nightsOf, openVotes, rangeLabel } from '@/lib/shared';
+import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
+import { APP_URL, emailableCount, emailMembers, planEmail, type EmailBody } from '@/lib/email';
 
 const KINDS: Kind[] = ['date', 'destination', 'lodging', 'round'];
 const SINGLE_WINNER: Kind[] = ['date', 'destination', 'lodging'];
@@ -11,7 +13,7 @@ const NUDGE_HOURS = 4;
 
 /** How an option reads in a notification: "Mar 25–28", "Myrtle Beach, SC", "True Blue Golf Club at 8:30 AM". */
 function label(kind: Kind, d: Record<string, unknown>, trip: Trip): string {
-  if (kind === 'date') return rangeLabel(String(d.start), trip.nights);
+  if (kind === 'date') return rangeLabel(String(d.start), nightsOf(trip, d as unknown as DateData));
   if (kind === 'round') return `${d.course} at ${d.time}`;
   return String(d.name || '');
 }
@@ -29,7 +31,8 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
     case 'date': {
       const start = str(d.start, 10);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) throw new HttpError(400, 'Pick an arrival date.');
-      return { start };
+      const nights = int(d.nights, 0, 14, 0);
+      return nights ? { start, nights } : { start };
     }
     case 'destination': {
       const name = str(d.name, 80);
@@ -56,7 +59,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
       if (!course) throw new HttpError(400, 'Enter the course name.');
       return {
         course,
-        day: int(d.day, 1, trip.nights + 1, 1),
+        day: int(d.day, 1, 15, 1),
         time: str(d.time, 12) || 'TBD',
         fee: int(d.fee, 0, 5000, 0),
         booked: d.booked === true,
@@ -66,9 +69,16 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         checkedAt: /^\d{4}-\d{2}-\d{2}T/.test(str(d.checkedAt, 30)) ? str(d.checkedAt, 30) : '',
         weekday: int(d.weekday, -1, 6, -1),
         url: url(d.url),
+        ...(Array.isArray(d.groups) ? { groups: cleanGroups(d.groups) } : {}),
       };
     }
   }
+}
+
+/** Pairings: up to 12 groups of up to 6 member ids; nobody in two groups. */
+function cleanGroups(raw: unknown[]): string[][] {
+  const seen = new Set<string>();
+  return raw.slice(0, 12).map((g) => (Array.isArray(g) ? g : []).map((id) => str(id, 40)).filter((id) => id && !seen.has(id) && seen.add(id)).slice(0, 6)).filter((g) => g.length);
 }
 
 async function optionFor(tripId: string, id: unknown) {
@@ -89,6 +99,9 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
     const b = await body(req);
     // Notifications to send after the response goes out: [who, message, quiet minutes].
     const pings: [string[] | 'others', PushMessage, number][] = [];
+    // Emails to send after the response (people with an account and trip emails on).
+    const emails: [string[] | 'others', EmailBody][] = [];
+    const link = (tab: string) => `${APP_URL}/t/${trip.code}#${tab}`;
     const url = (tab: string) => `/t/${trip.code}#${tab}`;
 
     switch (b.type) {
@@ -120,7 +133,10 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       case 'update_option': {
         const opt = await optionFor(trip.id, b.optionId);
         if (opt.created_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who added this or the organizer can edit it.');
-        const r = await db().from('options').update({ data: cleanData(opt.kind, b.data, trip) }).eq('id', opt.id);
+        const data = cleanData(opt.kind, b.data, trip);
+        // Editing a round's course or time keeps its pairings.
+        if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
+        const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;
       }
@@ -146,6 +162,10 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           const what = label(opt.kind, opt.data, trip);
           const text = opt.kind === 'round' ? `${what} is in the plan.` : opt.kind === 'lodging' ? `You’re staying at ${what}.` : `${what} is locked in.`;
           pings.push(['others', { title: trip.name, body: text, url: url(TAB[opt.kind]), tag: `lock-${opt.kind}` }, 0]);
+          if (SINGLE_WINNER.includes(opt.kind)) {
+            const next = opt.kind === 'date' || opt.kind === 'destination' ? 'Time to look at flights.' : 'Check the cost per person on the Clubhouse tab.';
+            emails.push(['others', { subject: `${trip.name}: ${text}`, heading: text, lines: [`${first(me.name)} locked it in for ${trip.name}.`, next], button: { label: 'Open the trip', url: link(TAB[opt.kind]) } }]);
+          }
         }
         break;
       }
@@ -163,7 +183,9 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           const n = open.date + open.destination + open.lodging + open.round;
           if (n > 0) {
             waiting.push(m.id);
-            pings.push([[m.id], { title: trip.name, body: `${first(me.name)} is waiting on you: ${n} thing${n > 1 ? 's' : ''} to vote on.`, url: url('trip'), tag: 'nudge' }, 0]);
+            const body = `${first(me.name)} is waiting on you: ${n} thing${n > 1 ? 's' : ''} to vote on.`;
+            pings.push([[m.id], { title: trip.name, body, url: url('trip'), tag: 'nudge' }, 0]);
+            emails.push([[m.id], { subject: `${trip.name}: your vote is needed`, heading: body, lines: [`Open ${trip.name} and tap in, maybe or out on each option. It takes a minute.`], button: { label: 'Vote now', url: link('trip') } }]);
           }
         }
         if (!waiting.length) throw new HttpError(400, 'Everyone has voted on everything. Nothing to nudge.');
@@ -171,10 +193,21 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (pings.length) {
           const subs = await db().from('push_subs').select('member_id').eq('trip_id', trip.id).in('member_id', waiting);
           const reachable = new Set((subs.data || []).map((x) => x.member_id)).size;
-          after(async () => { for (const [who, msg, quiet] of pings) await notify(trip.id, who as string[], msg, quiet); });
-          return Response.json({ ok: true, waiting: waiting.length, reachable });
+          const emailed = await emailableCount(waiting);
+          after(async () => {
+            for (const [who, msg, quiet] of pings) await notify(trip.id, who as string[], msg, quiet);
+            for (const [who, e] of emails) await emailMembers(who as string[], e);
+          });
+          return Response.json({ ok: true, waiting: waiting.length, reachable, emailed });
         }
         break;
+      }
+      case 'email_plan': {
+        mustOrganize(me);
+        await rateLimit(`plan:${trip.id}`, 3, 24 * 60, 'The plan was emailed a few times today already. Try again tomorrow.');
+        const state = await loadState(trip, null);
+        const sent = await emailMembers(state.members.map((m) => m.id), (id) => planEmail(state, id));
+        return Response.json({ ok: true, sent, of: state.members.length });
       }
       case 'update_me': {
         const r = await db().from('members').update({
@@ -248,11 +281,12 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       default:
         throw new HttpError(400, 'Unknown action.');
     }
-    if (pings.length) {
+    if (pings.length || emails.length) {
       after(async () => {
         const { data: everyone } = await db().from('members').select('id').eq('trip_id', trip.id);
         const others = (everyone || []).map((m) => m.id).filter((id) => id !== me.id);
         for (const [who, msg, quiet] of pings) await notify(trip.id, who === 'others' ? others : who, msg, quiet);
+        for (const [who, e] of emails) await emailMembers(who === 'others' ? others : who, e);
       });
     }
     return Response.json({ ok: true });

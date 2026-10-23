@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
 import type { CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
-import { addDays, dayLabel, destAirports, isWeekendDay, parseDay, pickOf } from '@/lib/shared';
+import { addDays, autoGroups, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
-import { ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
+import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
 async function save(ctx: TripCtx, type: string, payload: Record<string, unknown>, msg: string) {
   if (await ctx.act(type, payload)) {
@@ -24,7 +24,7 @@ export function tripSheet(ctx: TripCtx) {
         <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'update_trip', { name: fd.name, nights: num(fd.nights), food: num(fd.food) }, 'Trip updated')}>
           <Field name="name" label="Trip name" defaultValue={t.name} required />
           <div className="grid2">
-            <Field name="nights" label="Nights" type="number" defaultValue={t.nights} min={1} max={10} step={1} />
+            <Field name="nights" label="Default nights" type="number" defaultValue={t.nights} min={1} max={10} step={1} />
             <Field name="food" label="Food & extras each ($)" type="number" defaultValue={t.food} />
           </div>
         </SheetForm>
@@ -60,9 +60,12 @@ export function dateSheet(ctx: TripCtx) {
   ctx.sheet({
     title: 'Suggest dates',
     body: (
-      <SheetForm submit="Add to the vote" onSubmit={(fd) => save(ctx, 'add_option', { kind: 'date', data: { start: fd.start } }, 'Dates added to the vote')}>
-        <Field name="start" label="Arrival date" type="date" defaultValue={iso} required />
-        <p className="hint">The trip runs {ctx.state.trip.nights} nights from this date. Your vote counts as “in”.</p>
+      <SheetForm submit="Add to the vote" onSubmit={(fd) => save(ctx, 'add_option', { kind: 'date', data: { start: fd.start, nights: num(fd.nights) } }, 'Dates added to the vote')}>
+        <div className="grid2">
+          <Field name="start" label="Arrival date" type="date" defaultValue={iso} required />
+          <Select name="nights" label="Nights" defaultValue={String(ctx.state.trip.nights)} options={Array.from({ length: 14 }, (_, i) => [String(i + 1), `${i + 1} night${i ? 's' : ''}`] as [string, string])} />
+        </div>
+        <p className="hint">Suggest a long weekend and a full week side by side and let the group pick. Your vote counts as “in”.</p>
       </SheetForm>
     ),
   });
@@ -195,7 +198,7 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
         <label htmlFor="f-name">Name</label>
         <input id="f-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="6-bedroom beach house" />
       </div>
-      <Field name="total" label={`Total for ${ctx.state.trip.nights} nights, with fees ($)`} type="number" defaultValue={opt?.data.total || ''} required />
+      <Field name="total" label={`Total for ${tripNights(ctx.state)} nights, with fees ($)`} type="number" defaultValue={opt?.data.total || ''} required />
       <div className="grid2">
         <Field name="bedrooms" label="Bedrooms" type="number" defaultValue={opt?.data.bedrooms || ''} />
         <Field name="beds" label="Beds" type="number" defaultValue={opt?.data.beds || ''} />
@@ -210,7 +213,7 @@ export function lodgingSheet(ctx: TripCtx, opt?: Option<LodgingData>) {
 
 function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx: TripCtx; opt?: Option<RoundData>; day: number; prefillCourse?: string; prefillUrl?: string }) {
   const { state } = ctx;
-  const days = state.trip.nights + 1;
+  const days = tripNights(state) + 1;
   const d = opt?.data;
   const date = pickOf<DateData>(state, 'date').option;
   const dest = pickOf<DestinationData>(state, 'destination').option;
@@ -347,4 +350,64 @@ function OrganizerTools({ ctx }: { ctx: TripCtx }) {
       </div>
     </div>
   );
+}
+
+function PairingsForm({ ctx, r }: { ctx: TripCtx; r: Option<RoundData> }) {
+  const members = ctx.state.members;
+  const start = (): Record<string, number> => {
+    const saved = r.data.groups || [];
+    const out: Record<string, number> = {};
+    const fresh = autoGroups(members.map((m) => m.id));
+    for (const m of members) {
+      const i = saved.findIndex((g) => g.includes(m.id));
+      out[m.id] = i >= 0 ? i : fresh.findIndex((g) => g.includes(m.id));
+    }
+    return out;
+  };
+  const [pick, setPick] = useState<Record<string, number>>(start);
+  const [count, setCount] = useState(() => Math.max(teeTimesNeeded(members.length), ...Object.values(start()).map((i) => i + 1)));
+  const shuffle = () => {
+    const g = autoGroups(members.map((m) => m.id));
+    setCount(g.length);
+    const out: Record<string, number> = {};
+    g.forEach((ids, i) => ids.forEach((id) => { out[id] = i; }));
+    setPick(out);
+  };
+  const groups = Array.from({ length: count }, (_, i) => members.filter((m) => Math.min(pick[m.id] ?? 0, count - 1) === i).map((m) => m.id));
+  const tooBig = groups.some((g) => g.length > 4);
+  return (
+    <div className="stack">
+      <p className="sub">{r.data.course} · group 1 tees off at {r.data.time}, each next group 10 minutes later.</p>
+      <div className="btn-row">
+        <button type="button" className="btn small" onClick={shuffle}>Shuffle</button>
+        <button type="button" className="btn small ghost" disabled={count <= 1} onClick={() => setCount(count - 1)}>− Group</button>
+        <button type="button" className="btn small ghost" disabled={count >= members.length} onClick={() => setCount(count + 1)}>+ Group</button>
+      </div>
+      {groups.map((g, i) => (
+        <div className="card" key={i} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="row-title">Group {i + 1} · {teeAfter(r.data.time, i)} {g.length > 4 && <Chip kind="warn">{g.length} players</Chip>}</div>
+          {g.length === 0 && <div className="row-meta">Nobody yet</div>}
+          {g.map((id) => {
+            const m = members.find((x) => x.id === id)!;
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="grow">{m.name}</span>
+                <select className="mini-select" value={i} aria-label={`Group for ${m.name}`} onChange={(e) => setPick({ ...pick, [id]: Number(e.target.value) })}>
+                  {Array.from({ length: count }, (_, j) => <option key={j} value={j}>Group {j + 1}</option>)}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      {tooBig && <p className="hint">Most courses allow at most 4 players per tee time.</p>}
+      <div className="btn-row">
+        <button className="btn primary" onClick={() => save(ctx, 'update_option', { optionId: r.id, data: { ...r.data, groups: groups.filter((g) => g.length) } }, 'Pairings saved')}>Save pairings</button>
+        {r.data.groups?.length ? <button className="btn ghost" onClick={() => save(ctx, 'update_option', { optionId: r.id, data: { ...r.data, groups: [] } }, 'Pairings cleared')}>Clear</button> : null}
+      </div>
+    </div>
+  );
+}
+export function pairingsSheet(ctx: TripCtx, r: Option<RoundData>) {
+  ctx.sheet({ title: 'Pairings', body: <PairingsForm ctx={ctx} r={r} /> });
 }

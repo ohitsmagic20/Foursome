@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { ProfileForm, SignIn, signOut, useMe } from '@/components/account';
+import { api, clearSession } from '@/lib/client';
 import { initials } from '@/lib/client';
+import type { Profile } from '@/lib/shared';
 
 export default function ProfilePage() {
   const { me, setMe } = useMe();
@@ -31,6 +33,7 @@ export default function ProfilePage() {
             <div className="card">
               <ProfileForm profile={me.profile} onSaved={(r) => { setMe({ ...me, ...r }); setSaved(true); window.scrollTo({ top: 0 }); }} />
             </div>
+            <EmailSwitch on={me.profile.email_updates !== false} onChange={(profile) => setMe({ ...me, profile })} />
             <section className="section">
               <h2>Linked accounts</h2>
               <div className="list">
@@ -47,9 +50,59 @@ export default function ProfilePage() {
               </div>
             </section>
             <button className="btn ghost danger block" onClick={async () => { await signOut(); location.href = '/'; }}>Sign out</button>
+            <DeleteAccount />
+            <p className="hint" style={{ textAlign: 'center' }}><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
           </>
         )}
       </main>
     </div>
+  );
+}
+
+function DeleteAccount() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  if (!open) return <button className="btn small ghost" style={{ alignSelf: 'center', color: 'var(--muted)' }} onClick={() => setOpen(true)}>Delete my account</button>;
+  return (
+    <section className="card form">
+      <h2>Delete your account</h2>
+      <p className="sub">This removes your profile, your spot and votes on every trip, and your sign-in. Trips you organize pass to the next person on the trip; trips with only you are deleted. This can’t be undone.</p>
+      <div className="field">
+        <label htmlFor="del-confirm">Type DELETE to confirm</label>
+        <input id="del-confirm" value={text} onChange={(e) => setText(e.target.value)} autoCapitalize="characters" autoComplete="off" />
+      </div>
+      {err && <p className="error" role="alert">{err}</p>}
+      <div className="btn-row">
+        <button className="btn danger" disabled={busy || text.trim().toUpperCase() !== 'DELETE'} onClick={async () => {
+          setBusy(true); setErr('');
+          try {
+            await api('/api/me/delete', { body: { confirm: text } });
+            clearSession();
+            try { Object.keys(localStorage).filter((k) => k.startsWith('foursome:')).forEach((k) => localStorage.removeItem(k)); } catch { /* ignore */ }
+            location.href = '/';
+          } catch (e) { setErr(e instanceof Error ? e.message : 'Couldn’t delete the account.'); setBusy(false); }
+        }}>Delete my account</button>
+        <button className="btn ghost" onClick={() => { setOpen(false); setText(''); }}>Cancel</button>
+      </div>
+    </section>
+  );
+}
+
+function EmailSwitch({ on, onChange }: { on: boolean; onChange: (p: Profile) => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="grow">
+        <div className="row-title">Trip emails</div>
+        <div className="row-meta">Reminders when the group is waiting on your vote, when dates or the destination get locked, and the final plan.</div>
+      </div>
+      <button className="switch" role="switch" aria-checked={on} aria-label="Trip emails" disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { const r = await api<{ profile: Profile }>('/api/me', { body: { email_updates: !on } }); onChange(r.profile); } catch { /* keep as is */ }
+        setBusy(false);
+      }} />
+    </section>
   );
 }

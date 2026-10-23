@@ -1,10 +1,11 @@
 import { profileComplete, profileFromRequest } from '@/lib/auth';
-import { airport, bed, body, db, handle, HttpError, int, newCode, newToken, str } from '@/lib/server';
+import { airport, bed, body, db, handle, HttpError, int, ipKey, newCode, newToken, rateLimit, str } from '@/lib/server';
 
 // Create a trip. The creator becomes the organizer: from their profile if signed in, otherwise as a guest.
 export function POST(req: Request) {
   return handle(async () => {
     const me = await profileFromRequest(req);
+    await rateLimit(`trip-create:${me ? me.id : ipKey(req)}`, 10, 60, 'You’ve started a lot of trips in the last hour. Try again later.');
     const b = await body(req);
     const tripName = str(b.tripName, 80);
     if (!tripName) throw new HttpError(400, 'Give the trip a name.');

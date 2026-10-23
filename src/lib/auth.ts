@@ -6,7 +6,7 @@ import type { Profile } from './shared';
 // Accounts. Supabase Auth only sends and checks the 6-digit email code; after that the app
 // keeps its own long-lived session token on the phone (same model as trip tokens).
 
-export const PROFILE_COLS = 'id,email,name,phone,home_city,airport,budget,bed';
+export const PROFILE_COLS = 'id,email,name,phone,home_city,airport,budget,bed,email_updates';
 
 /** A throwaway Auth client per request, so a signed-in user's session never leaks into the shared server client. */
 function authClient() {
@@ -98,13 +98,36 @@ export async function profileFromRequest(req: Request, required?: false): Promis
 export async function profileFromRequest(req: Request, required = false): Promise<Profile | null> {
   const token = req.headers.get('x-session') || '';
   if (token) {
-    const { data, error } = await db().from('sessions').select(`profile_id, profiles(${PROFILE_COLS})`).eq('token', token).maybeSingle();
+    const { data, error } = await db().from('sessions').select(`profile_id, last_seen, profiles(${PROFILE_COLS})`).eq('token', token).maybeSingle();
     if (error && !/sessions/.test(error.message)) throw error; // table not created yet → treat as signed out
-    const p = (data as unknown as { profiles?: Profile } | null)?.profiles;
-    if (p) return p;
+    const row = data as unknown as { profiles?: Profile; last_seen?: string } | null;
+    if (row?.profiles) {
+      // Note activity at most once a day; sessions unused for 6 months are cleared by the daily job.
+      if (!row.last_seen || Date.now() - Date.parse(row.last_seen) > 864e5) await db().from('sessions').update({ last_seen: new Date().toISOString() }).eq('token', token);
+      return row.profiles;
+    }
   }
   if (required) throw new HttpError(401, 'Sign in first.');
   return null;
 }
 
 export const profileComplete = (p: Profile) => !!p.name.trim() && p.airport.length === 3;
+
+/** Delete a person's account and personal data. Trips they organize pass to the next person on the trip;
+ *  trips where they were the only person are deleted. Their spot and votes on every trip are removed. */
+export async function deleteAccount(profile: Profile) {
+  const { data: spots, error } = await db().from('members').select('id,trip_id,is_organizer').eq('profile_id', profile.id);
+  if (error) throw error;
+  for (const s of spots || []) {
+    if (s.is_organizer) {
+      const { data: next } = await db().from('members').select('id').eq('trip_id', s.trip_id).neq('id', s.id).order('created_at').limit(1).maybeSingle();
+      if (next) await db().from('members').update({ is_organizer: true }).eq('id', next.id);
+      else { await db().from('trips').delete().eq('id', s.trip_id); continue; }
+    }
+    await db().from('members').delete().eq('id', s.id);
+  }
+  await db().from('login_requests').delete().eq('email', profile.email);
+  const del = await db().from('profiles').delete().eq('id', profile.id); // sessions go with it
+  if (del.error) throw del.error;
+  await authClient().auth.admin.deleteUser(profile.id).catch(() => {}); // the sign-in record at Supabase Auth
+}

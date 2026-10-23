@@ -1,21 +1,21 @@
 'use client';
 
 import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
-import { dayLabel, isWeekendDay, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded } from '@/lib/shared';
+import { dayLabel, groupNames, isWeekendDay, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
-import { roundSheet } from '../sheets';
+import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 
 export function GolfTab() {
   const ctx = useTrip();
   const { state } = ctx;
   const n = state.members.length;
-  const days = state.trip.nights + 1;
+  const days = tripNights(state) + 1;
   const date = pickOf<DateData>(state, 'date').option;
   const rounds = optionsOf<RoundData>(state, 'round');
   const plan = plannedRounds(state);
   const destOpt = pickOf<DestinationData>(state, 'destination').option;
-  const wx = useWeather(destOpt?.data.name, date?.data.start, state.trip.nights);
+  const wx = useWeather(destOpt?.data.name, date?.data.start, tripNights(state));
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
 
   return (
@@ -65,6 +65,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         {r.locked ? <Chip kind="good">In the plan</Chip> : t.yes > state.members.length / 2 ? <Chip kind="flag">Most are in</Chip> : null}
         {r.locked && (r.data.booked ? <Chip kind="good">Booked</Chip> : <Chip kind="warn">Not booked</Chip>)}
       </div>
+      {r.locked && <Pairings r={r} />}
       {early && <Callout kind="warn">This is an early round on arrival day. Check the Flights tab to see if everyone lands in time.</Callout>}
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
@@ -76,6 +77,22 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         )}
         {canEdit(me, r) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => roundSheet(ctx, r)}>Edit</button>}
       </div>
+    </div>
+  );
+}
+
+/** Who plays with whom in a planned round. */
+function Pairings({ r }: { r: Option<RoundData> }) {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  if (state.members.length < 2) return null;
+  const names = groupNames(state, r.data.groups);
+  return (
+    <div className="pairings">
+      {names.length
+        ? names.map((g, i) => <div className="row-meta" key={i}><strong>{teeAfter(r.data.time, i)}</strong> · {g}</div>)
+        : <div className="row-meta">No pairings yet{state.members.length > 4 ? `: ${teeTimesNeeded(state.members.length)} groups needed` : ''}.</div>}
+      {me?.is_organizer && <button className="link-btn" onClick={() => pairingsSheet(ctx, r)}>{names.length ? 'Change pairings' : 'Set pairings'}</button>}
     </div>
   );
 }

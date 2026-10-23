@@ -252,3 +252,25 @@ tr.me .mark.none { border-color: var(--green); }
 .notify { display: flex; flex-direction: column; gap: 10px; }
 .notify-row { display: flex; align-items: center; gap: 12px; }
 .update-banner { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 60; border: 0; border-radius: 999px; padding: 10px 16px; background: var(--ink); color: var(--paper); font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.2); max-width: calc(100% - 32px); }
+
+/* legal pages */
+.legal-body { display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.55; max-width: 65ch; }
+.legal-body h2 { margin-top: 12px; }
+.legal-body p, .legal-body ul { margin: 0; }
+.legal-body ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.legal-links { text-align: center; font-size: 12px; color: var(--muted); }
+.legal-links a { color: inherit; }
+
+/* pairings */
+.pairings { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 10px; background: var(--chip, rgba(0,0,0,.04)); }
+.pairings .link-btn { align-self: flex-start; }
+
+/* get started */
+.get-started { display: flex; flex-direction: column; gap: 10px; }
+.gs-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.gs-steps li { display: flex; gap: 12px; align-items: flex-start; }
+.gs-mark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; border: 1.5px solid var(--line); color: var(--muted); }
+.gs-steps li.next .gs-mark { border-color: var(--good); color: var(--good); }
+.gs-steps li.done .gs-mark { background: var(--good); border-color: var(--good); color: #fff; }
+.gs-steps li.done .row-title { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

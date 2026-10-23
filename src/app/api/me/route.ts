@@ -14,16 +14,16 @@ export function GET(req: Request) {
     const list = ((rows || []) as unknown as Row[]).filter((r) => r.trips);
     const ids = list.map((r) => r.trips!.id);
 
-    const picks = new Map<string, { start?: string; destination?: string; members: number }>();
+    const picks = new Map<string, { start?: string; nights?: number; destination?: string; members: number }>();
     if (ids.length) {
       const [opts, mems] = await Promise.all([
         db().from('options').select('trip_id,kind,data').in('trip_id', ids).eq('locked', true).in('kind', ['date', 'destination']),
         db().from('members').select('trip_id').in('trip_id', ids),
       ]);
       for (const id of ids) picks.set(id, { members: (mems.data || []).filter((m) => m.trip_id === id).length });
-      for (const o of (opts.data || []) as { trip_id: string; kind: string; data: { start?: string; name?: string } }[]) {
+      for (const o of (opts.data || []) as { trip_id: string; kind: string; data: { start?: string; nights?: number; name?: string } }[]) {
         const p = picks.get(o.trip_id)!;
-        if (o.kind === 'date') p.start = o.data.start;
+        if (o.kind === 'date') { p.start = o.data.start; p.nights = o.data.nights; }
         if (o.kind === 'destination') p.destination = o.data.name;
       }
     }
@@ -31,7 +31,7 @@ export function GET(req: Request) {
       .sort((a, b) => b.trips!.created_at.localeCompare(a.trips!.created_at))
       .map((r) => {
         const p = picks.get(r.trips!.id);
-        return { code: r.trips!.code, name: r.trips!.name, nights: r.trips!.nights, start: p?.start || null, destination: p?.destination || null, members: p?.members || 1, organizer: r.is_organizer };
+        return { code: r.trips!.code, name: r.trips!.name, nights: p?.nights || r.trips!.nights, start: p?.start || null, destination: p?.destination || null, members: p?.members || 1, organizer: r.is_organizer };
       });
     return Response.json({ profile, complete: profileComplete(profile), trips }, { headers: { 'Cache-Control': 'no-store' } });
   });
@@ -42,6 +42,12 @@ export function POST(req: Request) {
   return handle(async () => {
     const me = await profileFromRequest(req, true);
     const b = await body(req);
+    if (!('name' in b) && typeof b.email_updates === 'boolean') {
+      // Just the trip-emails switch.
+      const { data, error } = await db().from('profiles').update({ email_updates: b.email_updates }).eq('id', me.id).select(PROFILE_COLS).single();
+      if (error) throw error;
+      return Response.json({ profile: data, complete: profileComplete(data) });
+    }
     const next = {
       name: str(b.name, 60) || me.name,
       phone: str(b.phone, 30).replace(/[^\d+()\-\s.]/g, ''),

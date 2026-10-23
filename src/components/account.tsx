@@ -88,6 +88,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
           </div>
           {err && <p className="error" role="alert">{err}</p>}
           <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Email me a code'}</button>
+          <p className="legal-links">By continuing you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.</p>
         </form>
       ) : (
         <form className="form" onSubmit={(e) => { e.preventDefault(); verify(); }}>

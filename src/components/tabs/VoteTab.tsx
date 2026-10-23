@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, VoteValue } from '@/lib/shared';
-import { destAirports, leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor } from '@/lib/shared';
+import { destAirports, leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor, nightsOf, tripNights } from '@/lib/shared';
 import { WeatherCredit, WeatherStrip } from '../live';
 import { firstName } from '@/lib/client';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
@@ -30,10 +30,10 @@ function When() {
         <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Suggest the first set of dates. Everyone else marks if they’re in.</button>
       ) : (
         <>
-          <p className="sub">Tap your row to mark each option: in, maybe, or out. {state.trip.nights} nights each.</p>
+          <p className="sub">Tap your row to mark each option: in, maybe, or out. Each option shows its own length.</p>
           <div className="scroll">
             <table className="sc">
-              <thead><tr><th className="name">Golfer</th>{dates.map((d) => <th key={d.id} className={colClass(d.id)}>{rangeLabel(d.data.start, state.trip.nights)}</th>)}</tr></thead>
+              <thead><tr><th className="name">Golfer</th>{dates.map((d) => <th key={d.id} className={colClass(d.id)}>{rangeLabel(d.data.start, nightsOf(state.trip, d.data))}</th>)}</tr></thead>
               <tbody>
                 {members.map((m) => {
                   const mine = m.id === me?.id;
@@ -46,7 +46,7 @@ function When() {
                         return (
                           <td key={d.id} className={colClass(d.id)}>
                             {mine && !locked
-                              ? <button className="cell" aria-label={`${rangeLabel(d.data.start, state.trip.nights)}: ${v === 'none' ? 'not voted' : v}. Tap to change.`} onClick={() => vote(d.id, NEXT[v])}>{mark}</button>
+                              ? <button className="cell" aria-label={`${rangeLabel(d.data.start, nightsOf(state.trip, d.data))}: ${v === 'none' ? 'not voted' : v}. Tap to change.`} onClick={() => vote(d.id, NEXT[v])}>{mark}</button>
                               : <div className="cell" aria-label={`${m.name}: ${v}`}>{mark}</div>}
                           </td>
                         );
@@ -64,7 +64,7 @@ function When() {
               return (
                 <div className="row" key={d.id}>
                   <div className="grow">
-                    <div className="row-title">{rangeLabel(d.data.start, state.trip.nights)} {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && t.yes > 0 ? <Chip kind="flag">Leading</Chip> : null}</div>
+                    <div className="row-title">{rangeLabel(d.data.start, nightsOf(state.trip, d.data))} {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && t.yes > 0 ? <Chip kind="flag">Leading</Chip> : null}</div>
                     <div className="row-meta">{t.yes} in{t.maybe ? ` · ${t.maybe} maybe` : ''}{t.no ? ` · ${t.no} out` : ''}{t.waiting ? ` · ${t.waiting} waiting` : ''}</div>
                   </div>
                   <LockButton option={d} />
@@ -102,7 +102,7 @@ function Where() {
             </div>
             {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && tally(state, d.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
           </div>
-          {wxDate && <WeatherStrip place={d.data.name} start={wxDate} nights={state.trip.nights} />}
+          {wxDate && <WeatherStrip place={d.data.name} start={wxDate} nights={tripNights(state)} />}
           {!locked && <VoteControl option={d} />}
           <Tally option={d} />
           {(me?.is_organizer || canEdit(me, d)) && (

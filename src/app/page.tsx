@@ -94,6 +94,7 @@ export default function Home() {
         </section>
         <HowItWorks />
         <p className="hint">On iPhone, tap Share → Add to Home Screen to keep Foresome next to your other apps.</p>
+        <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
       </div>
     </div>
   );
@@ -153,6 +154,7 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
               <GuestFields />
               {err && <p className="error" role="alert">{err}</p>}
               <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip and get the invite link'}</button>
+              <p className="legal-links">By continuing you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.</p>
               <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>Sign in to my Foresome account</button>
             </form>
           </section>

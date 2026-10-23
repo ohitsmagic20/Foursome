@@ -1,5 +1,5 @@
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, isoDay, parseDay, pickOf } from '@/lib/shared';
+import { addDays, isoDay, parseDay, pickOf, nightsOf } from '@/lib/shared';
 import { airport, body, handle, HttpError, loadState, memberFromRequest, tripByCode } from '@/lib/server';
 
 export const maxDuration = 60;
@@ -57,7 +57,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
     if (origin === to) throw new HttpError(400, 'Your home airport is the destination airport.');
 
     const outDate = date.data.start;
-    const backDate = isoDay(addDays(parseDay(outDate), trip.nights));
+    const backDate = isoDay(addDays(parseDay(outDate), nightsOf(trip, date.data)));
 
     const res = await fetch('https://api.duffel.com/air/offer_requests?return_offers=true&supplier_timeout=20000', {
       method: 'POST',

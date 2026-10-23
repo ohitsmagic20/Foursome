@@ -14,7 +14,7 @@ No scorekeeping. This app is only for planning.
 ## Data sources
 
 - **Airports**: [OurAirports](https://ourairports.com/data/) (public domain), bundled in `src/data/airports.json`: airports with scheduled flights only. Typing a destination suggests the closest ones, favoring big airports with more flights.
-- **Golf courses**: [OpenStreetMap](https://www.openstreetmap.org/copyright) via the Overpass API (free, attribution required).
+- **Golf courses**: [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim, with Overpass as a backup (free, attribution required).
 - **Weather**: [Open-Meteo](https://open-meteo.com/) (free for non-commercial use; needs a paid plan once the app earns money).
 - **Place lookup**: Open-Meteo geocoding.
 
@@ -31,7 +31,7 @@ No scorekeeping. This app is only for planning.
 
 1. Open your Supabase project.
 2. Go to **SQL Editor → New query**, paste everything in [`supabase/schema.sql`](supabase/schema.sql), and click **Run**.
-   Projects created before accounts or notifications existed: also run `supabase/002_accounts.sql` and `supabase/003_notifications.sql`.
+   Projects created before accounts or notifications existed: also run `supabase/002_accounts.sql`, `supabase/003_notifications.sql` and `supabase/004_safety_email.sql`.
 3. Go to **Project Settings → API** and copy:
    - the **Project URL** → `SUPABASE_URL`
    - the **secret** key (`sb_secret_...`), or the legacy **service_role** key → `SUPABASE_SECRET_KEY`
@@ -68,7 +68,7 @@ npm run dev                  # http://localhost:3000
 | `supabase/schema.sql` | Tables: `trips`, `members`, `options` (date, destination, lodging, round), `votes` |
 | `src/lib/shared.ts` | Types and trip math: vote tallies, leaders, bed counts, cost per person |
 | `src/lib/server.ts` | Database client, input cleaning, loading a trip |
-| `src/app/api/trips/...` | Create, join, load, actions (vote, add, lock, flights picked, deposits), flight search |
+| `src/app/api/trips/...` | Create, join, load, actions (vote, add, lock, pairings, flights picked, email the plan), flight search |
 | `src/app/api/preview` | Reads a pasted listing link's title and photo when the site allows it |
 | `src/components/TripApp.tsx` | The trip screen: syncing, tabs, join screen |
 | `src/components/tabs/*` | Trip, Vote, Stay, Golf, Flights |
@@ -86,3 +86,12 @@ npm run dev                  # http://localhost:3000
 - Only members see a trip's details. Anyone else with the link sees the trip name, the organizer's first name and how many are going.
 - Notifications use web push. On iPhone they work once Foresome is added to the Home Screen (iOS 16.4+). The signing keys are generated on first use and stored in `app_settings`; nothing to configure.
 - `/api/health` reports whether the database, accounts and notifications are set up.
+
+## Emails, daily job and safety
+
+- **Trip emails** go through Resend's API when `RESEND_API_KEY` is set in Vercel: nudges, "dates/destination/place locked", and the organizer's **Email the plan**. Only people with an account and **Trip emails** on (profile) get them; every email has a one-click unsubscribe.
+- **Daily job** (`vercel.json` → `/api/cron/daily`): keeps the free Supabase project from pausing and clears old sign-in requests, rate-limit records and sessions unused for 6 months. Set `CRON_SECRET` in Vercel to lock it to Vercel's scheduler.
+- **Rate limits** on sign-in emails, new trips and guest joins (`rate_events` table).
+- **Flight search** only appears with a live Duffel token (`duffel_live_...`). Until then the Flights tab uses Google Flights plus manual entry.
+- **Old address**: opening foresome-one.vercel.app moves the phone's saved trips and sign-in to www.foresomes.net (`/migrate`).
+- **Privacy and terms**: `/privacy` and `/terms`. Have a lawyer review them before charging money.

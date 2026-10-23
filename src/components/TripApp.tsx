@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
-import { openVotes, pickOf, rangeLabel } from '@/lib/shared';
+import { openVotes, pickOf, rangeLabel, nightsOf } from '@/lib/shared';
 import { api, rememberTrip, setToken, firstName, initials } from '@/lib/client';
 import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
@@ -112,7 +112,7 @@ export default function TripApp({ code }: { code: string }) {
   const dest = pickOf<DestinationData>(state, 'destination');
   const eyebrow = [
     dest.option ? dest.option.data.name + (dest.locked ? '' : '?') : 'Destination TBD',
-    date.option ? rangeLabel(date.option.data.start, state.trip.nights) + (date.locked ? '' : '?') : `${state.trip.nights} nights`,
+    date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) + (date.locked ? '' : '?') : `${state.trip.nights} nights`,
   ].join(' · ');
 
   return (
@@ -195,6 +195,7 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
           <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
           {err && <p className="error" role="alert">{err}</p>}
           <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
+          <p className="legal-links">By joining you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.</p>
           <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>I have a Foresome account</button>
         </form>
       )}

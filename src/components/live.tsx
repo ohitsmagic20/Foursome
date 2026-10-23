@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CoursePrices, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
-import { bedsNeeded, lodgingSearchLinks, rangeLabel } from '@/lib/shared';
+import { bedsNeeded, lodgingSearchLinks, rangeLabel, tripNights } from '@/lib/shared';
 import { Chip, useTrip } from './ui';
 import { roundSheet } from './sheets';
 
@@ -91,12 +91,12 @@ export function StaySearch({ dest, start }: { dest: string; start: string }) {
   const n = state.members.length;
   const beds = bedsNeeded(state.members);
   const minBedrooms = Math.max(1, Math.ceil(beds * 0.75));
-  const links = lodgingSearchLinks(dest, start, state.trip.nights, n, minBedrooms);
+  const links = lodgingSearchLinks(dest, start, tripNights(state), n, minBedrooms);
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
         <div className="row-title">Search {dest}</div>
-        <div className="row-meta">{rangeLabel(start, state.trip.nights)} · {n} {n === 1 ? 'guest' : 'guests'} · houses with {minBedrooms}+ bedrooms</div>
+        <div className="row-meta">{rangeLabel(start, tripNights(state))} · {n} {n === 1 ? 'guest' : 'guests'} · houses with {minBedrooms}+ bedrooms</div>
       </div>
       <div className="link-grid">
         {links.map((l) => (
@@ -151,7 +151,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
                   </div>
                 </div>
                 {already ? <Chip kind="good">Suggested</Chip>
-                  : <button className="btn small" onClick={() => roundSheet(ctx, undefined, Math.min(2, ctx.state.trip.nights + 1), c.name, c.website)}>Suggest</button>}
+                  : <button className="btn small" onClick={() => roundSheet(ctx, undefined, Math.min(2, tripNights(ctx.state) + 1), c.name, c.website)}>Suggest</button>}
               </div>
             );
           })}

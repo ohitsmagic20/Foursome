@@ -20,6 +20,7 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
     }
     const state = await loadState(trip, me);
     const { data: t } = await db().from('members').select('token').eq('id', me.id).single();
-    return Response.json({ ...state, calKey: t ? calendarKey(t.token) : undefined }, { headers: { 'Cache-Control': 'no-store' } });
+    const flightSearch = (process.env.DUFFEL_ACCESS_TOKEN || '').startsWith('duffel_live') || process.env.FLIGHT_SEARCH_TEST === '1';
+    return Response.json({ ...state, calKey: t ? calendarKey(t.token) : undefined, flightSearch }, { headers: { 'Cache-Control': 'no-store' } });
   });
 }
