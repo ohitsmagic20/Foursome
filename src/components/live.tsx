@@ -163,7 +163,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
           <button className="btn small ghost" onClick={() => setShowPrivate(!showPrivate)}>{showPrivate ? 'Hide private clubs' : 'Show private clubs'}</button>
         )}
       </div>
-      <p className="hint">Course list from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Prices shown are what other Foursome groups entered. Tap Tee times for today’s rates.</p>
+      <p className="hint">Course list from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Prices shown are what other Foresome groups entered. Tap Tee times for today’s rates.</p>
     </section>
   );
 }

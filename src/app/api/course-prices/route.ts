@@ -4,7 +4,7 @@ import { isWeekendDay } from '@/lib/shared';
 
 export const dynamic = 'force-dynamic';
 
-// Greens fees that Foursome users have entered for a course, across all trips, summarized as weekday and
+// Greens fees that Foresome users have entered for a course, across all trips, summarized as weekday and
 // weekend ranges. Only prices are shared: no trip, person or date details leave the server.
 //   GET /api/course-prices?course=Caledonia Golf %26 Fish Club
 //   GET /api/course-prices?courses=Name A|Name B|Name C   (up to 40, exact names)

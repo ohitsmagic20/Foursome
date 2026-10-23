@@ -1,4 +1,4 @@
-# Foursome
+# Foresome
 
 Plan a golf trip with your group. One invite link, and everyone votes on:
 
@@ -44,7 +44,7 @@ No scorekeeping. This app is only for planning.
 
 ### 3. Vercel
 
-1. In Vercel, click **Add New → Project** and import the `Foursome` repo from GitHub.
+1. In Vercel, click **Add New → Project** and import the `Foresome` repo from GitHub.
 2. Before deploying, open **Environment Variables** and add the three values:
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DUFFEL_ACCESS_TOKEN`
 3. Click **Deploy**. Vercel gives you a link like `foursome-xyz.vercel.app`.
@@ -84,5 +84,5 @@ npm run dev                  # http://localhost:3000
 
 - People can start or join a trip with just their name and home city (a guest spot saved on that phone), or sign in with email so their trips follow them to any phone. Signing in later attaches the account to the guest spot.
 - Only members see a trip's details. Anyone else with the link sees the trip name, the organizer's first name and how many are going.
-- Notifications use web push. On iPhone they work once Foursome is added to the Home Screen (iOS 16.4+). The signing keys are generated on first use and stored in `app_settings`; nothing to configure.
+- Notifications use web push. On iPhone they work once Foresome is added to the Home Screen (iOS 16.4+). The signing keys are generated on first use and stored in `app_settings`; nothing to configure.
 - `/api/health` reports whether the database, accounts and notifications are set up.

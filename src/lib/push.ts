@@ -2,7 +2,7 @@ import 'server-only';
 import webpush from 'web-push';
 import { db } from './server';
 
-// Web push for phones that added Foursome to the home screen. The signing keys (VAPID) are created
+// Web push for phones that added Foresome to the home screen. The signing keys (VAPID) are created
 // once and kept in the database, so there is nothing to configure in Vercel.
 
 let keys: { publicKey: string; privateKey: string } | null = null;
@@ -33,7 +33,7 @@ export async function notify(tripId: string, memberIds: string[], msg: PushMessa
   const { data: subs, error } = await db().from('push_subs').select('endpoint,sub,last_sent').eq('trip_id', tripId).in('member_id', memberIds);
   if (error || !subs?.length) return 0;
   const k = await vapidKeys();
-  webpush.setVapidDetails('mailto:support@foursome.app', k.publicKey, k.privateKey);
+  webpush.setVapidDetails('mailto:support@foresome.app', k.publicKey, k.privateKey);
   const now = Date.now();
   let sent = 0;
   await Promise.all(subs.map(async (s) => {

@@ -15,7 +15,7 @@ export default function Home() {
 
   const hero = (
     <div className="hero">
-      <div className="eyebrow">Foursome</div>
+      <div className="eyebrow">Foresome</div>
       <h1>Plan the golf trip without the 200-message group text.</h1>
       <p>Everyone votes on the dates, the destination, where you stay and where you play. Then line up flights so you all land in time for the first tee.</p>
     </div>
@@ -40,7 +40,7 @@ export default function Home() {
     <div className="app no-tabs">
       <header className="top">
         <div style={{ minWidth: 0 }}>
-          <div className="eyebrow">Foursome</div>
+          <div className="eyebrow">Foresome</div>
           <h1>Hey, {me.profile.name.split(' ')[0]}</h1>
         </div>
         <a className="avatar-btn" href="/profile" aria-label="Your profile">{initials(me.profile.name)}</a>
@@ -93,7 +93,7 @@ export default function Home() {
           </form>
         </section>
         <HowItWorks />
-        <p className="hint">On iPhone, tap Share → Add to Home Screen to keep Foursome next to your other apps.</p>
+        <p className="hint">On iPhone, tap Share → Add to Home Screen to keep Foresome next to your other apps.</p>
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
               <GuestFields />
               {err && <p className="error" role="alert">{err}</p>}
               <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip and get the invite link'}</button>
-              <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>Sign in to my Foursome account</button>
+              <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>Sign in to my Foresome account</button>
             </form>
           </section>
         )}

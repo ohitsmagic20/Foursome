@@ -24,7 +24,7 @@ export function POST(req: Request) {
       const res = await fetch(u.toString(), {
         signal: ctrl.signal,
         redirect: 'follow',
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FoursomeLinkPreview/1.0)', Accept: 'text/html' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ForesomeLinkPreview/1.0)', Accept: 'text/html' },
       });
       if (!res.ok) return Response.json({ title: '', image: '' });
       const html = (await res.text()).slice(0, 300000);

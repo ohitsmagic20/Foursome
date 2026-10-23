@@ -25,7 +25,7 @@ export default function UpdateBanner() {
   if (!stale) return null;
   return (
     <button className="update-banner" onClick={() => location.reload()}>
-      A new version of Foursome is ready. <strong>Tap to update</strong>
+      A new version of Foresome is ready. <strong>Tap to update</strong>
     </button>
   );
 }

@@ -99,7 +99,7 @@ export default function TripApp({ code }: { code: string }) {
   const ctx: TripCtx | null = useMemo(() => state ? { state, me, act, vote, toast, sheet: setSheet, go } : null, [state, me, act, vote, toast, go]);
 
   if (error && !state) {
-    return <div className="app no-tabs"><div className="hero"><h1>Trip not found</h1><p>{error}</p><a className="btn primary" href="/">Go to Foursome</a></div></div>;
+    return <div className="app no-tabs"><div className="hero"><h1>Trip not found</h1><p>{error}</p><a className="btn primary" href="/">Go to Foresome</a></div></div>;
   }
   if (!state || !ctx) {
     return <div className="app no-tabs"><div className="empty" style={{ paddingTop: 80 }}><span className="spinner" style={{ display: 'inline-block' }} /></div></div>;
@@ -195,7 +195,7 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
           <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
           {err && <p className="error" role="alert">{err}</p>}
           <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
-          <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>I have a Foursome account</button>
+          <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>I have a Foresome account</button>
         </form>
       )}
       {me === null && signIn && (

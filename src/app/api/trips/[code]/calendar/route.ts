@@ -29,7 +29,7 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
     const start = date.data.start;
     const where = dest?.data.name || '';
     const ev: string[] = [];
-    const add = (uid: string, lines: string[]) => ev.push(['BEGIN:VEVENT', `UID:${uid}@foursome`, `DTSTAMP:${stamp()}`, ...lines, 'END:VEVENT'].join('\r\n'));
+    const add = (uid: string, lines: string[]) => ev.push(['BEGIN:VEVENT', `UID:${uid}@foresome`, `DTSTAMP:${stamp()}`, ...lines, 'END:VEVENT'].join('\r\n'));
 
     add(`trip-${trip.code}`, [
       `DTSTART;VALUE=DATE:${day(start)}`,
@@ -58,7 +58,7 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
     flight(me.flight_arrive_at, `✈️ You land${dest ? ` at ${dest.data.airport}` : ''}`, 'arrive');
     flight(me.flight_depart_at, '✈️ Flight home', 'depart');
 
-    const body = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Foursome//Golf trip//EN', 'CALSCALE:GREGORIAN', `X-WR-CALNAME:${esc(trip.name)}`, ...ev, 'END:VCALENDAR'].join('\r\n');
+    const body = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Foresome//Golf trip//EN', 'CALSCALE:GREGORIAN', `X-WR-CALNAME:${esc(trip.name)}`, ...ev, 'END:VCALENDAR'].join('\r\n');
     return new Response(body, {
       headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `inline; filename="${trip.code}.ics"`, 'Cache-Control': 'no-store' },
     });

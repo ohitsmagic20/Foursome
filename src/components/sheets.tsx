@@ -277,7 +277,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         <div className="price-hint">
           <div>
             <div className="row-title">${range.low === range.high ? range.low : `${range.low}–${range.high}`}{rangeLabel}</div>
-            <div className="row-meta">What Foursome groups paid · {range.count} {range.count === 1 ? 'report' : 'reports'}{prices?.latest ? ` · latest ${prices.latest}` : ''}</div>
+            <div className="row-meta">What Foresome groups paid · {range.count} {range.count === 1 ? 'report' : 'reports'}{prices?.latest ? ` · latest ${prices.latest}` : ''}</div>
           </div>
           <button type="button" className="btn small" onClick={() => setFee(String(range.median))}>Use ${range.median}</button>
         </div>
@@ -286,7 +286,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         {url && <a className="btn small" href={url} target="_blank" rel="noopener noreferrer">Course website</a>}
         <a className="btn small" href={teeSearch} target="_blank" rel="noopener noreferrer">Check live tee times{dayName ? ` for ${dayName}` : ''}</a>
       </div>
-      <p className="hint">Enter the rate you see for your day and time. It helps the next group: Foursome remembers prices so courses show typical weekday and weekend ranges.</p>
+      <p className="hint">Enter the rate you see for your day and time. It helps the next group: Foresome remembers prices so courses show typical weekday and weekend ranges.</p>
     </SheetForm>
   );
 }

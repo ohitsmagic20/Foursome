@@ -16,14 +16,14 @@ export default function SignInLanding() {
     api<{ session: string }>('/api/auth/link', { body: { access_token: token, nonce } })
       .then((r) => {
         setSession(r.session);
-        if (nonce) setMsg('You’re signed in. If you started on the Foursome app, switch back to it; it has signed you in too.');
+        if (nonce) setMsg('You’re signed in. If you started on the Foresome app, switch back to it; it has signed you in too.');
         else location.replace('/');
       })
       .catch((e) => setMsg(e instanceof Error ? e.message : 'Sign-in failed.'));
   }, []);
   return (
     <div className="app no-tabs">
-      <div className="hero"><div className="eyebrow">Foursome</div><h1>{msg}</h1><a className="btn primary" href="/">Continue here</a></div>
+      <div className="hero"><div className="eyebrow">Foresome</div><h1>{msg}</h1><a className="btn primary" href="/">Continue here</a></div>
     </div>
   );
 }

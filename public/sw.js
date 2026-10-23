@@ -1,9 +1,9 @@
-// Foursome service worker: shows notifications and opens the right trip when one is tapped.
+// Foresome service worker: shows notifications and opens the right trip when one is tapped.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', (event) => {
-  let msg = { title: 'Foursome', body: 'Something changed on your trip.', url: '/' };
+  let msg = { title: 'Foresome', body: 'Something changed on your trip.', url: '/' };
   try { msg = { ...msg, ...event.data.json() }; } catch (_) { /* plain text or empty */ }
   event.waitUntil(self.registration.showNotification(msg.title, {
     body: msg.body,

@@ -11,10 +11,10 @@ import './globals.css';
 import UpdateBanner from '@/components/UpdateBanner';
 
 export const metadata: Metadata = {
-  title: 'Foursome',
+  title: 'Foresome',
   description: 'Plan a golf trip with your group. Vote on dates, destination, lodging and tee times, and line up everyone’s flights.',
-  applicationName: 'Foursome',
-  appleWebApp: { capable: true, title: 'Foursome', statusBarStyle: 'default' },
+  applicationName: 'Foresome',
+  appleWebApp: { capable: true, title: 'Foresome', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
 };
 

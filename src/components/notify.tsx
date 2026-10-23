@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/client';
 import { useTrip } from './ui';
 
-// Notifications: on iPhone they work only once Foursome is on the Home Screen (iOS 16.4+).
+// Notifications: on iPhone they work only once Foresome is on the Home Screen (iOS 16.4+).
 
 type Status = 'loading' | 'unsupported' | 'needs-home-screen' | 'blocked' | 'off' | 'on';
 
@@ -90,12 +90,12 @@ export function NotifyCard() {
       ) : status === 'needs-home-screen' ? (
         <div className="grow">
           <div className="row-title">Get a heads-up when it’s your turn</div>
-          <div className="row-meta">On iPhone, add Foursome to your Home Screen first: tap Share, then <strong>Add to Home Screen</strong>, and open it from there.</div>
+          <div className="row-meta">On iPhone, add Foresome to your Home Screen first: tap Share, then <strong>Add to Home Screen</strong>, and open it from there.</div>
         </div>
       ) : status === 'blocked' ? (
         <div className="grow">
           <div className="row-title">Notifications are blocked</div>
-          <div className="row-meta">Turn them on in Settings → Notifications → Foursome.</div>
+          <div className="row-meta">Turn them on in Settings → Notifications → Foresome.</div>
         </div>
       ) : (
         <div className="notify-row">
