@@ -45,11 +45,10 @@ export function TripTab() {
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
 
+      <GetStarted />
       <TripPlan />
       <YourTurn />
       <NotifyCard />
-
-      <GetStarted />
 
       <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
