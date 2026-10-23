@@ -45,19 +45,19 @@ export function TripMap({ place, airport, stops }: { place: string; airport?: st
     import('leaflet').then((L) => {
       if (cancelled || !el.current) return;
       map = L.map(el.current, { zoomControl: false, attributionControl: true, scrollWheelZoom: false, dragging: true, tap: false } as L.MapOptions);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 16, attribution: '© OpenStreetMap' }).addTo(map);
+      map.attributionControl.setPrefix(false);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 16, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' }).addTo(map);
       const pts = path.map((p) => L.latLng(p.at.lat, p.at.lon));
       if (pts.length > 1) L.polyline(pts, { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 }).addTo(map);
-      // Courses visited more than once get one pin with every number on it.
-      const byPlace = new Map<string, { at: { lat: number; lon: number }; labels: string[]; airport: boolean }>();
+      // Stops within about half a mile (the same course, or courses at one resort) share one pin with every number on it.
+      const pins: { at: { lat: number; lon: number }; labels: string[]; airport: boolean }[] = [];
       path.forEach((p, i) => {
-        const k = `${p.at.lat.toFixed(4)},${p.at.lon.toFixed(4)}`;
         const isAirport = !!data.airport && i === 0;
-        const e = byPlace.get(k) || { at: p.at, labels: [], airport: isAirport };
-        e.labels.push(p.label);
-        byPlace.set(k, e);
+        const near = !isAirport && pins.find((e) => !e.airport && miles(e.at, p.at) < 0.6);
+        if (near) near.labels.push(p.label);
+        else pins.push({ at: p.at, labels: [p.label], airport: isAirport });
       });
-      for (const e of byPlace.values()) {
+      for (const e of pins) {
         const html = `<span class="pin${e.airport ? ' pin-airport' : ''}">${e.labels.join(' ')}</span>`;
         L.marker([e.at.lat, e.at.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false }).addTo(map);
       }
