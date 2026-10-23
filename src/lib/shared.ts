@@ -35,6 +35,8 @@ export interface RoundData {
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
   groups?: string[][];
+  /** Added from a trip idea; the fee is an estimate until someone enters a real price. */
+  fromTemplate?: string;
 }
 
 export interface Option<T = unknown> {

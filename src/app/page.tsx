@@ -6,12 +6,34 @@ import { api, initials, rememberTrip, savedTrips, setToken, type SavedTrip } fro
 import { rangeLabel } from '@/lib/shared';
 import { Field, Icon } from '@/components/ui';
 import { GuestFields, ProfileForm, SignIn, useMe } from '@/components/account';
+import { IdeaStrip } from '@/components/IdeaCards';
+import { templateBySlug, type TripTemplate } from '@/data/templates';
+
+/** The trip idea picked on /ideas/[slug] (?template=slug), if any. */
+function useTemplate(): [TripTemplate | null, () => void] {
+  const [t, setT] = useState<TripTemplate | null>(null);
+  useEffect(() => {
+    const slug = new URLSearchParams(location.search).get('template');
+    if (slug) setT(templateBySlug(slug));
+  }, []);
+  return [t, () => { setT(null); history.replaceState(null, '', '/'); }];
+}
+
+function TemplateBanner({ t, onClear }: { t: TripTemplate; onClear: () => void }) {
+  return (
+    <div className="callout good idea-banner">
+      <div className="grow">Starting from <strong>{t.name}</strong>: the destination and {t.rounds.length} rounds go in as suggestions for the group to vote on.</div>
+      <button type="button" className="link-btn" onClick={onClear}>Remove</button>
+    </div>
+  );
+}
 
 export default function Home() {
   const router = useRouter();
   const { me, setMe, reload } = useMe();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [tpl, clearTpl] = useTemplate();
 
   const hero = (
     <div className="hero">
@@ -23,7 +45,7 @@ export default function Home() {
 
   if (me === undefined) return <div className="app no-tabs">{hero}</div>;
 
-  if (me === null) return <SignedOut hero={hero} onSignedIn={reload} />;
+  if (me === null) return <SignedOut hero={hero} onSignedIn={reload} tpl={tpl} clearTpl={clearTpl} />;
 
   if (!me.complete) {
     return (
@@ -68,15 +90,16 @@ export default function Home() {
             )}
         </section>
 
-        <section className="section">
+        <section className="section" id="start">
           <h2>Start a trip</h2>
-          <form className="form card" onSubmit={async (e) => {
+          {tpl && <TemplateBanner t={tpl} onClear={clearTpl} />}
+          <form key={tpl?.slug || 'blank'} className="form card" onSubmit={async (e) => {
             e.preventDefault();
             setErr('');
             setBusy(true);
             try {
               const fd = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-              const r = await api<{ code: string; token: string }>('/api/trips', { body: fd });
+              const r = await api<{ code: string; token: string }>('/api/trips', { body: { ...fd, template: tpl?.slug } });
               setToken(r.code, r.token);
               rememberTrip(r.code, fd.tripName);
               router.push(`/t/${r.code}`);
@@ -85,13 +108,14 @@ export default function Home() {
               setBusy(false);
             }
           }}>
-            <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip 2027" required />
-            <Field name="nights" label="Nights" type="number" defaultValue={3} min={1} max={10} step={1} />
+            <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip 2027" defaultValue={tpl ? `${tpl.name} trip` : undefined} required />
+            <Field name="nights" label="Nights" type="number" defaultValue={tpl?.nights ?? 3} min={1} max={10} step={1} />
             <p className="hint">You’ll be the organizer, flying from {me.profile.airport}. Next you’ll get an invite link for the group.</p>
             {err && <p className="error" role="alert">{err}</p>}
             <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip'}</button>
           </form>
         </section>
+        <IdeaStrip />
         <HowItWorks />
         <p className="hint">On iPhone, tap Share → Add to Home Screen to keep Foresome next to your other apps.</p>
         <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
@@ -101,7 +125,7 @@ export default function Home() {
 }
 
 /** No account: start a trip with just your name, see trips saved on this phone, or sign in. */
-function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: () => void }) {
+function SignedOut({ hero, onSignedIn, tpl, clearTpl }: { hero: React.ReactNode; onSignedIn: () => void; tpl: TripTemplate | null; clearTpl: () => void }) {
   const router = useRouter();
   const [trips, setTrips] = useState<SavedTrip[]>([]);
   const [busy, setBusy] = useState(false);
@@ -130,15 +154,16 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
             <button className="btn small ghost" onClick={() => setSignIn(false)}>Start a trip without an account</button>
           </>
         ) : (
-          <section className="section">
+          <section className="section" id="start">
             <h2>Start a trip</h2>
-            <form className="form card" onSubmit={async (e) => {
+            {tpl && <TemplateBanner t={tpl} onClear={clearTpl} />}
+            <form key={tpl?.slug || 'blank'} className="form card" onSubmit={async (e) => {
               e.preventDefault();
               setErr('');
               setBusy(true);
               try {
                 const fd = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-                const r = await api<{ code: string; token: string }>('/api/trips', { body: fd });
+                const r = await api<{ code: string; token: string }>('/api/trips', { body: { ...fd, template: tpl?.slug } });
                 setToken(r.code, r.token);
                 rememberTrip(r.code, fd.tripName);
                 router.push(`/t/${r.code}`);
@@ -148,8 +173,8 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
               }
             }}>
               <div className="grid2">
-                <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip" required />
-                <Field name="nights" label="Nights" type="number" defaultValue={3} min={1} max={10} step={1} />
+                <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip" defaultValue={tpl ? `${tpl.name} trip` : undefined} required />
+                <Field name="nights" label="Nights" type="number" defaultValue={tpl?.nights ?? 3} min={1} max={10} step={1} />
               </div>
               <GuestFields />
               {err && <p className="error" role="alert">{err}</p>}
@@ -159,6 +184,7 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
             </form>
           </section>
         )}
+        <IdeaStrip />
         <HowItWorks />
       </div>
     </div>

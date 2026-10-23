@@ -64,7 +64,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         <div className="tee">{r.data.time.replace(/\s*(AM|PM)/i, '')}<small>{ap}</small></div>
         <div style={{ minWidth: 0 }}>
           <div className="row-title">{r.data.course}</div>
-          <div className="row-meta">{r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
+          <div className="row-meta">{r.data.fromTemplate ? <>Typical price from the <a href={`/ideas/${r.data.fromTemplate}`}>trip idea</a> · confirm when you book</> : r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
         </div>
         <div className="fee">{money(r.data.fee)}<small>per player</small></div>
       </div>

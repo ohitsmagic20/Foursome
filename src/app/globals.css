@@ -274,3 +274,16 @@ tr.me .mark.none { border-color: var(--green); }
 .gs-steps li.done .gs-mark { background: var(--good); border-color: var(--good); color: #fff; }
 .gs-steps li.done .row-title { color: var(--muted); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* trip ideas */
+.idea-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; }
+.idea-strip::-webkit-scrollbar { display: none; }
+.idea-strip .idea-card { flex: 0 0 78%; max-width: 300px; scroll-snap-align: start; }
+.idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.idea-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); color: inherit; text-decoration: none; }
+.idea-card:active { transform: scale(.99); }
+.idea-name { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 24px; line-height: 1.05; letter-spacing: .01em; }
+.idea-cost { margin-top: auto; padding-top: 6px; }
+.idea-day { flex: none; width: 52px; font-family: var(--font-display), sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 1px; }
+.idea-tips { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.idea-banner { display: flex; gap: 10px; align-items: center; }

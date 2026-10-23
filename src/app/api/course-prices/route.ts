@@ -29,7 +29,8 @@ async function fromRealTrips(rows: Row[]): Promise<Row[]> {
   const { data } = await db().from('members').select('trip_id').in('trip_id', ids);
   const size = new Map<string, number>();
   for (const m of data || []) size.set(m.trip_id, (size.get(m.trip_id) || 0) + 1);
-  return rows.filter((r) => (size.get(r.trip_id || '') || 0) >= 2);
+  // Trip-idea estimates aren't real prices until someone enters one (which sets checkedAt).
+  return rows.filter((r) => (size.get(r.trip_id || '') || 0) >= 2 && !((r.data as { fromTemplate?: string }).fromTemplate && !r.data.checkedAt));
 }
 
 function range(fees: number[]): PriceRange | null {

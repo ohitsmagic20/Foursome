@@ -255,6 +255,8 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
           course: course.trim(), url, day, time: fd.time, fee: num(fd.fee), booked: d?.booked || false, weekday,
           checked: priceChanged ? todayLabel() : d?.checked || todayLabel(),
           checkedAt: priceChanged ? new Date().toISOString() : d?.checkedAt || '',
+          // A trip-idea estimate stays marked as one until someone enters a real price.
+          ...(!priceChanged && d?.fromTemplate ? { fromTemplate: d.fromTemplate } : {}),
         };
         return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
       }}

@@ -70,6 +70,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         weekday: int(d.weekday, -1, 6, -1),
         url: url(d.url),
         ...(Array.isArray(d.groups) ? { groups: cleanGroups(d.groups) } : {}),
+        ...(typeof d.fromTemplate === 'string' && d.fromTemplate ? { fromTemplate: str(d.fromTemplate, 60) } : {}),
       };
     }
   }
