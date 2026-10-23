@@ -58,6 +58,18 @@ async function send(to: string, b: EmailBody, profileId: string) {
   return res.ok;
 }
 
+/** A plain notice to the app owner (no unsubscribe: it's operational). */
+export async function emailOwner(to: string[], subject: string, lines: string[]) {
+  if (!emailEnabled() || !to.length) return false;
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5">${lines.map((l) => `<p style="margin:0 0 8px">${esc(l)}</p>`).join('')}</div>`;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: FROM, to, subject, html, text: lines.join('\n') }),
+  });
+  return res.ok;
+}
+
 /** Email trip members who have an account and trip emails on. Returns how many were sent. */
 export async function emailMembers(memberIds: string[], b: EmailBody | ((memberId: string) => EmailBody)): Promise<number> {
   if (!emailEnabled() || !memberIds.length) return 0;

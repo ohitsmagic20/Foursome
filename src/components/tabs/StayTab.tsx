@@ -3,7 +3,7 @@
 import type { DateData, DestinationData, LodgingData } from '@/lib/shared';
 import { bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
 import { StaySearch } from '../live';
-import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
+import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
 
 export function StayTab() {
@@ -44,6 +44,7 @@ export function StayTab() {
               {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
               <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
             </div>
+            <BookingRow option={o} />
             {!locked && <VoteControl option={o} />}
             <Tally option={o} />
             <div className="opt-foot">

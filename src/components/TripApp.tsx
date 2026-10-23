@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
 import { openVotes, pickOf, rangeLabel, nightsOf } from '@/lib/shared';
-import { api, rememberTrip, setToken, firstName, initials } from '@/lib/client';
+import { api, rememberTrip, setToken, initials } from '@/lib/client';
 import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
 import { TripTab } from './tabs/TripTab';

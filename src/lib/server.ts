@@ -1,7 +1,7 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createHash, randomBytes } from 'crypto';
-import type { Member, Option, Trip, TripState, Vote } from './shared';
+import type { Expense, Member, Option, Trip, TripState, Vote } from './shared';
 
 let client: SupabaseClient | null = null;
 
@@ -21,11 +21,19 @@ export class HttpError extends Error {
 }
 
 export function handle(fn: () => Promise<Response>): Promise<Response> {
-  return fn().catch((e: unknown) => {
+  return fn().catch(async (e: unknown) => {
     if (e instanceof HttpError) return Response.json({ error: e.message }, { status: e.status });
     console.error(e);
+    await logError('server', explain(e), '', e instanceof Error ? e.stack || '' : String(e));
     return Response.json({ error: `Something went wrong on the server: ${explain(e)}` }, { status: 500 });
   });
+}
+
+/** Keep a record of an error for the owner's stats page and daily email. Never throws. */
+export async function logError(source: 'server' | 'client', message: string, path = '', detail = '') {
+  try {
+    await db().from('app_errors').insert({ source, message: message.slice(0, 500), path: path.slice(0, 200), detail: detail.slice(0, 2000) });
+  } catch { /* logging must never break a request */ }
 }
 
 /** Turn a database or network error into a message that says what to fix. Never includes keys. */
@@ -86,7 +94,7 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
 }
 
 /* ---------- loading ---------- */
-const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at';
+const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at,venmo,cashapp';
 
 export async function tripByCode(code: string): Promise<Trip> {
   const { data, error } = await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle();
@@ -147,7 +155,11 @@ export async function loadState(trip: Trip, me: Member | null): Promise<TripStat
     if (v.error) throw v.error;
     votes = (v.data || []) as Vote[];
   }
-  return { trip, members: (m.data || []) as Member[], options, votes, meId: me?.id ?? null };
+  // Expenses for settling up (an older database without the table just shows none).
+  const ex = await db().from('expenses').select('id,paid_by,amount,note,split_with,created_at').eq('trip_id', trip.id).order('created_at');
+  const expenses = ex.error ? [] : ((ex.data || []) as Expense[]).map((e) => ({ ...e, amount: Number(e.amount), split_with: e.split_with || [] }));
+  const shared = await db().from('trip_ideas').select('id').eq('trip_id', trip.id).maybeSingle();
+  return { trip, members: (m.data || []) as Member[], options, votes, expenses, sharedIdea: shared.data?.id || undefined, meId: me?.id ?? null };
 }
 
 /* ---------- spam limits ---------- */

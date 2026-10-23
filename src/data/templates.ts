@@ -22,6 +22,8 @@ export interface TemplateRound {
   url?: string;
   /** What to search on the map when OpenStreetMap doesn't list the course by name (e.g. the resort). */
   mapAs?: string;
+  /** The course in the course database, when known. */
+  courseId?: string;
 }
 
 export interface TripTemplate {
@@ -40,6 +42,37 @@ export interface TripTemplate {
   lodging: { note: string; perNight: TemplateFee };
   tips: string[];
   sources: { label: string; url: string }[];
+  /** Shared by a Foresome group from a real trip (prices are what they paid). */
+  community?: { group: number; month: string };
+}
+
+/** What an organizer shares from a finished trip: courses, tee times, prices paid and the house cost. No names. */
+export interface SharedIdea {
+  destination: string; airports: string[]; nights: number; month: string; group: number;
+  rounds: { day: number; time: string; course: string; fee: number; courseId?: string; access?: string }[];
+  lodgingPerNight: number;
+}
+
+/** A shared trip turned into the same shape as the ready-made ideas, so the same pages and "start a trip" work. */
+export function sharedToTemplate(id: string, d: SharedIdea): TripTemplate {
+  const [city, region = ''] = d.destination.split(',').map((x) => x.trim());
+  return {
+    slug: `g-${id}`,
+    name: city,
+    state: region,
+    destination: d.destination,
+    airports: d.airports,
+    airportNote: d.airports.length ? `Fly into ${d.airports.join(' or ')}.` : '',
+    nights: d.nights,
+    bestMonths: d.month,
+    tagline: `Planned by a group of ${d.group} for ${d.month}.`,
+    summary: `A real ${d.nights}-night trip a Foresome group of ${d.group} planned for ${d.month}, with the courses they played and what they paid.`,
+    rounds: d.rounds.map((r) => ({ day: r.day, time: r.time, course: r.course, courseId: r.courseId, fee: { low: r.fee, high: r.fee, asOf: d.month, verified: true } })),
+    lodging: { note: 'What the group paid for their place, per person per night.', perNight: { low: d.lodgingPerNight, high: d.lodgingPerNight, asOf: d.month, verified: true } },
+    tips: [],
+    sources: [],
+    community: { group: d.group, month: d.month },
+  };
 }
 
 const FOOD_PER_DAY: [number, number] = [75, 125];

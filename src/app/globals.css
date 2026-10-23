@@ -365,3 +365,32 @@ tr.me .mark.none { border-color: var(--green); }
 .g-rating span { font-weight: 500; color: var(--muted); }
 .google-attrib { margin: 0; font-family: Roboto, Arial, sans-serif; font-size: 12px; color: #5E5E5E; white-space: nowrap; }
 @media (prefers-color-scheme: dark) { .google-attrib { color: #ffffff; } }
+
+/* settle up */
+.settle-amt { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.expenses summary { cursor: pointer; font-size: 14px; color: var(--muted); padding: 2px 0 10px; }
+.split-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.split-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; background: var(--card); }
+.split-item input { accent-color: var(--green); }
+
+/* trip-day view */
+.today { display: flex; flex-direction: column; gap: 10px; }
+.today-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.today-when { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 26px; line-height: 1; color: var(--green); }
+.today-wx { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.today-wx small { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+/* who books it */
+.booking { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.booking-done { font-weight: 700; color: var(--good); }
+.booking-open { font-weight: 700; color: var(--warn); }
+
+/* about a course */
+.about summary { cursor: pointer; font-size: 13px; color: var(--green); font-weight: 600; margin-top: 2px; }
+.about-body { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.about-body p { margin: 0; font-size: 13px; line-height: 1.5; }
+
+/* owner stats */
+.stats-weeks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; align-items: end; height: 140px; }
+.stats-week { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+.stats-bar { width: 100%; min-height: 3px; background: var(--green); border-radius: 4px 4px 0 0; }

@@ -4,7 +4,7 @@ import type { DateData, DestinationData, VoteValue } from '@/lib/shared';
 import { destAirports, leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor, nightsOf, tripNights } from '@/lib/shared';
 import { WeatherCredit, WeatherStrip } from '../live';
 import { firstName } from '@/lib/client';
-import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
+import { Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { dateSheet, destSheet } from '../sheets';
 
 const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };

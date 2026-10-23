@@ -14,7 +14,10 @@ function useTemplate(): [TripTemplate | null, () => void] {
   const [t, setT] = useState<TripTemplate | null>(null);
   useEffect(() => {
     const slug = new URLSearchParams(location.search).get('template');
-    if (slug) setT(templateBySlug(slug));
+    if (!slug) return;
+    const ready = templateBySlug(slug);
+    if (ready) setT(ready);
+    else api<{ idea: TripTemplate }>(`/api/ideas/${encodeURIComponent(slug)}`).then((r) => setT(r.idea)).catch(() => {});
   }, []);
   return [t, () => { setT(null); history.replaceState(null, '', '/'); }];
 }

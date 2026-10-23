@@ -13,6 +13,22 @@ interface RawTee { tee_name?: string; gender?: string; course_rating?: number; s
 interface RawDetail {
   id: string; course_name: string; club_name?: string; city: string | null; state: string | null; lat: number; lng: number; type: string | null;
   par?: number; holes?: number; yardage?: number; phone?: string | null; website?: string | null; tees?: RawTee[];
+  architect?: string | null; year_built?: number | null;
+  description?: string | null; description_source?: { name?: string; url?: string } | null;
+  facilities?: Record<string, unknown> | null;
+}
+
+const FACILITY: Record<string, string> = {
+  driving_range: 'Driving range', putting_green: 'Putting green', restaurant: 'Restaurant', pro_shop: 'Pro shop',
+  lessons: 'Lessons', club_rental: 'Club rental', lodging: 'Lodging', bar: 'Bar', caddies: 'Caddies', carts: 'Carts',
+};
+/** The first sentence or two of a description, cut at a sentence end around 300 characters. */
+function brief(text: string): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  if (t.length <= 320) return t;
+  const cut = t.slice(0, 320);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '));
+  return end > 120 ? cut.slice(0, end + 1) : `${cut.slice(0, cut.lastIndexOf(' '))}…`;
 }
 
 /** "Tpc Scottsdale" → "TPC Scottsdale". */
@@ -70,6 +86,10 @@ export async function courseDetail(id: string): Promise<CourseInfo | null> {
   return {
     id: d.id, name: tidy(d.course_name), city: d.city || '', state: d.state || '', access: accessOf(d.type), lat: d.lat, lon: d.lng,
     par: d.par || 0, holes: d.holes || 0, yards: d.yardage || 0, website: d.website || '', phone: d.phone || '', tees,
+    architect: d.architect || '', built: d.year_built || 0,
+    description: d.description ? brief(d.description) : '',
+    descriptionUrl: d.description_source?.url || '',
+    facilities: Object.entries(d.facilities || {}).filter(([k, v]) => v === true && FACILITY[k]).map(([k]) => FACILITY[k]),
   };
 }
 

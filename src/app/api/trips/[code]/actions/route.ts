@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import type { Kind, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { nightsOf, openVotes, rangeLabel } from '@/lib/shared';
+import { nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { APP_URL, emailableCount, emailMembers, planEmail, type EmailBody } from '@/lib/email';
@@ -52,6 +52,8 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         total: int(d.total, 0, 1000000, 0),
         bedrooms: int(d.bedrooms, 0, 40, 0),
         beds: int(d.beds, 0, 80, 0),
+        ...(d.booked === true ? { booked: true } : {}),
+        ...(str(d.owner, 40) ? { owner: str(d.owner, 40) } : {}),
       };
     }
     case 'round': {
@@ -63,6 +65,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         time: str(d.time, 12) || 'TBD',
         fee: int(d.fee, 0, 5000, 0),
         booked: d.booked === true,
+        ...(str(d.owner, 40) ? { owner: str(d.owner, 40) } : {}),
         checked: str(d.checked, 24),
         // When the price was checked and which day of the week it was for (0 = Sunday, -1 = unknown).
         // These feed the shared greens-fee ranges other trips see.
@@ -143,8 +146,10 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const opt = await optionFor(trip.id, b.optionId);
         if (opt.created_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who added this or the organizer can edit it.');
         const data = cleanData(opt.kind, b.data, trip);
-        // Editing a round's course or time keeps its pairings.
+        // Editing a round's course or time keeps its pairings, and editing a place keeps who's booking it.
         if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
+        const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
+        for (const k of ['owner', 'booked'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
         const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;
@@ -219,13 +224,102 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const sent = await emailMembers(state.members.map((m) => m.id), (id) => planEmail(state, id));
         return Response.json({ ok: true, sent, of: state.members.length });
       }
+      case 'share_idea': {
+        // Share the trip as a trip idea for other groups: destination, courses, tee times and prices. No names.
+        mustOrganize(me);
+        const state = await loadState(trip, null);
+        const date = state.options.find((o) => o.kind === 'date' && o.locked);
+        const dest = state.options.find((o) => o.kind === 'destination' && o.locked);
+        const rounds = state.options.filter((o) => o.kind === 'round' && o.locked);
+        if (!date || !dest || rounds.length < 2) throw new HttpError(400, 'Lock the dates and destination and put at least 2 rounds in the plan first.');
+        const dd = date.data as { start: string; nights?: number }, de = dest.data as { name: string; airport?: string; airports?: string[] };
+        const nights = dd.nights || trip.nights;
+        const stay = state.options.find((o) => o.kind === 'lodging' && o.locked);
+        const total = stay ? Number((stay.data as { total?: number }).total) || 0 : 0;
+        const start = new Date(`${dd.start}T12:00:00`);
+        const idea = {
+          destination: str(de.name, 80),
+          airports: (de.airports?.length ? de.airports : de.airport ? [de.airport] : []).slice(0, 4),
+          nights,
+          month: start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          group: state.members.length,
+          rounds: rounds.map((o) => o.data as Record<string, unknown>).sort((a, b) => Number(a.day) - Number(b.day)).slice(0, 12).map((r) => ({
+            day: int(r.day, 1, 15, 1), time: str(r.time, 12), course: str(r.course, 100), fee: int(r.fee, 0, 5000, 0),
+            ...(typeof r.courseId === 'string' ? { courseId: r.courseId } : {}),
+            ...(typeof r.access === 'string' && r.access ? { access: r.access } : {}),
+          })),
+          lodgingPerNight: total && state.members.length ? Math.round(total / state.members.length / nights) : 0,
+        };
+        const r = await db().from('trip_ideas').upsert({ trip_id: trip.id, data: idea }, { onConflict: 'trip_id' }).select('id').single();
+        if (r.error) throw r.error;
+        return Response.json({ ok: true, id: r.data.id });
+      }
+      case 'unshare_idea': {
+        mustOrganize(me);
+        const r = await db().from('trip_ideas').delete().eq('trip_id', trip.id);
+        if (r.error) throw r.error;
+        break;
+      }
+      case 'set_booking': {
+        // Who books a locked place or a planned round, and whether it's booked. The organizer assigns;
+        // the person assigned (or the organizer) marks it booked.
+        const opt = await optionFor(trip.id, b.optionId);
+        if (!opt.locked || (opt.kind !== 'lodging' && opt.kind !== 'round')) throw new HttpError(400, 'Lock it in before assigning who books it.');
+        const next = { ...opt.data };
+        if ('owner' in b) {
+          mustOrganize(me);
+          const owner = str(b.owner, 40);
+          if (owner) {
+            const { data: who } = await db().from('members').select('id,name').eq('trip_id', trip.id).eq('id', owner).maybeSingle();
+            if (!who) throw new HttpError(400, 'Pick someone on the trip.');
+            next.owner = owner;
+            if (owner !== me.id) {
+              const what = opt.kind === 'round' ? `${opt.data.course} at ${opt.data.time}` : String(opt.data.name || 'the place to stay');
+              pings.push([[owner], { title: trip.name, body: `${first(me.name)} asked you to book ${what}.`, url: url(TAB[opt.kind]), tag: `book-${opt.id}` }, 0]);
+            }
+          } else delete next.owner;
+        }
+        if ('booked' in b) {
+          if (!me.is_organizer && opt.data.owner !== me.id) throw new HttpError(403, 'Only the person booking it or the organizer can mark it booked.');
+          next.booked = b.booked === true;
+        }
+        const r = await db().from('options').update({ data: next }).eq('id', opt.id);
+        if (r.error) throw r.error;
+        break;
+      }
       case 'update_me': {
         const r = await db().from('members').update({
           name: str(b.name, 60) || me.name,
           airport: airport(b.airport),
           budget: int(b.budget, 0, 100000, me.budget),
           bed: bed(b.bed),
+          ...('venmo' in b ? { venmo: payHandle(b.venmo) } : {}),
+          ...('cashapp' in b ? { cashapp: payHandle(b.cashapp) } : {}),
         }).eq('id', me.id);
+        if (r.error) throw r.error;
+        break;
+      }
+      case 'add_expense': {
+        const amount = Math.round(Number(b.amount) * 100) / 100;
+        if (!(amount > 0 && amount < 1000000)) throw new HttpError(400, 'Enter the amount paid.');
+        const { data: everyone } = await db().from('members').select('id').eq('trip_id', trip.id);
+        const ids = new Set((everyone || []).map((m) => m.id));
+        const paidBy = ids.has(str(b.paidBy, 40)) ? str(b.paidBy, 40) : me.id;
+        const split = (Array.isArray(b.splitWith) ? b.splitWith : []).map((x) => str(x, 40)).filter((x) => ids.has(x));
+        const { count } = await db().from('expenses').select('id', { count: 'exact', head: true }).eq('trip_id', trip.id);
+        if ((count || 0) >= 300) throw new HttpError(400, 'This trip has a lot of expenses already.');
+        const r = await db().from('expenses').insert({
+          trip_id: trip.id, paid_by: paidBy, amount, note: str(b.note, 80),
+          split_with: split.length === ids.size ? [] : [...new Set(split)],
+        });
+        if (r.error) throw r.error;
+        break;
+      }
+      case 'delete_expense': {
+        const { data: e } = await db().from('expenses').select('id,paid_by').eq('trip_id', trip.id).eq('id', str(b.expenseId, 40)).maybeSingle();
+        if (!e) throw new HttpError(404, 'That expense was already removed.');
+        if (e.paid_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who paid or the organizer can remove it.');
+        const r = await db().from('expenses').delete().eq('id', e.id);
         if (r.error) throw r.error;
         break;
       }

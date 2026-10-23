@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { TEMPLATES, templateBySlug, templateCost } from '@/data/templates';
+import { TEMPLATES, templateCost } from '@/data/templates';
+import { ideaBySlug } from '@/lib/ideas';
+
+export const revalidate = 600;
 import { moneyRange } from '@/components/IdeaCards';
 import { TripMap } from '@/components/TripMap';
 
@@ -9,7 +12,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const t = templateBySlug((await params).slug);
+  const t = await ideaBySlug((await params).slug);
   if (!t) return {};
   return {
     title: `${t.name} golf trip itinerary · Foresome`,
@@ -18,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export default async function Idea({ params }: { params: Promise<{ slug: string }> }) {
-  const t = templateBySlug((await params).slug);
+  const t = await ideaBySlug((await params).slug);
   if (!t) notFound();
   const c = templateCost(t);
   const days = Array.from({ length: t.nights + 1 }, (_, i) => i + 1);
@@ -45,7 +48,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
           <a className="btn primary block" href={`/?template=${t.slug}#start`}>Start a trip from this</a>
         </section>
 
-        <TripMap place={t.destination} airport={t.airports[0]} stops={t.rounds.map((r, i) => ({ name: r.course, label: String(i + 1), search: r.mapAs }))} />
+        <TripMap place={t.destination} airport={t.airports[0]} stops={t.rounds.map((r, i) => ({ name: r.course, label: String(i + 1), search: r.mapAs, courseId: r.courseId }))} />
 
         <section className="section">
           <h2>The itinerary</h2>
@@ -75,19 +78,19 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
           <h2>Getting there</h2>
           <div className="card stack" style={{ gap: 8 }}>
             <div><span className="row-title">Fly into </span>{t.airports.join(' or ')}</div>
-            <div><span className="row-title">Best time </span>{t.bestMonths}</div>
+            <div><span className="row-title">{t.community ? 'When they went ' : 'Best time '}</span>{t.bestMonths}</div>
             <div><span className="row-title">Stay </span>{t.lodging.note} <span className="row-meta">~{moneyRange([t.lodging.perNight.low, t.lodging.perNight.high])}/person/night</span></div>
           </div>
         </section>
 
         <section className="section">
-          <h2>Good to know</h2>
+          <h2>Good to know</h2>{t.tips.length === 0 && <p className="sub">Shared by a Foresome group from their real trip. Prices are what they paid in {t.community?.month}.</p>}
           <ul className="idea-tips">{t.tips.map((x) => <li key={x}>{x}</li>)}</ul>
         </section>
 
         <section className="section">
           <p className="hint">
-            Prices checked Oct 2026 · {t.sources.map((s, i) => <span key={s.url}>{i ? ', ' : ''}<a href={s.url} target="_blank" rel="noopener noreferrer">{s.label.split(':')[0]}</a></span>)}
+            {t.sources.length ? <>Prices checked Oct 2026 · {t.sources.map((s, i) => <span key={s.url}>{i ? ', ' : ''}<a href={s.url} target="_blank" rel="noopener noreferrer">{s.label.split(':')[0]}</a></span>)}</> : <>Prices are what the group paid. Check current rates before booking.</>}
           </p>
         </section>
 

@@ -41,7 +41,6 @@ export default function ProfilePage() {
                 {[
                   ['Airline loyalty numbers', 'Save your frequent flyer numbers for faster booking'],
                   ['GolfNow', 'Book tee times with your GolfNow account'],
-                  ['Venmo or Cash App', 'Settle up shared costs like the house'],
                 ].map(([t, d]) => (
                   <div className="row" key={t}>
                     <div className="grow"><div className="row-title">{t}</div><div className="row-meta">{d}</div></div>
@@ -55,6 +54,7 @@ export default function ProfilePage() {
               <div className="list">
                 <a className="row" href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}><div className="grow row-title">Privacy policy</div>{Icon.chev}</a>
                 <a className="row" href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}><div className="grow row-title">Terms of use</div>{Icon.chev}</a>
+                {me.owner && <a className="row" href="/stats" style={{ color: 'inherit', textDecoration: 'none' }}><div className="grow row-title">App stats</div>{Icon.chev}</a>}
               </div>
             </section>
             <button className="btn ghost danger block" onClick={async () => { await signOut(); location.href = '/'; }}>Sign out</button>

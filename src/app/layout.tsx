@@ -10,6 +10,7 @@ import '@fontsource/instrument-sans/700.css';
 import './globals.css';
 import UpdateBanner from '@/components/UpdateBanner';
 import OldDomain from '@/components/OldDomain';
+import ErrorReporter from '@/components/ErrorReporter';
 
 export const metadata: Metadata = {
   title: 'Foresome',
@@ -32,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}<UpdateBanner /><OldDomain /></body>
+      <body>{children}<UpdateBanner /><OldDomain /><ErrorReporter /></body>
     </html>
   );
 }

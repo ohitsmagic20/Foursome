@@ -1,16 +1,18 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { bedsNeeded, clockLabel, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { clockLabel, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
 import { NotifyCard } from '../notify';
+import { SettleUp } from '../SettleUp';
+import { TodayCard } from '../TodayCard';
 
 export function TripTab() {
   const ctx = useTrip();
-  const { state, me, go } = ctx;
+  const { state, go } = ctx;
   const n = state.members.length;
   const date = pickOf<DateData>(state, 'date');
   const dest = pickOf<DestinationData>(state, 'destination');
@@ -45,9 +47,11 @@ export function TripTab() {
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
 
+      <TodayCard />
       <GetStarted />
       <TripPlan />
       <YourTurn />
+      <ToBook />
 
       <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
@@ -70,6 +74,7 @@ export function TripTab() {
         <p className="hint">Sharing a bed saves 25% on the stay. Food: {money(state.trip.food)} each.</p>
       </section>
 
+      <SettleUp />
       <NotifyCard />
       <Crew />
       <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
@@ -124,6 +129,7 @@ function TripPlan() {
         {cal && <a className="btn small" href={cal}>Add to Calendar</a>}
         <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>
         {me?.is_organizer && <EmailPlan />}
+        {me?.is_organizer && <ShareIdea />}
       </div>
     </section>
   );
@@ -368,5 +374,56 @@ function GetStarted() {
         ))}
       </ol>
     </section>
+  );
+}
+
+/** Things the organizer asked me to book that aren't booked yet. */
+function ToBook() {
+  const { state, me, go } = useTrip();
+  if (!me) return null;
+  const date = pickOf<DateData>(state, 'date').option;
+  const items = state.options.filter((o) => o.locked && (o.kind === 'lodging' || o.kind === 'round'))
+    .filter((o) => { const d = o.data as { owner?: string; booked?: boolean }; return d.owner === me.id && !d.booked; });
+  if (!items.length) return null;
+  return (
+    <section className="section">
+      <div className="section-head"><h2>To book</h2><span className="sub">{items.length} on you</span></div>
+      <div className="list">
+        {items.map((o) => {
+          const r = o.data as { course?: string; time?: string; day?: number; name?: string };
+          return (
+            <button key={o.id} className="row" onClick={() => go(o.kind === 'round' ? 'golf' : 'stay')}>
+              <div className="grow">
+                <div className="row-title">{o.kind === 'round' ? r.course : r.name}</div>
+                <div className="row-meta">{o.kind === 'round' ? `${date ? dayLabel(date.data.start, r.day || 1) : `Day ${r.day}`} · ${r.time}` : 'Place to stay'}</div>
+              </div>
+              {Icon.chev}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Organizer: share the trip's courses and prices (no names) as a trip idea for other groups. */
+function ShareIdea() {
+  const { state, act, toast } = useTrip();
+  const [busy, setBusy] = useState(false);
+  if (plannedRounds(state).length < 2) return null;
+  if (state.sharedIdea) {
+    return (
+      <>
+        <a className="btn small" href={`/ideas/g-${state.sharedIdea}`}>View shared idea</a>
+        <ConfirmButton className="btn small ghost" label="Stop sharing" confirmLabel="Tap to stop sharing" onConfirm={async () => { if (await act('unshare_idea')) toast('No longer shared'); }} />
+      </>
+    );
+  }
+  return (
+    <button className="btn small" disabled={busy} onClick={async () => {
+      setBusy(true);
+      if (await act('share_idea')) toast('Shared as a trip idea. Only the courses, tee times and prices are shown.');
+      setBusy(false);
+    }}>{busy ? <span className="spinner" /> : 'Share as a trip idea'}</button>
   );
 }

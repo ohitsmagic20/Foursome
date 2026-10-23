@@ -21,7 +21,7 @@ export function registerServiceWorker() {
 }
 
 export function NotifyCard() {
-  const { state, me, act, toast } = useTrip();
+  const { state, me, toast } = useTrip();
   const [status, setStatus] = useState<Status>('loading');
   const [busy, setBusy] = useState(false);
   const code = state.trip.code;

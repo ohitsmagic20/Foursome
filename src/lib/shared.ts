@@ -23,20 +23,28 @@ export interface Member {
   flight_summary: string | null;
   flight_arrive_at: string | null;
   flight_depart_at: string | null;
+  /** Where to send this person money: Venmo username and Cash App $cashtag (without @ or $). */
+  venmo?: string;
+  cashapp?: string;
 }
+
+/** Money someone paid for the group, split equally among `split_with` (everyone when empty). */
+export interface Expense { id: string; paid_by: string; amount: number; note: string; split_with: string[]; created_at: string }
 
 /** A date option. `nights` lets one option be a long weekend and another a full week; without it the trip's default applies. */
 export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
-export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number }
+export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string }
 export interface RoundData {
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
   groups?: string[][];
   /** Added from a trip idea; the fee is an estimate until someone enters a real price. */
   fromTemplate?: string;
+  /** Who on the trip is booking this tee time (member id). */
+  owner?: string;
   /** Picked from the course database: its id, location and how the public can play it. */
   courseId?: string;
   lat?: number;
@@ -58,6 +66,9 @@ export interface Vote { option_id: string; member_id: string; value: VoteValue }
 export interface TripState {
   trip: Trip;
   members: Member[];
+  expenses?: Expense[];
+  /** Set when the organizer shared this trip as a trip idea. */
+  sharedIdea?: string;
   options: Option[];
   votes: Vote[];
   meId: string | null;
@@ -186,6 +197,40 @@ export function costOf(state: TripState, m: Member) {
 }
 export const teeTimesNeeded = (n: number) => Math.max(1, Math.ceil(n / 4));
 
+/* ---------- settle up ---------- */
+/** Each person's balance (positive: they're owed money) and the fewest payments that even everyone out. */
+export function settleUp(state: TripState) {
+  const ids = state.members.map((m) => m.id);
+  const cents = new Map<string, number>(ids.map((id) => [id, 0]));
+  for (const e of state.expenses || []) {
+    const among = (e.split_with?.length ? e.split_with : ids).filter((id) => cents.has(id));
+    if (!among.length || !cents.has(e.paid_by)) continue;
+    const total = Math.round(Number(e.amount) * 100);
+    const share = Math.floor(total / among.length);
+    let rest = total - share * among.length; // leftover cents go to the first people in the split
+    cents.set(e.paid_by, cents.get(e.paid_by)! + total);
+    for (const id of among) { cents.set(id, cents.get(id)! - share - (rest > 0 ? 1 : 0)); if (rest > 0) rest--; }
+  }
+  const owed = [...cents].filter(([, c]) => c > 0).map(([id, c]) => ({ id, c })).sort((a, b) => b.c - a.c);
+  const owes = [...cents].filter(([, c]) => c < 0).map(([id, c]) => ({ id, c: -c })).sort((a, b) => b.c - a.c);
+  const payments: { from: string; to: string; amount: number }[] = [];
+  while (owed.length && owes.length) {
+    const a = owes[0], b = owed[0];
+    const amt = Math.min(a.c, b.c);
+    if (amt > 0) payments.push({ from: a.id, to: b.id, amount: amt / 100 });
+    a.c -= amt; b.c -= amt;
+    if (!a.c) owes.shift();
+    if (!b.c) owed.shift();
+  }
+  const total = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
+  return { balance: new Map([...cents].map(([id, c]) => [id, c / 100])), payments, total };
+}
+/** Pay links that open Venmo or Cash App with the amount filled in. */
+export const venmoLink = (handle: string, amount: number, note: string) =>
+  `https://venmo.com/?txn=pay&audience=private&recipients=${encodeURIComponent(handle)}&amount=${amount.toFixed(2)}&note=${encodeURIComponent(note)}`;
+export const cashAppLink = (tag: string, amount: number) => `https://cash.app/$${encodeURIComponent(tag)}/${amount.toFixed(2)}`;
+export const payHandle = (v: unknown) => String(v ?? '').trim().replace(/^[@$]+/, '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 30);
+
 /* ---------- pairings ---------- */
 /** Group i's tee time: the round's time plus 10 minutes per group. */
 export function teeAfter(time: string, i: number): string {
@@ -225,7 +270,12 @@ export const ACCESS_LABEL: Record<CourseAccess, string> = {
 };
 export interface CourseHit { id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; website: string; miles?: number }
 export interface CourseTee { name: string; yards: number; rating: number; slope: number }
-export interface CourseInfo { id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; par: number; holes: number; yards: number; website: string; phone: string; tees: CourseTee[] }
+export interface CourseInfo {
+  id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; par: number; holes: number; yards: number;
+  website: string; phone: string; tees: CourseTee[];
+  /** A short description (from Wikipedia, CC BY-SA) and where it came from; facilities like a driving range. */
+  architect?: string; built?: number; description?: string; descriptionUrl?: string; facilities?: string[];
+}
 /** "Rating 72.0–75.6 · Slope 137–146" across the men's tees. */
 export function teeSummary(tees: CourseTee[]): string {
   if (!tees.length) return '';
@@ -278,5 +328,5 @@ export interface PriceRange { low: number; high: number; median: number; count: 
 export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string }
 
 /* ---------- accounts ---------- */
-export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed; email_updates?: boolean }
+export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed; email_updates?: boolean; venmo?: string; cashapp?: string }
 export interface MyTrip { code: string; name: string; nights: number; start: string | null; destination: string | null; members: number; organizer: boolean }

@@ -3,10 +3,11 @@
 import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
 import { ACCESS_LABEL, teeSummary, type CourseAccess } from '@/lib/shared';
 import { dayLabel, groupNames, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
-import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
+import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
+import { CourseAbout } from '../CourseAbout';
 import { templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
@@ -68,7 +69,7 @@ export function GolfTab() {
 
 function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; info?: MapCourse }) {
   const ctx = useTrip();
-  const { state, me, act } = ctx;
+  const { state, me } = ctx;
   const dest = pickOf<DestinationData>(state, 'destination').option;
   const t = tally(state, r.id);
   const ap = (r.data.time.match(/AM|PM/i) || [''])[0].toUpperCase();
@@ -97,22 +98,21 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
               {' · '}<a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a>
             </div>
           ) : <div className="row-meta"><a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a></div>}
+          {info && <CourseAbout info={info} />}
         </div>
         <div className="fee">{money(r.data.fee)}<small>{r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player'}</small></div>
       </div>
       {r.locked
-        ? <div className="opt-status"><span className="good">In the plan</span><span className={r.data.booked ? 'good' : 'warn'}>{r.data.booked ? 'Booked' : 'Not booked'}</span></div>
+        ? <div className="opt-status"><span className="good">In the plan</span></div>
         : t.yes > state.members.length / 2 ? <div className="opt-status"><span className="flag">Most are in</span></div> : null}
       {r.locked && <Pairings r={r} />}
+      {r.locked && <BookingRow option={r} />}
       {early && <Callout kind="warn">Early on arrival day. Check everyone lands in time.</Callout>}
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">
         <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
         <LockButton option={r} lockLabel="Add to plan" unlockLabel="Remove from plan" />
-        {me?.is_organizer && r.locked && (
-          <button className="btn small ghost" onClick={() => act('update_option', { optionId: r.id, data: { ...r.data, booked: !r.data.booked } })}>{r.data.booked ? 'Not booked' : 'Booked it'}</button>
-        )}
         {canEdit(me, r) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => roundSheet(ctx, r)}>Edit</button>}
       </div>
     </div>

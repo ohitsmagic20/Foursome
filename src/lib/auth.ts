@@ -6,7 +6,7 @@ import type { Profile } from './shared';
 // Accounts. Supabase Auth only sends and checks the 6-digit email code; after that the app
 // keeps its own long-lived session token on the phone (same model as trip tokens).
 
-export const PROFILE_COLS = 'id,email,name,phone,home_city,airport,budget,bed,email_updates';
+export const PROFILE_COLS = 'id,email,name,phone,home_city,airport,budget,bed,email_updates,venmo,cashapp';
 
 /** A throwaway Auth client per request, so a signed-in user's session never leaks into the shared server client. */
 function authClient() {

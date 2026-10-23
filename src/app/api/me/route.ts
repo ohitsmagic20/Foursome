@@ -1,6 +1,8 @@
 import { PROFILE_COLS, profileComplete, profileFromRequest } from '@/lib/auth';
+import { isOwner } from '@/lib/owner';
 import { airport, bed, body, db, handle, int, str } from '@/lib/server';
 import type { MyTrip } from '@/lib/shared';
+import { payHandle } from '@/lib/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +35,7 @@ export function GET(req: Request) {
         const p = picks.get(r.trips!.id);
         return { code: r.trips!.code, name: r.trips!.name, nights: p?.nights || r.trips!.nights, start: p?.start || null, destination: p?.destination || null, members: p?.members || 1, organizer: r.is_organizer };
       });
-    return Response.json({ profile, complete: profileComplete(profile), trips }, { headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ profile, complete: profileComplete(profile), trips, owner: isOwner(profile.email) }, { headers: { 'Cache-Control': 'no-store' } });
   });
 }
 
@@ -55,10 +57,12 @@ export function POST(req: Request) {
       airport: airport(b.airport) || me.airport,
       budget: int(b.budget, 0, 100000, me.budget),
       bed: bed(b.bed),
+      venmo: payHandle(b.venmo ?? me.venmo),
+      cashapp: payHandle(b.cashapp ?? me.cashapp),
     };
     const { data, error } = await db().from('profiles').update(next).eq('id', me.id).select(PROFILE_COLS).single();
     if (error) throw error;
-    await db().from('members').update({ name: next.name, airport: next.airport, budget: next.budget, bed: next.bed }).eq('profile_id', me.id);
+    await db().from('members').update({ name: next.name, airport: next.airport, budget: next.budget, bed: next.bed, venmo: next.venmo, cashapp: next.cashapp }).eq('profile_id', me.id);
     return Response.json({ profile: data, complete: profileComplete(data) });
   });
 }

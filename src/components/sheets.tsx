@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
-import type { CourseHit, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
-import { ACCESS_LABEL } from '@/lib/shared';
+import type { CourseHit, CourseInfo, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
+import { ACCESS_LABEL, teeSummary } from '@/lib/shared';
+import { CourseAbout } from './CourseAbout';
 import { addDays, autoGroups, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
@@ -42,13 +43,17 @@ export function meSheet(ctx: TripCtx) {
   ctx.sheet({
     title: 'Your details',
     body: (
-      <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'update_me', { name: fd.name, airport: fd.airport, budget: num(fd.budget), bed: fd.bed }, 'Saved')}>
+      <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'update_me', { name: fd.name, airport: fd.airport, budget: num(fd.budget), bed: fd.bed, venmo: fd.venmo, cashapp: fd.cashapp }, 'Saved')}>
         <Field name="name" label="Name" defaultValue={m.name} required />
         <div className="grid2">
           <Field name="airport" label="Home airport" defaultValue={m.airport} placeholder="ORD" autoCapitalize="characters" maxLength={3} />
           <Field name="budget" label="Budget, all-in ($)" type="number" defaultValue={m.budget} />
         </div>
         <Select name="bed" label="Sleeping" defaultValue={m.bed} options={[['own', 'I want my own bed'], ['share', 'I’m fine sharing a bed']]} />
+        <div className="grid2">
+          <Field name="venmo" label="Venmo" defaultValue={m.venmo} placeholder="@username" autoCapitalize="none" />
+          <Field name="cashapp" label="Cash App" defaultValue={m.cashapp} placeholder="$cashtag" autoCapitalize="none" />
+        </div>
       </SheetForm>
     ),
   });
@@ -227,6 +232,12 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   const [picked, setPicked] = useState<CourseHit | null>(d?.courseId ? { id: d.courseId, name: d.course, city: '', state: '', access: d.access || '', lat: d.lat || 0, lon: d.lon || 0, website: d.url || '' } : null);
   const [hits, setHits] = useState<CourseHit[]>([]);
   const [open, setOpen] = useState(false);
+  const [about, setAbout] = useState<CourseInfo | null>(null);
+  useEffect(() => {
+    setAbout(null);
+    if (!picked?.id) return;
+    api<{ course: CourseInfo }>(`/api/course-info?id=${picked.id}`).then((r) => setAbout(r.course)).catch(() => {});
+  }, [picked?.id]);
 
   const weekday = date ? addDays(parseDay(date.data.start), day - 1).getDay() : -1;
   const weekend = weekday >= 0 && isWeekendDay(weekday);
@@ -310,6 +321,12 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         {picked && picked.name === course.trim()
           ? <p className="hint">{[picked.access ? ACCESS_LABEL[picked.access] : '', picked.city ? `${picked.city}, ${picked.state}` : ''].filter(Boolean).join(' · ')}{picked.access === 'private' ? ' · members and guests only' : ''}</p>
           : course.trim().length >= 3 && hits.length === 0 && <p className="hint">Not in the course list. You can still add it.</p>}
+        {picked && picked.name === course.trim() && about && (
+          <>
+            {(about.par || about.tees.length) ? <p className="hint">{[about.par ? `Par ${about.par}` : '', teeSummary(about.tees)].filter(Boolean).join(' · ')}</p> : null}
+            <CourseAbout info={about} open />
+          </>
+        )}
       </div>
       <div className="field">
         <label htmlFor="f-day">Day</label>

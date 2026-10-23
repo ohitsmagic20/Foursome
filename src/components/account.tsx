@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { MyTrip, NearbyAirport, Profile } from '@/lib/shared';
 import { api, clearSession, getSession, setSession } from '@/lib/client';
 
-export interface MeState { profile: Profile; complete: boolean; trips: MyTrip[] }
+export interface MeState { profile: Profile; complete: boolean; trips: MyTrip[]; owner?: boolean }
 
 /** Load the signed-in person. `null` = signed out, `undefined` = still loading. */
 export function useMe() {
@@ -34,7 +34,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
   const [err, setErr] = useState('');
   const [resent, setResent] = useState(false);
   const [nonce, setNonce] = useState('');
-  const [showCode, setShowCode] = useState(true);
+  const [showCode] = useState(true);
   const codeRef = useRef<HTMLInputElement>(null);
 
   // While waiting, check every few seconds whether the emailed link was opened (in Mail, Safari, anywhere).
@@ -119,6 +119,8 @@ export function ProfileForm({ profile, onSaved, submitLabel = 'Save', intro }: {
   const [airport, setAirport] = useState(profile.airport);
   const [budget, setBudget] = useState(profile.budget ? String(profile.budget) : '');
   const [bed, setBed] = useState(profile.bed);
+  const [venmo, setVenmo] = useState(profile.venmo || '');
+  const [cashapp, setCashapp] = useState(profile.cashapp || '');
   const [found, setFound] = useState<NearbyAirport[]>([]);
   const [looking, setLooking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -153,7 +155,7 @@ export function ProfileForm({ profile, onSaved, submitLabel = 'Save', intro }: {
       if (airport.length !== 3) { setErr('Pick your home airport so flight search knows where you’re coming from.'); return; }
       setBusy(true);
       try {
-        onSaved(await api<{ profile: Profile; complete: boolean }>('/api/me', { body: { name, phone, home_city: city, airport, budget: Number(budget) || 0, bed } }));
+        onSaved(await api<{ profile: Profile; complete: boolean }>('/api/me', { body: { name, phone, home_city: city, airport, budget: Number(budget) || 0, bed, venmo, cashapp } }));
       } catch (x) { setErr(x instanceof Error ? x.message : 'Couldn’t save.'); }
       finally { setBusy(false); }
     }}>
@@ -204,6 +206,16 @@ export function ProfileForm({ profile, onSaved, submitLabel = 'Save', intro }: {
             <option value="own">Own bed</option>
             <option value="share">Fine sharing</option>
           </select>
+        </div>
+      </div>
+      <div className="grid2">
+        <div className="field">
+          <label htmlFor="p-venmo">Venmo <span style={{ fontWeight: 500 }}>(optional)</span></label>
+          <input id="p-venmo" value={venmo} onChange={(e) => setVenmo(e.target.value)} autoCapitalize="none" autoCorrect="off" placeholder="@username" />
+        </div>
+        <div className="field">
+          <label htmlFor="p-cashapp">Cash App <span style={{ fontWeight: 500 }}>(optional)</span></label>
+          <input id="p-cashapp" value={cashapp} onChange={(e) => setCashapp(e.target.value)} autoCapitalize="none" autoCorrect="off" placeholder="$cashtag" />
         </div>
       </div>
       {err && <p className="error" role="alert">{err}</p>}

@@ -16,7 +16,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       if (!profileComplete(me)) throw new HttpError(400, 'Finish your profile first: your name and home airport.');
       const existing = await db().from('members').select('id,token').eq('trip_id', trip.id).eq('profile_id', me.id).maybeSingle();
       if (existing.data) return Response.json({ token: existing.data.token });
-      row = { name: me.name, airport: me.airport, budget: me.budget, bed: me.bed, profile_id: me.id };
+      row = { name: me.name, airport: me.airport, budget: me.budget, bed: me.bed, venmo: me.venmo || '', cashapp: me.cashapp || '', profile_id: me.id };
     } else {
       await rateLimit(`guest-join:${ipKey(req)}`, 20, 60, 'Too many joins from this device. Try again in an hour.');
       const b = await body(req);

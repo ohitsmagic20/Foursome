@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Member, Option, TripState, VoteValue } from '@/lib/shared';
-import { formatTee, parseTee, tally, votesFor } from '@/lib/shared';
+import { formatTee, parseTee, votesFor } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 
 /* ---------- icons ---------- */
@@ -208,6 +208,34 @@ export function TimeField({ name, label, defaultValue, hint }: { name: string; l
         ))}
       </div>
       {hint && <p className="hint">{hint}</p>}
+    </div>
+  );
+}
+
+/* ---------- who books it ---------- */
+/** On a locked place or planned round: who's booking it and whether it's done. */
+export function BookingRow({ option }: { option: Option<{ owner?: string; booked?: boolean }> }) {
+  const { state, me, act, toast } = useTrip();
+  if (!option.locked || !me) return null;
+  const owner = state.members.find((m) => m.id === option.data.owner);
+  const booked = !!option.data.booked;
+  const canMark = me.is_organizer || owner?.id === me.id;
+  return (
+    <div className="booking">
+      <span className={booked ? 'booking-done' : 'booking-open'}>{booked ? 'Booked' : 'Not booked'}</span>
+      {me.is_organizer ? (
+        <select className="mini-select" aria-label="Who books it" value={owner?.id || ''} onChange={async (e) => {
+          if (await act('set_booking', { optionId: option.id, owner: e.target.value })) toast(e.target.value ? 'Assigned' : 'Unassigned');
+        }}>
+          <option value="">Who books it?</option>
+          {state.members.map((m) => <option key={m.id} value={m.id}>{m.id === me.id ? 'Me' : firstName(m.name)}</option>)}
+        </select>
+      ) : (
+        <span className="row-meta">{owner ? (owner.id === me.id ? 'You’re booking it' : `${firstName(owner.name)} is booking it`) : 'Nobody assigned yet'}</span>
+      )}
+      {canMark && (
+        <button className="btn small" style={{ marginLeft: 'auto' }} onClick={() => act('set_booking', { optionId: option.id, booked: !booked })}>{booked ? 'Not booked' : 'Mark booked'}</button>
+      )}
     </div>
   );
 }

@@ -8,10 +8,10 @@ export function IdeaCard({ t }: { t: TripTemplate }) {
   const c = templateCost(t);
   return (
     <a className="idea-card" href={`/ideas/${t.slug}`}>
-      <div className="eyebrow">{t.state} · {t.nights + 1} days</div>
+      <div className="eyebrow">{t.community ? `Group of ${t.community.group} · ${t.community.month}` : `${t.state} · ${t.nights + 1} days`}</div>
       <div className="idea-name">{t.name}</div>
       <div className="row-meta">{t.tagline}</div>
-      <div className="idea-cost"><strong>{range(c.total)}</strong> <span className="row-meta">per golfer, before flights</span></div>
+      <div className="idea-cost"><strong>{range(c.total)}</strong> <span className="row-meta">per golfer, before flights{t.community ? ', what they paid' : ''}</span></div>
     </a>
   );
 }
