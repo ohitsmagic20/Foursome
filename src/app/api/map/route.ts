@@ -3,7 +3,7 @@ import { handle, HttpError, str } from '@/lib/server';
 
 // Points for a trip's mini map: the arrival airport and each course, found on OpenStreetMap.
 // GET /api/map?place=Kohler, WI&airport=MKE&course=Erin Hills&course=Whistling Straits (Straits)
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export function GET(req: Request) {
   return handle(async () => {

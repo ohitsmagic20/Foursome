@@ -110,24 +110,37 @@ export function airportCoords(code: string): { lat: number; lon: number } | null
   return row ? { lat: row[3], lon: row[4] } : null;
 }
 
-/** Find a golf course by name near a point (within about 100 miles), from OpenStreetMap. Cached for a month. */
+/** Find a golf course by name near a point (within about 100 miles), from OpenStreetMap. Cached for a month.
+ *  Prefers places tagged as golf courses, and the one closest to the destination when several share a name. */
 export async function findCourse(name: string, near: { lat: number; lon: number }): Promise<{ lat: number; lon: number } | null> {
-  const base = name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
+  const base = name.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
   const inside = (name.match(/\((.*?)\)/) || [])[1] || '';
-  const pad = 1.5;
-  const box = [near.lon - pad, near.lat + pad, near.lon + pad, near.lat - pad].map((x) => x.toFixed(3)).join(',');
-  // "Whistling Straits (Irish)" → "Whistling Straits"; "The Commons (Sand Valley)" → "The Commons Sand Valley" first.
-  const tries = [...new Set([inside && !/^(north|south|east|west|old|new|irish|straits|river|lake|ridge|judge|stadium|monument|saguaro|cholla|bluffs|dye course)$/i.test(inside) ? `${base} ${inside}` : '', base, `${base} golf`].filter(Boolean))];
-  for (const q of tries) {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=5&bounded=1&viewbox=${box}`, {
-        headers: { 'User-Agent': UA, Accept: 'application/json' }, next: { revalidate: 60 * 60 * 24 * 30 },
-      });
-      if (!res.ok) continue;
-      const hits = (await res.json()) as { lat: string; lon: string; category?: string; type?: string }[];
-      const golf = hits.find((h) => h.type === 'golf_course') || hits.find((h) => h.category === 'leisure') || hits[0];
-      if (golf) return { lat: Number(golf.lat), lon: Number(golf.lon) };
-    } catch { /* try the next wording */ }
+  const generic = /^(north|south|east|west|old|new|irish|straits|river|lake|ridge|judge|stadium|monument|saguaro|cholla|bluffs|links|dye course|meadow valleys)$/i;
+  const short = base.replace(/\b(inn|lodge|resort)\b\s*&?\s*/gi, '').replace(/\b(golf (club|course|links|resort)|golf & (country club|cc)|country club|golf club|club|gc|cc)\b\.?/gi, '').replace(/[&,]+\s*$/, '').trim();
+  const tries = [...new Set([
+    inside && !generic.test(inside) ? `${base} ${inside}` : '',
+    inside && !generic.test(inside) ? inside : '',
+    base, short, `${short} golf`,
+  ].filter((x) => x && x.length > 2))];
+  type Hit = { lat: string; lon: string; category?: string; type?: string };
+  const dist = (h: Hit) => miles(near.lat, near.lon, Number(h.lat), Number(h.lon));
+  let fallback: Hit | null = null;
+  let calls = 0;
+  for (const pad of [0.8, 1.5]) {
+    const box = [near.lon - pad, near.lat + pad, near.lon + pad, near.lat - pad].map((x) => x.toFixed(3)).join(',');
+    for (const q of tries) {
+      if (calls++) await new Promise((r) => setTimeout(r, 1000)); // OpenStreetMap asks for at most one search per second
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=10&bounded=1&viewbox=${box}`, {
+          headers: { 'User-Agent': UA, Accept: 'application/json' }, next: { revalidate: 60 * 60 * 24 * 30 },
+        });
+        if (!res.ok) continue;
+        const hits = ((await res.json()) as Hit[]).sort((a, b) => dist(a) - dist(b));
+        const golf = hits.find((h) => h.type === 'golf_course');
+        if (golf) return { lat: Number(golf.lat), lon: Number(golf.lon) };
+        fallback ||= hits.find((h) => h.category === 'leisure') || null;
+      } catch { /* try the next wording */ }
+    }
   }
-  return null;
+  return fallback ? { lat: Number(fallback.lat), lon: Number(fallback.lon) } : null;
 }
