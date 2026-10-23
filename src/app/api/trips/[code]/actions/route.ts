@@ -2,7 +2,7 @@ import { after } from 'next/server';
 import type { Kind, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { nightsOf, openVotes, rangeLabel } from '@/lib/shared';
-import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, rateLimit, str, tripByCode } from '@/lib/server';
+import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { APP_URL, emailableCount, emailMembers, planEmail, type EmailBody } from '@/lib/email';
 
@@ -162,7 +162,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           const what = label(opt.kind, opt.data, trip);
           const text = opt.kind === 'round' ? `${what} is in the plan.` : opt.kind === 'lodging' ? `You’re staying at ${what}.` : `${what} is locked in.`;
           pings.push(['others', { title: trip.name, body: text, url: url(TAB[opt.kind]), tag: `lock-${opt.kind}` }, 0]);
-          if (SINGLE_WINNER.includes(opt.kind)) {
+          // One email per decision type per 30 minutes, so locking and unlocking doesn't flood inboxes.
+          if (SINGLE_WINNER.includes(opt.kind) && await firstIn(`lockmail:${trip.id}:${opt.kind}`, 30)) {
             const next = opt.kind === 'date' || opt.kind === 'destination' ? 'Time to look at flights.' : 'Check the cost per person on the Clubhouse tab.';
             emails.push(['others', { subject: `${trip.name}: ${text}`, heading: text, lines: [`${first(me.name)} locked it in for ${trip.name}.`, next], button: { label: 'Open the trip', url: link(TAB[opt.kind]) } }]);
           }

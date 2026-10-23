@@ -166,3 +166,8 @@ export async function rateLimit(bucket: string, max: number, minutes: number, me
   if ((count || 0) >= max) throw new HttpError(429, message);
   await db().from('rate_events').insert({ bucket });
 }
+
+/** True (and recorded) if nothing happened in this bucket in the last `minutes`. Used to avoid repeat emails. */
+export async function firstIn(bucket: string, minutes: number): Promise<boolean> {
+  try { await rateLimit(bucket, 1, minutes, ''); return true; } catch { return false; }
+}

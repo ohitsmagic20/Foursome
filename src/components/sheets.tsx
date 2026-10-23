@@ -219,7 +219,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   const dest = pickOf<DestinationData>(state, 'destination').option;
   const [course, setCourse] = useState(d?.course ?? prefillCourse ?? '');
   const [url, setUrl] = useState(d?.url ?? prefillUrl ?? '');
-  const [day, setDay] = useState(d?.day || startDay);
+  const [day, setDay] = useState(Math.min(d?.day || startDay, days));
   const [fee, setFee] = useState(d?.fee ? String(d.fee) : '');
   const [nearby, setNearby] = useState<NearbyCourse[]>([]);
   const [prices, setPrices] = useState<CoursePrices | null>(null);

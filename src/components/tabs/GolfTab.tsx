@@ -35,6 +35,13 @@ export function GolfTab() {
           </section>
         );
       })}
+      {rounds.some((r) => r.data.day > days) && (
+        <section className="section">
+          <div className="day-label">Outside the current dates</div>
+          <Callout kind="warn">These rounds are on a day after the trip ends with the current dates. Edit them to move them to another day, or remove them.{plan.some((r) => r.data.day > days) ? ' Ones in the plan still count toward the cost.' : ''}</Callout>
+          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} />)}
+        </section>
+      )}
       {wx.data && <WeatherCredit />}
       {destOpt
         ? <CoursesNearby dest={destOpt.data.name} />
