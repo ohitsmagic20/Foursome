@@ -8,6 +8,30 @@ interface OsmElement { lat?: number; lon?: number; center?: { lat: number; lon: 
 
 const NOT_GOLF = /\b(mini|miniature|putt|putting|disc|frisbee|foot ?golf|driving range|par 3 kids)\b/i;
 
+// Public OpenStreetMap servers. The main one is often busy, so try the others before giving up.
+const MIRRORS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+
+async function overpass(query: string): Promise<{ elements?: OsmElement[] } | null> {
+  for (const base of MIRRORS) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const res = await fetch(`${base}?data=${encodeURIComponent(query)}`, {
+        headers: { 'User-Agent': 'Foursome golf trip planner (https://foresome-one.vercel.app)' },
+        signal: ctl.signal,
+        cache: 'no-store', // never cache a busy-server error; successful answers are cached by the CDN below
+      });
+      if (res.ok) {
+        const j = await res.json();
+        if (Array.isArray(j?.elements)) return j;
+      }
+    } catch { /* try the next server */ } finally { clearTimeout(timer); }
+  }
+  return null;
+}
+
+export const maxDuration = 45;
+
 export function GET(req: Request) {
   return handle(async () => {
     const q = new URL(req.url).searchParams;
@@ -21,12 +45,9 @@ export function GET(req: Request) {
     const m = Math.round(radiusMi * 1609.34);
     const around = `around:${m},${place.lat},${place.lon}`;
     const query = `[out:json][timeout:25];(way["leisure"="golf_course"]["name"](${around});relation["leisure"="golf_course"]["name"](${around}););out center tags 150;`;
-    const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`, {
-      headers: { 'User-Agent': 'Foursome golf trip planner' },
-      next: { revalidate: 60 * 60 * 24 * 7 },
-    });
-    if (!res.ok) throw new HttpError(502, 'The course map is busy right now. Try again in a minute.');
-    const json = (await res.json()) as { elements?: OsmElement[] };
+    const json = await overpass(query);
+    if (!json) throw new HttpError(502, 'The course map is busy right now. Try again in a minute.');
+
 
     const seen = new Set<string>();
     const courses: NearbyCourse[] = [];
@@ -52,7 +73,7 @@ export function GET(req: Request) {
     courses.sort((a, b) => Number(a.isPrivate) - Number(b.isPrivate) || a.miles - b.miles);
 
     return Response.json({ place: `${place.name}${place.region ? `, ${place.region}` : ''}`, radius: radiusMi, courses: courses.slice(0, 40) }, {
-      headers: { 'Cache-Control': 'public, max-age=86400' },
+      headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=604800' },
     });
   });
 }

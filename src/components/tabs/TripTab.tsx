@@ -103,7 +103,7 @@ function TripPlan() {
       <div className="plan-head">
         <div className="eyebrow">The plan</div>
         <div className="plan-title">{dest.option.data.name}</div>
-        <div className="row-meta">{rangeLabel(start, state.trip.nights)} · {state.trip.nights} nights · {state.members.length} golfers</div>
+        <div className="row-meta">{rangeLabel(start, state.trip.nights)} · {state.trip.nights} nights · {state.members.length} {state.members.length === 1 ? 'golfer' : 'golfers'}</div>
       </div>
       <div className="plan-rows">
         <div className="plan-row"><span className="k">Stay</span><span>{stay.option ? <>{stay.option.data.url ? <a href={stay.option.data.url} target="_blank" rel="noopener noreferrer">{stay.option.data.name}</a> : stay.option.data.name}{!stay.locked && <span className="row-meta"> · still voting</span>}</> : <span className="row-meta">Not picked yet</span>}</span></div>
