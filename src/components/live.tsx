@@ -109,6 +109,26 @@ export function StaySearch({ dest, start }: { dest: string; start: string }) {
 }
 
 /* ---------- courses near the destination ---------- */
+interface GooglePlace { name: string; rating: number; count: number; url: string; lat: number; lon: number }
+const GENERIC_WORDS = new Set(['the', 'golf', 'club', 'course', 'country', 'cc', 'gc', 'resort', 'links', 'and', 'at', 'of']);
+const nameWords = (s: string) => s.toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w && !GENERIC_WORDS.has(w));
+function milesBetween(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * 3958.8 * Math.asin(Math.sqrt(h));
+}
+/** The Google Maps listing for a course: close by and sharing a real word of its name (or right on top of it). */
+function googleFor(c: NearbyCourse, places: GooglePlace[]): GooglePlace | null {
+  const w = nameWords(c.name);
+  let best: GooglePlace | null = null, bestD = Infinity;
+  for (const p of places) {
+    const d = milesBetween(c, p);
+    const shared = nameWords(p.name).some((x) => w.includes(x));
+    if ((shared && d < 2) || d < 0.3) { if (d < bestD) { best = p; bestD = d; } }
+  }
+  return best;
+}
+
 export function CoursesNearby({ dest }: { dest: string }) {
   const ctx = useTrip();
   const [radius, setRadius] = useState(30);
@@ -119,6 +139,9 @@ export function CoursesNearby({ dest }: { dest: string }) {
   const list = (data?.courses || []).filter((c) => showPrivate || !c.isPrivate);
   const names = list.slice(0, limit).map((c) => c.name).join('|');
   const priced = useLoad<{ prices: Record<string, CoursePrices> }>(names ? `/api/course-prices?courses=${encodeURIComponent(names)}` : null).data?.prices || {};
+  const google = useLoad<{ enabled: boolean; places: GooglePlace[] }>(`/api/google-ratings?place=${encodeURIComponent(dest)}&miles=${radius}`).data;
+  const ratingOf = (c: NearbyCourse) => (google?.places.length ? googleFor(c, google.places) : null);
+  const shownRatings = list.slice(0, limit).some((c) => ratingOf(c));
 
   return (
     <section className="section">
@@ -140,7 +163,10 @@ export function CoursesNearby({ dest }: { dest: string }) {
                 <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div>
                     <div className="row-title">{c.name}</div>
-                    <div className="row-meta">{c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}{c.isPrivate ? ' · Private' : ''}</div>
+                    <div className="row-meta">
+                      {(() => { const g = ratingOf(c); return g ? <a className="g-rating" href={g.url} target="_blank" rel="noopener noreferrer" aria-label={`${g.rating} out of 5 on Google Maps, ${g.count} reviews`}>★ {g.rating.toFixed(1)} <span>({g.count.toLocaleString('en-US')})</span></a> : null; })()}
+                      {c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}{c.isPrivate ? ' · Private' : ''}
+                    </div>
                     {priced[c.name]?.all && <div className="price-tag">Groups paid ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
                   </div>
                   <div className="btn-row">
@@ -161,6 +187,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
           <button className="btn small ghost" onClick={() => setShowPrivate(!showPrivate)}>{showPrivate ? 'Hide private clubs' : 'Show private clubs'}</button>
         )}
       </div>
+      {shownRatings && <p className="google-attrib">Ratings: Google Maps</p>}
       <p className="hint">Course data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> via <a href="https://opengolfapi.org/attribution" target="_blank" rel="noopener noreferrer">OpenGolfAPI</a></p>
     </section>
   );

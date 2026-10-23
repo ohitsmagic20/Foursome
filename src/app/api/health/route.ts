@@ -13,6 +13,8 @@ export async function GET() {
     SUPABASE_URL: !url ? 'missing' : /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url.trim()) ? 'looks right' : `unexpected format (starts with "${url.slice(0, 12)}…", should be https://xxxx.supabase.co)`,
     SUPABASE_SECRET_KEY: !key ? 'missing' : key.startsWith('sb_secret_') ? 'set (secret key)' : key.startsWith('sb_publishable_') ? 'WRONG KEY: this is the publishable key, use the secret key' : key.startsWith('eyJ') ? 'set (legacy JWT key: make sure it is service_role, not anon)' : 'set (unrecognized format)',
     DUFFEL_ACCESS_TOKEN: !duffel ? 'missing' : duffel.startsWith('duffel_test_') ? 'set (test mode)' : duffel.startsWith('duffel_live_') ? 'set (live)' : 'set (unrecognized format)',
+    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY ? 'set' : 'missing (Google ratings off)',
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? 'set' : 'missing (trip emails off)',
     url_has_spaces: /\s/.test(url) ? 'yes: remove spaces' : 'no',
     key_has_spaces: /\s/.test(key) ? 'yes: remove spaces' : 'no',
   };

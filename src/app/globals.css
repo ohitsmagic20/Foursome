@@ -359,3 +359,9 @@ tr.me .mark.none { border-color: var(--green); }
 .course-hits button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: 0; padding: 10px; border-radius: 8px; color: var(--ink); font: inherit; }
 .course-hits button:active, .course-hits button:hover { background: var(--soft); }
 .course-hits .access { margin: 0; flex: none; }
+
+/* Google Maps ratings (attribution per Google's Places policies: "Google Maps", sans-serif, #5E5E5E, 12px+) */
+.g-rating { display: inline-flex; gap: 3px; align-items: baseline; margin-right: 8px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.g-rating span { font-weight: 500; color: var(--muted); }
+.google-attrib { margin: 0; font-family: Roboto, Arial, sans-serif; font-size: 12px; color: #5E5E5E; white-space: nowrap; }
+@media (prefers-color-scheme: dark) { .google-attrib { color: #ffffff; } }
