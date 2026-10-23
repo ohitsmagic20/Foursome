@@ -7,7 +7,7 @@ Plan a golf trip with your group. One invite link, and everyone votes on:
 - **Where we stay**: paste an Airbnb, Vrbo or hotel link with the total; the app checks beds against who wants their own
 - **Where we play**: courses and tee times by day, with greens fees and the date each price was checked
 
-The organizer locks the winners. Costs split per person automatically (people sharing a bed pay 25% less), and the Flights tab searches round trips from each person's home airport for the locked dates and shows who lands when, flagging anyone who would miss the first tee time.
+The organizer locks the winners. Everyone pays their own way; the app shows each person's estimated cost (people sharing a bed pay 25% less of the house), and the Flights tab searches round trips from each person's home airport for the locked dates and shows who lands when, flagging anyone who would miss the first tee time.
 
 No scorekeeping. This app is only for planning.
 
@@ -31,6 +31,7 @@ No scorekeeping. This app is only for planning.
 
 1. Open your Supabase project.
 2. Go to **SQL Editor → New query**, paste everything in [`supabase/schema.sql`](supabase/schema.sql), and click **Run**.
+   Projects created before accounts or notifications existed: also run `supabase/002_accounts.sql` and `supabase/003_notifications.sql`.
 3. Go to **Project Settings → API** and copy:
    - the **Project URL** → `SUPABASE_URL`
    - the **secret** key (`sb_secret_...`), or the legacy **service_role** key → `SUPABASE_SECRET_KEY`
@@ -77,5 +78,11 @@ npm run dev                  # http://localhost:3000
 - Live tee times and greens fees from the GolfNow affiliate API (needs approval)
 - Hotel search with commission through the Expedia Group creator program
 - Text-message reminders to people who haven't voted
-- Deposits collected in the app with Stripe (set up an LLC first)
 - An App Store version wrapped with Capacitor (needs a Mac and an Apple Developer account)
+
+## Accounts, guests and notifications
+
+- People can start or join a trip with just their name and home city (a guest spot saved on that phone), or sign in with email so their trips follow them to any phone. Signing in later attaches the account to the guest spot.
+- Only members see a trip's details. Anyone else with the link sees the trip name, the organizer's first name and how many are going.
+- Notifications use web push. On iPhone they work once Foursome is added to the Home Screen (iOS 16.4+). The signing keys are generated on first use and stored in `app_settings`; nothing to configure.
+- `/api/health` reports whether the database, accounts and notifications are set up.

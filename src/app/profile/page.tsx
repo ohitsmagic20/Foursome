@@ -37,7 +37,7 @@ export default function ProfilePage() {
                 {[
                   ['Airline loyalty numbers', 'Save your frequent flyer numbers for faster booking'],
                   ['GolfNow', 'Book tee times with your GolfNow account'],
-                  ['Venmo or Cash App', 'Settle deposits and split costs'],
+                  ['Venmo or Cash App', 'Settle up shared costs like the house'],
                 ].map(([t, d]) => (
                   <div className="row" key={t}>
                     <div className="grow"><div className="row-title">{t}</div><div className="row-meta">{d}</div></div>

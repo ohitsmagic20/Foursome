@@ -2,9 +2,10 @@
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
 import { bedsNeeded, clockLabel, openVotes, costOf, dayLabel, money, parseDay, pickOf, plannedRounds, rangeLabel, teeMinutes, teeTimesNeeded } from '@/lib/shared';
-import { firstName, initials } from '@/lib/client';
+import { clearToken, firstName, initials } from '@/lib/client';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
+import { NotifyCard } from '../notify';
 
 export function TripTab() {
   const ctx = useTrip();
@@ -16,7 +17,6 @@ export function TripTab() {
   const rounds = plannedRounds(state);
   const booked = rounds.filter((r) => r.data.booked).length;
   const flown = state.members.filter((m) => m.flight_price !== null).length;
-  const paid = state.members.filter((m) => m.paid).length;
   const avg = n ? state.members.reduce((s, m) => s + costOf(state, m).total, 0) / n : 0;
 
   let countdown: number | null = null;
@@ -44,7 +44,9 @@ export function TripTab() {
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
 
+      <TripPlan />
       <YourTurn />
+      <NotifyCard />
 
       {n < 2 && me?.is_organizer && <Callout>Invite your group first. Everything else is decided by their votes. <InviteButton ctx={ctx} className="link-btn" label="Share the invite link" /></Callout>}
 
@@ -71,6 +73,57 @@ export function TripTab() {
 
       <Crew />
     </>
+  );
+}
+
+/** Once dates and destination are locked: the whole trip on one card, plus calendar and share. */
+function TripPlan() {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  const date = pickOf<DateData>(state, 'date');
+  const dest = pickOf<DestinationData>(state, 'destination');
+  if (!date.locked || !dest.locked || !date.option || !dest.option) return null;
+  const start = date.option.data.start;
+  const stay = pickOf<LodgingData>(state, 'lodging');
+  const rounds = plannedRounds(state).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
+  const landed = state.members.filter((m) => m.flight_arrive_at).sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
+  const lastIn = landed[landed.length - 1];
+  const mine = me ? costOf(state, me) : null;
+  const cal = me && state.calKey ? `/api/trips/${state.trip.code}/calendar?m=${me.id}&k=${state.calKey}` : '';
+
+  const shareText = [
+    `⛳ ${state.trip.name}`,
+    `${rangeLabel(start, state.trip.nights)} · ${dest.option.data.name}`,
+    stay.option ? `Staying: ${stay.option.data.name}${stay.locked ? '' : ' (leading)'}` : '',
+    ...rounds.map((r) => `${dayLabel(start, r.data.day)} ${r.data.time}: ${r.data.course}${r.data.booked ? '' : ' (not booked yet)'}`),
+  ].filter(Boolean).join('\n');
+
+  return (
+    <section className="plan">
+      <div className="plan-head">
+        <div className="eyebrow">The plan</div>
+        <div className="plan-title">{dest.option.data.name}</div>
+        <div className="row-meta">{rangeLabel(start, state.trip.nights)} · {state.trip.nights} nights · {state.members.length} golfers</div>
+      </div>
+      <div className="plan-rows">
+        <div className="plan-row"><span className="k">Stay</span><span>{stay.option ? <>{stay.option.data.url ? <a href={stay.option.data.url} target="_blank" rel="noopener noreferrer">{stay.option.data.name}</a> : stay.option.data.name}{!stay.locked && <span className="row-meta"> · still voting</span>}</> : <span className="row-meta">Not picked yet</span>}</span></div>
+        {Array.from({ length: state.trip.nights + 1 }, (_, i) => i + 1).map((d) => {
+          const rs = rounds.filter((r) => r.data.day === d);
+          return (
+            <div className="plan-row" key={d}>
+              <span className="k">{dayLabel(start, d)}</span>
+              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="row-meta"> · not booked</span>}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === state.trip.nights + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
+            </div>
+          );
+        })}
+        {lastIn && <div className="plan-row"><span className="k">Arrivals</span><span>{landed.length} of {state.members.length} have flights · last in {firstName(lastIn.name)}, {clockLabel(lastIn.flight_arrive_at!)}</span></div>}
+        {mine && <div className="plan-row"><span className="k">Your cost</span><span><strong>{money(mine.total)}</strong> <span className="row-meta">flight {money(mine.flight)} · stay {money(mine.stay)} · golf {money(mine.golf)} · food {money(mine.food)}</span></span></div>}
+      </div>
+      <div className="btn-row">
+        {cal && <a className="btn small" href={cal}>Add to Calendar</a>}
+        <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>
+      </div>
+    </section>
   );
 }
 
@@ -172,13 +225,12 @@ function CostTable() {
 
 function Crew() {
   const ctx = useTrip();
-  const { state, me, act } = ctx;
+  const { state, me } = ctx;
   const stay = pickOf<LodgingData>(state, 'lodging').option;
   const need = bedsNeeded(state.members);
-  const paid = state.members.filter((m) => m.paid).length;
   return (
     <section className="section">
-      <div className="section-head"><h2>Crew</h2><span className="sub">{state.trip.deposit > 0 ? `${paid} of ${state.members.length} deposits in` : `${state.members.length} going`}</span></div>
+      <div className="section-head"><h2>Crew</h2><span className="sub">{state.members.length} going</span></div>
       <div className="list">
         {state.members.map((m) => (
           <div className="row" key={m.id}>
@@ -188,19 +240,16 @@ function Crew() {
               <div className="row-meta">{m.airport || 'No airport yet'} · {m.bed === 'own' ? 'Own bed' : 'Will share'}{m.budget ? ` · budget ${money(m.budget)}` : ''}</div>
             </div>
             {m.id === me?.id && <button className="btn small ghost" onClick={() => meSheet(ctx)}>Edit</button>}
-            {state.trip.deposit > 0 && (me?.is_organizer
-              ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <button className="switch" role="switch" aria-checked={m.paid} aria-label={`${m.name} paid deposit`} onClick={() => act('set_paid', { memberId: m.id, paid: !m.paid })} />
-                  <span className="row-meta" style={{ fontSize: 11 }}>{m.paid ? 'Paid' : 'Deposit'}</span>
-                </div>
-              : <Chip kind={m.paid ? 'good' : 'plain'}>{m.paid ? 'Paid' : 'Owes deposit'}</Chip>)}
           </div>
         ))}
       </div>
       {stay && <p className="hint">This group needs {need} beds. {stay.data.name} has {stay.data.beds || 'an unknown number of'}.</p>}
       <InviteButton ctx={ctx} className="btn primary block" label="Invite people" />
       <GroupUpdate ctx={ctx} />
-      {me?.is_organizer && <RemoveMember ctx={ctx} />}
+      {me?.is_organizer ? <RemoveMember ctx={ctx} /> : (
+        <ConfirmButton className="btn ghost danger block" label="Leave this trip" confirmLabel="Tap again to leave"
+          onConfirm={async () => { if (await ctx.act('leave')) { clearToken(state.trip.code); location.href = '/'; } }} />
+      )}
     </section>
   );
 }
@@ -227,7 +276,6 @@ function GroupUpdate({ ctx }: { ctx: TripCtx }) {
         dest.option ? `Where: ${dest.option.data.name}${dest.locked ? ' (locked)' : ' (leading)'}` : 'Where: suggest a place',
         stay.option ? `Stay: ${stay.option.data.name}${stay.locked ? ' (locked)' : ' (leading)'}` : '',
         waiting.length ? `Still need votes from: ${waiting.join(', ')}` : '',
-        state.trip.deposit > 0 && state.members.some((m) => !m.paid) ? `Deposits (${money(state.trip.deposit)}) still due: ${state.members.filter((m) => !m.paid).map((m) => firstName(m.name)).join(', ')}` : '',
       ].filter(Boolean);
       share(ctx, lines.join('\n'), `${location.origin}/t/${state.trip.code}`);
     }}>Send a status update to the group text</button>

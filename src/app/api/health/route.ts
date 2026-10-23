@@ -35,6 +35,9 @@ export async function GET() {
       if (error) missing.push(t);
     }
     report.accounts = missing.length ? `not set up: run supabase/002_accounts.sql (missing ${missing.join(', ')})` : 'ready';
+    const n1 = await db().from('push_subs').select('endpoint').limit(1);
+    const n2 = await db().from('trips').select('last_nudge').limit(1);
+    report.notifications = n1.error || n2.error ? 'not set up: run supabase/003_notifications.sql' : 'ready';
   }
   return Response.json(report, { headers: { 'Cache-Control': 'no-store' } });
 }

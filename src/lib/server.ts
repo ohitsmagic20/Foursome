@@ -1,6 +1,6 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import type { Member, Option, Trip, TripState, Vote } from './shared';
 
 let client: SupabaseClient | null = null;
@@ -58,6 +58,9 @@ export function newCode(len = 8): string {
 }
 export const newToken = () => randomBytes(24).toString('base64url');
 
+/** A read-only key for one member's calendar link, derived from their secret token (the token itself never goes in a URL). */
+export const calendarKey = (memberToken: string) => createHash('sha256').update(`cal:${memberToken}`).digest('base64url').slice(0, 22);
+
 /* ---------- input cleaning ---------- */
 export function str(v: unknown, max = 120, fallback = ''): string {
   return typeof v === 'string' ? v.trim().slice(0, max) : fallback;
@@ -83,10 +86,10 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
 }
 
 /* ---------- loading ---------- */
-const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,paid,flight_price,flight_summary,flight_arrive_at,flight_depart_at';
+const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at';
 
 export async function tripByCode(code: string): Promise<Trip> {
-  const { data, error } = await db().from('trips').select('id,code,name,nights,deposit,food').eq('code', code).maybeSingle();
+  const { data, error } = await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'This trip link is not valid. Ask the organizer to send it again.');
   return data as Trip;

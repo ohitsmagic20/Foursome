@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
 import { openVotes, pickOf, rangeLabel } from '@/lib/shared';
 import { api, rememberTrip, setToken, firstName, initials } from '@/lib/client';
-import { ProfileForm, SignIn, useMe } from './account';
+import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
 import { TripTab } from './tabs/TripTab';
 import { VoteTab } from './tabs/VoteTab';
@@ -12,6 +12,7 @@ import { StayTab } from './tabs/StayTab';
 import { GolfTab } from './tabs/GolfTab';
 import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
+import { registerServiceWorker } from './notify';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'trip', label: 'Clubhouse' },
@@ -50,6 +51,8 @@ export default function TripApp({ code }: { code: string }) {
     document.addEventListener('visibilitychange', vis);
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis); };
   }, [load]);
+
+  useEffect(() => { registerServiceWorker(); }, []);
 
   useEffect(() => {
     const h = window.location.hash.slice(1) as TabId;
@@ -159,13 +162,15 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
   const { me, setMe, reload } = useMe();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const org = state.members.find((m) => m.is_organizer);
+  const [signIn, setSignIn] = useState(false);
+  const org = state.preview?.organizer;
+  const count = state.preview?.count ?? 0;
 
-  async function join() {
+  async function join(details: Record<string, unknown> = {}) {
     setErr('');
     setBusy(true);
     try {
-      const r = await api<{ token: string }>(`/api/trips/${code}/join`, { body: {} });
+      const r = await api<{ token: string }>(`/api/trips/${code}/join`, { body: details });
       setToken(code, r.token);
       rememberTrip(code, state.trip.name);
       onJoined();
@@ -180,10 +185,26 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
       <div className="hero">
         <div className="eyebrow">You’re invited</div>
         <h1>{state.trip.name}</h1>
-        <p>{org ? `${firstName(org.name)} is organizing` : 'A golf trip'} with {state.members.length} {state.members.length === 1 ? 'person' : 'people'} so far. Join to vote on dates, where to stay and where to play.</p>
+        <p>{org ? `${org} is organizing` : 'A golf trip'} with {count} {count === 1 ? 'person' : 'people'} so far. Join to vote on dates, where to stay and where to play.</p>
       </div>
       {me === undefined && <div className="empty"><span className="spinner" style={{ display: 'inline-block' }} /></div>}
-      {me === null && <SignIn title="Sign in to join" note="Use your email. No password; we’ll send a 6-digit code." onDone={() => reload()} />}
+
+      {me === null && !signIn && (
+        <form className="card form" onSubmit={(e) => { e.preventDefault(); join(Object.fromEntries(new FormData(e.currentTarget))); }}>
+          <GuestFields />
+          <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
+          {err && <p className="error" role="alert">{err}</p>}
+          <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
+          <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>I have a Foursome account</button>
+        </form>
+      )}
+      {me === null && signIn && (
+        <div className="stack">
+          <SignIn title="Sign in to join" onDone={() => reload()} />
+          <button className="btn small ghost" onClick={() => setSignIn(false)}>Join with just my name instead</button>
+        </div>
+      )}
+
       {me && !me.complete && (
         <div className="card">
           <ProfileForm profile={me.profile} submitLabel="Save and continue" intro={<p className="sub">Quick setup, once. Every trip you join uses these details.</p>} onSaved={(r) => setMe({ ...me, ...r })} />
@@ -199,9 +220,8 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
             </div>
           </div>
           {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn primary block" onClick={join} disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
+          <button className="btn primary block" onClick={() => join()} disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
           <a className="btn small ghost" href={`/profile?back=/t/${code}`}>Edit my details first</a>
-          <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
         </div>
       )}
     </div>

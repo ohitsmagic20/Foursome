@@ -9,7 +9,6 @@ export interface Trip {
   code: string;
   name: string;
   nights: number;
-  deposit: number;
   food: number;
 }
 
@@ -20,7 +19,6 @@ export interface Member {
   budget: number;
   bed: Bed;
   is_organizer: boolean;
-  paid: boolean;
   flight_price: number | null;
   flight_summary: string | null;
   flight_arrive_at: string | null;
@@ -50,6 +48,10 @@ export interface TripState {
   options: Option[];
   votes: Vote[];
   meId: string | null;
+  /** Only for people who haven't joined: just enough for the invite screen. */
+  preview?: { organizer: string; count: number };
+  /** Read-only key for this person's calendar feed. */
+  calKey?: string;
 }
 
 export interface FlightLeg { depart: string; arrive: string; from: string; to: string; stops: number; carrier: string }

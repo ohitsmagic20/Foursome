@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
 import type { CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
 import { addDays, dayLabel, destAirports, isWeekendDay, parseDay, pickOf } from '@/lib/shared';
-import { api, getSession, todayLabel } from '@/lib/client';
+import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
 async function save(ctx: TripCtx, type: string, payload: Record<string, unknown>, msg: string) {
@@ -20,14 +20,16 @@ export function tripSheet(ctx: TripCtx) {
   ctx.sheet({
     title: 'Trip details',
     body: (
-      <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'update_trip', { name: fd.name, nights: num(fd.nights), deposit: num(fd.deposit), food: num(fd.food) }, 'Trip updated')}>
-        <Field name="name" label="Trip name" defaultValue={t.name} required />
-        <div className="grid2">
-          <Field name="nights" label="Nights" type="number" defaultValue={t.nights} min={1} max={10} step={1} />
-          <Field name="deposit" label="Deposit each ($)" type="number" defaultValue={t.deposit} />
-        </div>
-        <Field name="food" label="Food and extras per person ($)" type="number" defaultValue={t.food} />
-      </SheetForm>
+      <>
+        <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'update_trip', { name: fd.name, nights: num(fd.nights), food: num(fd.food) }, 'Trip updated')}>
+          <Field name="name" label="Trip name" defaultValue={t.name} required />
+          <div className="grid2">
+            <Field name="nights" label="Nights" type="number" defaultValue={t.nights} min={1} max={10} step={1} />
+            <Field name="food" label="Food & extras each ($)" type="number" defaultValue={t.food} />
+          </div>
+        </SheetForm>
+        <OrganizerTools ctx={ctx} />
+      </>
     ),
   });
 }
@@ -308,4 +310,41 @@ export function manualFlightSheet(ctx: TripCtx) {
       </SheetForm>
     ),
   });
+}
+
+/** Organizer-only: hand off the role, delete the trip. Lives under the trip details sheet. */
+function OrganizerTools({ ctx }: { ctx: TripCtx }) {
+  const others = ctx.state.members.filter((m) => m.id !== ctx.me?.id);
+  const [to, setTo] = useState(others[0]?.id || '');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const name = ctx.state.trip.name;
+  return (
+    <div className="stack" style={{ marginTop: 24 }}>
+      {others.length > 0 && (
+        <div className="section">
+          <h2>Hand off organizer</h2>
+          <p className="sub">They’ll be able to lock decisions and edit the trip. You stay on the trip.</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select className="mini-select" style={{ flex: 1, minHeight: 44, fontSize: 15 }} value={to} onChange={(e) => setTo(e.target.value)} aria-label="New organizer">
+              {others.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <ConfirmButton className="btn" label="Make organizer" confirmLabel="Tap to confirm"
+              onConfirm={async () => { if (await ctx.act('make_organizer', { memberId: to })) { ctx.sheet(null); ctx.toast('Organizer handed off'); } }} />
+          </div>
+        </div>
+      )}
+      <div className="section">
+        <h2>Delete trip</h2>
+        <p className="sub">Removes the trip and every vote for everyone. This can’t be undone. Type <strong>{name}</strong> to confirm.</p>
+        <input className="mini-select" style={{ minHeight: 44, fontSize: 16, fontWeight: 500 }} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={name} aria-label="Type the trip name to confirm" />
+        <button className="btn danger block" disabled={busy || confirm.trim().toLowerCase() !== name.trim().toLowerCase()}
+          onClick={async () => {
+            setBusy(true);
+            if (await ctx.act('delete_trip', { confirm })) { clearToken(ctx.state.trip.code); location.href = '/'; }
+            else setBusy(false);
+          }}>Delete this trip</button>
+      </div>
+    </div>
+  );
 }

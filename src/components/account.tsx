@@ -216,3 +216,72 @@ export async function signOut() {
   try { await api('/api/auth/signout', { body: {} }); } catch { /* already gone */ }
   clearSession();
 }
+
+/* ---------- guest details (no account): name, home city → airport, budget, bed ---------- */
+/** Fields for joining or starting a trip without an account. Use inside a <form>; reads as
+ *  name, airport, budget, bed from FormData. */
+export function GuestFields() {
+  const [city, setCity] = useState('');
+  const [airport, setAirport] = useState('');
+  const [found, setFound] = useState<NearbyAirport[]>([]);
+  const [looking, setLooking] = useState(false);
+  const last = useRef('');
+
+  useEffect(() => {
+    const q = city.trim();
+    if (q.length < 2 || q === last.current) return;
+    const t = setTimeout(async () => {
+      last.current = q;
+      setLooking(true);
+      try {
+        const r = await api<{ airports: NearbyAirport[] }>(`/api/airports?place=${encodeURIComponent(q)}`);
+        setFound(r.airports.slice(0, 3));
+        const best = r.airports.find((a) => a.suggested) || r.airports[0];
+        if (best) setAirport(best.code);
+      } catch { setFound([]); } finally { setLooking(false); }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [city]);
+
+  return (
+    <>
+      <div className="field">
+        <label htmlFor="g-name">Your name</label>
+        <input id="g-name" name="name" required autoComplete="name" placeholder="First and last" />
+      </div>
+      <div className="field">
+        <label htmlFor="g-city">Home city</label>
+        <input id="g-city" value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level2" placeholder="Chicago, IL" />
+      </div>
+      <input type="hidden" name="airport" value={airport} />
+      {looking && <p className="hint">Finding airports near {city.trim()}…</p>}
+      {found.length > 0 && (
+        <div className="airport-list">
+          {found.map((a) => (
+            <button type="button" key={a.code} className="airport" aria-pressed={airport === a.code} onClick={() => setAirport(a.code)}>
+              <span className="code">{a.code}</span>
+              <span className="grow" style={{ textAlign: 'left' }}>
+                <span className="row-title" style={{ display: 'block' }}>{a.name}</span>
+                <span className="row-meta">{a.miles} mi away</span>
+              </span>
+              <span className="check" aria-hidden="true">{airport === a.code ? '✓' : ''}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="grid2">
+        <div className="field">
+          <label htmlFor="g-budget">Budget, all-in ($)</label>
+          <input id="g-budget" name="budget" type="number" inputMode="decimal" min={0} placeholder="1500" />
+        </div>
+        <div className="field">
+          <label htmlFor="g-bed">Sleeping</label>
+          <select id="g-bed" name="bed" defaultValue="own">
+            <option value="own">Own bed</option>
+            <option value="share">Fine sharing</option>
+          </select>
+        </div>
+      </div>
+    </>
+  );
+}

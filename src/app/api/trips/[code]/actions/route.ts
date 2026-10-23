@@ -1,8 +1,21 @@
+import { after } from 'next/server';
 import type { Kind, Member, Trip } from '@/lib/shared';
-import { airport, bed, body, db, handle, HttpError, int, memberFromRequest, str, tripByCode } from '@/lib/server';
+import { openVotes, rangeLabel } from '@/lib/shared';
+import { airport, bed, body, db, handle, HttpError, int, loadState, memberFromRequest, str, tripByCode } from '@/lib/server';
+import { notify, type PushMessage } from '@/lib/push';
 
 const KINDS: Kind[] = ['date', 'destination', 'lodging', 'round'];
 const SINGLE_WINNER: Kind[] = ['date', 'destination', 'lodging'];
+const TAB: Record<Kind, string> = { date: 'vote', destination: 'vote', lodging: 'stay', round: 'golf' };
+const NUDGE_HOURS = 4;
+
+/** How an option reads in a notification: "Mar 25–28", "Myrtle Beach, SC", "True Blue Golf Club at 8:30 AM". */
+function label(kind: Kind, d: Record<string, unknown>, trip: Trip): string {
+  if (kind === 'date') return rangeLabel(String(d.start), trip.nights);
+  if (kind === 'round') return `${d.course} at ${d.time}`;
+  return String(d.name || '');
+}
+const first = (n: string) => n.split(/\s+/)[0];
 const MAX_OPTIONS = 60;
 
 function url(v: unknown): string {
@@ -59,10 +72,10 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
 }
 
 async function optionFor(tripId: string, id: unknown) {
-  const { data, error } = await db().from('options').select('id,kind,created_by,locked').eq('trip_id', tripId).eq('id', str(id, 40)).maybeSingle();
+  const { data, error } = await db().from('options').select('id,kind,created_by,locked,data').eq('trip_id', tripId).eq('id', str(id, 40)).maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, 'That option was removed. Pull down to refresh.');
-  return data as { id: string; kind: Kind; created_by: string | null; locked: boolean };
+  return data as { id: string; kind: Kind; created_by: string | null; locked: boolean; data: Record<string, unknown> };
 }
 function mustOrganize(me: Member) {
   if (!me.is_organizer) throw new HttpError(403, 'Only the organizer can do that.');
@@ -74,6 +87,9 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
     const trip = await tripByCode(code);
     const me = await memberFromRequest(req, trip.id, true);
     const b = await body(req);
+    // Notifications to send after the response goes out: [who, message, quiet minutes].
+    const pings: [string[] | 'others', PushMessage, number][] = [];
+    const url = (tab: string) => `/t/${trip.code}#${tab}`;
 
     switch (b.type) {
       case 'vote': {
@@ -98,6 +114,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (error) throw error;
         // Adding something counts as a yes from the person who suggested it.
         await db().from('votes').upsert({ option_id: row.id, member_id: me.id, value: 'yes' });
+        pings.push(['others', { title: trip.name, body: `${first(me.name)} suggested ${label(kind, data, trip)}. Are you in?`, url: url(TAB[kind]), tag: `new-${kind}` }, 15]);
         break;
       }
       case 'update_option': {
@@ -125,6 +142,38 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         }
         const r = await db().from('options').update({ locked: lock }).eq('id', opt.id);
         if (r.error) throw r.error;
+        if (lock) {
+          const what = label(opt.kind, opt.data, trip);
+          const text = opt.kind === 'round' ? `${what} is in the plan.` : opt.kind === 'lodging' ? `You’re staying at ${what}.` : `${what} is locked in.`;
+          pings.push(['others', { title: trip.name, body: text, url: url(TAB[opt.kind]), tag: `lock-${opt.kind}` }, 0]);
+        }
+        break;
+      }
+      case 'nudge': {
+        mustOrganize(me);
+        const { data: t } = await db().from('trips').select('last_nudge').eq('id', trip.id).single();
+        if (t?.last_nudge && Date.now() - Date.parse(t.last_nudge) < NUDGE_HOURS * 3600000) {
+          throw new HttpError(429, `You nudged the group recently. You can nudge again ${NUDGE_HOURS} hours after the last one.`);
+        }
+        const state = await loadState(trip, null);
+        const waiting: string[] = [];
+        for (const m of state.members) {
+          if (m.id === me.id) continue;
+          const open = openVotes({ ...state, meId: m.id });
+          const n = open.date + open.destination + open.lodging + open.round;
+          if (n > 0) {
+            waiting.push(m.id);
+            pings.push([[m.id], { title: trip.name, body: `${first(me.name)} is waiting on you: ${n} thing${n > 1 ? 's' : ''} to vote on.`, url: url('trip'), tag: 'nudge' }, 0]);
+          }
+        }
+        if (!waiting.length) throw new HttpError(400, 'Everyone has voted on everything. Nothing to nudge.');
+        await db().from('trips').update({ last_nudge: new Date().toISOString() }).eq('id', trip.id);
+        if (pings.length) {
+          const subs = await db().from('push_subs').select('member_id').eq('trip_id', trip.id).in('member_id', waiting);
+          const reachable = new Set((subs.data || []).map((x) => x.member_id)).size;
+          after(async () => { for (const [who, msg, quiet] of pings) await notify(trip.id, who as string[], msg, quiet); });
+          return Response.json({ ok: true, waiting: waiting.length, reachable });
+        }
         break;
       }
       case 'update_me': {
@@ -153,9 +202,27 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (r.error) throw r.error;
         break;
       }
-      case 'set_paid': {
+      case 'leave': {
+        if (me.is_organizer) throw new HttpError(400, 'Hand the organizer role to someone else before leaving, or delete the trip.');
+        const r = await db().from('members').delete().eq('id', me.id);
+        if (r.error) throw r.error;
+        break;
+      }
+      case 'make_organizer': {
         mustOrganize(me);
-        const r = await db().from('members').update({ paid: b.paid === true }).eq('trip_id', trip.id).eq('id', str(b.memberId, 40));
+        const id = str(b.memberId, 40);
+        const { data: target } = await db().from('members').select('id').eq('trip_id', trip.id).eq('id', id).maybeSingle();
+        if (!target || id === me.id) throw new HttpError(400, 'Pick someone else on the trip.');
+        const a1 = await db().from('members').update({ is_organizer: true }).eq('id', id);
+        if (a1.error) throw a1.error;
+        const a2 = await db().from('members').update({ is_organizer: false }).eq('id', me.id);
+        if (a2.error) throw a2.error;
+        break;
+      }
+      case 'delete_trip': {
+        mustOrganize(me);
+        if (str(b.confirm, 80).trim().toLowerCase() !== trip.name.trim().toLowerCase()) throw new HttpError(400, 'Type the trip name exactly to delete it.');
+        const r = await db().from('trips').delete().eq('id', trip.id);
         if (r.error) throw r.error;
         break;
       }
@@ -173,7 +240,6 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const r = await db().from('trips').update({
           name: str(b.name, 80) || trip.name,
           nights,
-          deposit: int(b.deposit, 0, 100000, trip.deposit),
           food: int(b.food, 0, 100000, trip.food),
         }).eq('id', trip.id);
         if (r.error) throw r.error;
@@ -181,6 +247,13 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       }
       default:
         throw new HttpError(400, 'Unknown action.');
+    }
+    if (pings.length) {
+      after(async () => {
+        const { data: everyone } = await db().from('members').select('id').eq('trip_id', trip.id);
+        const others = (everyone || []).map((m) => m.id).filter((id) => id !== me.id);
+        for (const [who, msg, quiet] of pings) await notify(trip.id, who === 'others' ? others : who, msg, quiet);
+      });
     }
     return Response.json({ ok: true });
   });

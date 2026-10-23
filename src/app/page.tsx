@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, initials, rememberTrip, setToken } from '@/lib/client';
+import { api, initials, rememberTrip, savedTrips, setToken, type SavedTrip } from '@/lib/client';
 import { rangeLabel } from '@/lib/shared';
 import { Field, Icon } from '@/components/ui';
-import { ProfileForm, SignIn, useMe } from '@/components/account';
+import { GuestFields, ProfileForm, SignIn, useMe } from '@/components/account';
 
 export default function Home() {
   const router = useRouter();
@@ -23,17 +23,7 @@ export default function Home() {
 
   if (me === undefined) return <div className="app no-tabs">{hero}</div>;
 
-  if (me === null) {
-    return (
-      <div className="app no-tabs">
-        {hero}
-        <div className="stack">
-          <SignIn onDone={() => reload()} />
-          <HowItWorks />
-        </div>
-      </div>
-    );
-  }
+  if (me === null) return <SignedOut hero={hero} onSignedIn={reload} />;
 
   if (!me.complete) {
     return (
@@ -96,10 +86,7 @@ export default function Home() {
             }
           }}>
             <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip 2027" required />
-            <div className="grid2">
-              <Field name="nights" label="Nights" type="number" defaultValue={3} min={1} max={10} step={1} />
-              <Field name="deposit" label="Deposit each ($)" type="number" placeholder="0" />
-            </div>
+            <Field name="nights" label="Nights" type="number" defaultValue={3} min={1} max={10} step={1} />
             <p className="hint">You’ll be the organizer, flying from {me.profile.airport}. Next you’ll get an invite link for the group.</p>
             {err && <p className="error" role="alert">{err}</p>}
             <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip'}</button>
@@ -112,12 +99,76 @@ export default function Home() {
   );
 }
 
+/** No account: start a trip with just your name, see trips saved on this phone, or sign in. */
+function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: () => void }) {
+  const router = useRouter();
+  const [trips, setTrips] = useState<SavedTrip[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [signIn, setSignIn] = useState(false);
+  useEffect(() => setTrips(savedTrips()), []);
+  return (
+    <div className="app no-tabs">
+      {hero}
+      <div className="stack">
+        {trips.length > 0 && (
+          <section className="section">
+            <h2>Your trips</h2>
+            <div className="list">
+              {trips.map((t) => (
+                <a key={t.code} className="row" href={`/t/${t.code}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                  <div className="grow row-title">{t.name}</div>{Icon.chev}
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+        {signIn ? (
+          <>
+            <SignIn onDone={() => onSignedIn()} note="Your trips follow you to any phone. No password: we’ll email you a sign-in link." />
+            <button className="btn small ghost" onClick={() => setSignIn(false)}>Start a trip without an account</button>
+          </>
+        ) : (
+          <section className="section">
+            <h2>Start a trip</h2>
+            <form className="form card" onSubmit={async (e) => {
+              e.preventDefault();
+              setErr('');
+              setBusy(true);
+              try {
+                const fd = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+                const r = await api<{ code: string; token: string }>('/api/trips', { body: fd });
+                setToken(r.code, r.token);
+                rememberTrip(r.code, fd.tripName);
+                router.push(`/t/${r.code}`);
+              } catch (x) {
+                setErr(x instanceof Error ? x.message : 'Could not create the trip.');
+                setBusy(false);
+              }
+            }}>
+              <div className="grid2">
+                <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip" required />
+                <Field name="nights" label="Nights" type="number" defaultValue={3} min={1} max={10} step={1} />
+              </div>
+              <GuestFields />
+              {err && <p className="error" role="alert">{err}</p>}
+              <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip and get the invite link'}</button>
+              <button type="button" className="btn small ghost" onClick={() => setSignIn(true)}>Sign in to my Foursome account</button>
+            </form>
+          </section>
+        )}
+        <HowItWorks />
+      </div>
+    </div>
+  );
+}
+
 function HowItWorks() {
   return (
     <section className="section">
       <h2>How it works</h2>
       <div className="steps">
-        <div className="step"><b>1</b><div><div className="row-title">Send one link</div><div className="row-meta">Friends sign in with their email. Their home airport, budget and bed preference come from their profile.</div></div></div>
+        <div className="step"><b>1</b><div><div className="row-title">Send one link</div><div className="row-meta">Friends join with their name and home city. No app to download, no password.</div></div></div>
         <div className="step"><b>2</b><div><div className="row-title">The group votes</div><div className="row-meta">Dates, destination, rentals and tee times. You see who’s in and who hasn’t answered.</div></div></div>
         <div className="step"><b>3</b><div><div className="row-title">Lock it and book</div><div className="row-meta">The organizer locks the winners. Costs split automatically and flights line up with the first tee time.</div></div></div>
       </div>
