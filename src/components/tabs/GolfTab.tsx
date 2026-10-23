@@ -85,10 +85,12 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
         <div className="tee">{r.data.time.replace(/\s*(AM|PM)/i, '')}<small>{ap}</small></div>
         <div style={{ minWidth: 0 }}>
           <div className="row-title">{r.data.course}</div>
-          <div className="row-meta">
-            {access && <span className={`access ${access}`}>{ACCESS_LABEL[access]}</span>}
-            {[where, r.data.fromTemplate ? 'typical price' : r.data.checked ? `price checked ${r.data.checked}` : 'price not checked'].filter(Boolean).join(' · ')}
-          </div>
+          {(access || where) && (
+            <div className="row-meta">
+              {access && <span className={`access ${access}`}>{ACCESS_LABEL[access]}</span>}
+              {where}
+            </div>
+          )}
           {(info?.par || info?.tees?.length) ? (
             <div className="row-meta">
               {[info.par ? `Par ${info.par}` : '', teeSummary(info.tees || [])].filter(Boolean).join(' · ')}
@@ -96,7 +98,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
             </div>
           ) : <div className="row-meta"><a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a></div>}
         </div>
-        <div className="fee">{money(r.data.fee)}<small>per player</small></div>
+        <div className="fee">{money(r.data.fee)}<small>{r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player'}</small></div>
       </div>
       {r.locked
         ? <div className="opt-status"><span className="good">In the plan</span><span className={r.data.booked ? 'good' : 'warn'}>{r.data.booked ? 'Booked' : 'Not booked'}</span></div>
