@@ -16,11 +16,18 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** OpenStreetMap's search service (Nominatim). Its usage policy asks for at most one request per second
  *  and a real User-Agent; answers are cached for a week by the CDN, so each area is looked up rarely. */
 async function nominatim(lat: number, lon: number, radiusMi: number): Promise<OsmElement[] | null> {
-  const dLat = radiusMi / 69, dLon = radiusMi / (69 * Math.cos((lat * Math.PI) / 180));
-  const box = [lon - dLon, lat + dLat, lon + dLon, lat - dLat].map((x) => x.toFixed(4)).join(',');
+  const boxFor = (r: number) => {
+    const dLat = r / 69, dLon = r / (69 * Math.cos((lat * Math.PI) / 180));
+    return [lon - dLon, lat + dLat, lon + dLon, lat - dLat].map((x) => x.toFixed(4)).join(',');
+  };
+  // Each search returns at most 40 places, so in golf-dense areas search close in first, then wider.
+  const searches: [string, string][] = [];
+  const near = Math.min(10, radiusMi);
+  for (const q of ['golf course', 'golf club', 'country club']) searches.push([q, boxFor(near)]);
+  if (radiusMi > near) for (const q of ['golf course', 'golf club']) searches.push([q, boxFor(radiusMi)]);
   const out: OsmElement[] = [];
   let ok = false;
-  for (const [i, q] of ['golf course', 'golf club', 'country club'].entries()) {
+  for (const [i, [q, box]] of searches.entries()) {
     if (i) await wait(1100);
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 10000);
