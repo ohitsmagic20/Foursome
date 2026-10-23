@@ -325,3 +325,7 @@ tr.me .mark.none { border-color: var(--green); }
 .summary::after { display: none; }
 .sc thead th, .sc tfoot td, .sc thead th.name, .sc tfoot td.name { background: var(--card); }
 .sc tfoot td { border-top: 1px solid var(--line); }
+/* Status inside lists reads as colored text, matching the option cards. */
+.list .chip { background: transparent; padding: 0; font-size: 13px; }
+.list .chip.flag { color: var(--warn); }
+.pairings .link-btn { font-size: 14px; color: var(--green); }

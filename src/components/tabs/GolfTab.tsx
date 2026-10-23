@@ -93,11 +93,10 @@ function Pairings({ r }: { r: Option<RoundData> }) {
   const { state, me } = ctx;
   if (state.members.length < 2) return null;
   const names = groupNames(state, r.data.groups);
+  if (!names.length && !me?.is_organizer) return null;
   return (
     <div className="pairings">
-      {names.length
-        ? names.map((g, i) => <div className="row-meta" key={i}><strong>{teeAfter(r.data.time, i)}</strong> · {g}</div>)
-        : <div className="row-meta">No pairings yet{state.members.length > 4 ? `: ${teeTimesNeeded(state.members.length)} groups needed` : ''}.</div>}
+      {names.map((g, i) => <div className="row-meta" key={i}><strong>{teeAfter(r.data.time, i)}</strong> · {g}</div>)}
       {me?.is_organizer && <button className="link-btn" onClick={() => pairingsSheet(ctx, r)}>{names.length ? 'Change pairings' : 'Set pairings'}</button>}
     </div>
   );

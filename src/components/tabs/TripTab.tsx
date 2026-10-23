@@ -225,8 +225,6 @@ function CostTable() {
 function Crew() {
   const ctx = useTrip();
   const { state, me } = ctx;
-  const stay = pickOf<LodgingData>(state, 'lodging').option;
-  const need = bedsNeeded(state.members);
   return (
     <section className="section">
       <div className="section-head"><h2>Crew</h2><span className="sub">{state.members.length} going</span></div>
@@ -242,7 +240,6 @@ function Crew() {
           </div>
         ))}
       </div>
-      {stay && <p className="hint">Need {need} beds · {stay.data.name} has {stay.data.beds || '?'}.</p>}
       <InviteButton ctx={ctx} className="btn primary block" label="Invite people" />
       <GroupUpdate ctx={ctx} />
       {me?.is_organizer ? <RemoveMember ctx={ctx} /> : (
