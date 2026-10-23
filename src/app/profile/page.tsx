@@ -104,7 +104,7 @@ function EmailSwitch({ on, onChange }: { on: boolean; onChange: (p: Profile) => 
     <section className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <div className="grow">
         <div className="row-title">Trip emails</div>
-        <div className="row-meta">Reminders when the group is waiting on your vote, when dates or the destination get locked, and the final plan.</div>
+        <div className="row-meta">Vote reminders and the final plan.</div>
       </div>
       <button className="switch" role="switch" aria-checked={on} aria-label="Trip emails" disabled={busy} onClick={async () => {
         setBusy(true);
