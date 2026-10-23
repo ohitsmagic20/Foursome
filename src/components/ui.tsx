@@ -140,10 +140,11 @@ export function Tally({ option }: { option: Option }) {
   const vs = votesFor(state, option.id);
   const names = (val: VoteValue) => state.members.filter((m) => vs[m.id] === val).map((m) => firstName(m.name));
   const waiting = state.members.filter((m) => !vs[m.id]).map((m) => firstName(m.name));
-  const parts: [string, string[]][] = [['In', names('yes')], ['Maybe', names('maybe')], ['Out', names('no')], ['Waiting on', waiting]];
+  const voted: [string, string[]][] = ([['In', names('yes')], ['Maybe', names('maybe')], ['Out', names('no')]] as [string, string[]][]).filter(([, n]) => n.length);
   return (
     <div className="voters">
-      {parts.filter(([, n]) => n.length).map(([k, n], i) => <span key={k}>{i ? ' · ' : ''}<b>{k}</b> {n.join(', ')}</span>)}
+      <div>{voted.length ? voted.map(([k, n], i) => <span key={k}>{i ? ' · ' : ''}<b>{k}</b> {n.join(', ')}</span>) : <span>No votes yet</span>}</div>
+      {waiting.length > 0 && <div className="voters-waiting"><b>Waiting on</b> {waiting.join(', ')}</div>}
     </div>
   );
 }

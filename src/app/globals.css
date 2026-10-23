@@ -329,3 +329,10 @@ tr.me .mark.none { border-color: var(--green); }
 .list .chip { background: transparent; padding: 0; font-size: 13px; }
 .list .chip.flag { color: var(--warn); }
 .pairings .link-btn { font-size: 14px; color: var(--green); }
+/* Votes: who's in on the left, who we're waiting on on the right. */
+.voters { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; }
+.voters-waiting { text-align: right; margin-left: auto; }
+/* Keep the outlined buttons and the line above them. */
+.opt-foot { border-top: 1px solid var(--line); padding-top: 12px; gap: 8px; margin-left: 0; }
+.opt-foot .btn { border-color: var(--line); background: var(--card); color: var(--ink); padding: 0 12px; }
+.opt-foot .btn.ghost { background: transparent; color: var(--ink); }
