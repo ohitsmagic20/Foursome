@@ -7,7 +7,6 @@ import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdi
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
-import { CourseAbout } from '../CourseAbout';
 import { templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
@@ -77,8 +76,6 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
   const search = `https://www.google.com/search?q=${encodeURIComponent(`${r.data.course} ${dest?.data.name || ''} tee times`)}`;
   const access = (info?.access || r.data.access || '') as CourseAccess;
   const where = info?.city ? `${info.city}, ${info.state}` : r.data.where || '';
-  // 18Birdies and The Grint have no public data access, so link to their reviews instead.
-  const reviews = `https://www.google.com/search?q=${encodeURIComponent(`${r.data.course} ${where || dest?.data.name || ''} reviews 18Birdies OR TheGrint`)}`;
   const url = r.data.url || info?.website || '';
   return (
     <div className={`card opt ${r.locked ? 'locked' : ''}`}>
@@ -92,13 +89,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
               {where}
             </div>
           )}
-          {(info?.par || info?.tees?.length) ? (
-            <div className="row-meta">
-              {[info.par ? `Par ${info.par}` : '', teeSummary(info.tees || [])].filter(Boolean).join(' · ')}
-              {' · '}<a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a>
-            </div>
-          ) : <div className="row-meta"><a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a></div>}
-          {info && <CourseAbout info={info} />}
+          {info?.tees?.length ? <div className="row-meta">{teeSummary(info.tees)}</div> : null}
         </div>
         <div className="fee">{money(r.data.fee)}<small>{r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player'}</small></div>
       </div>

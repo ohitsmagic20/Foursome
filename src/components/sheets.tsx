@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
 import type { CourseHit, CourseInfo, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
 import { ACCESS_LABEL, teeSummary } from '@/lib/shared';
-import { CourseAbout } from './CourseAbout';
 import { addDays, autoGroups, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
@@ -323,8 +322,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
           : course.trim().length >= 3 && hits.length === 0 && <p className="hint">Not in the course list. You can still add it.</p>}
         {picked && picked.name === course.trim() && about && (
           <>
-            {(about.par || about.tees.length) ? <p className="hint">{[about.par ? `Par ${about.par}` : '', teeSummary(about.tees)].filter(Boolean).join(' · ')}</p> : null}
-            <CourseAbout info={about} open />
+            {about.tees.length ? <p className="hint">{teeSummary(about.tees)}</p> : null}
           </>
         )}
       </div>

@@ -273,15 +273,17 @@ export interface CourseTee { name: string; yards: number; rating: number; slope:
 export interface CourseInfo {
   id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; par: number; holes: number; yards: number;
   website: string; phone: string; tees: CourseTee[];
-  /** A short description (from Wikipedia, CC BY-SA) and where it came from; facilities like a driving range. */
-  architect?: string; built?: number; description?: string; descriptionUrl?: string; facilities?: string[];
 }
-/** "Rating 72.0–75.6 · Slope 137–146" across the men's tees. */
+/** "6,366–7,201 yds · Rating 72.0–75.6 · Slope 137–146" across the men's tees. */
 export function teeSummary(tees: CourseTee[]): string {
   if (!tees.length) return '';
-  const r = tees.map((t) => t.rating), sl = tees.map((t) => t.slope);
   const span = (xs: number[], f: (n: number) => string) => (Math.min(...xs) === Math.max(...xs) ? f(xs[0]) : `${f(Math.min(...xs))}–${f(Math.max(...xs))}`);
-  return `Rating ${span(r, (n) => n.toFixed(1))} · Slope ${span(sl, String)}`;
+  const yards = tees.map((t) => t.yards).filter((y) => y > 0);
+  return [
+    yards.length ? `${span(yards, (n) => n.toLocaleString('en-US'))} yds` : '',
+    `Rating ${span(tees.map((t) => t.rating), (n) => n.toFixed(1))}`,
+    `Slope ${span(tees.map((t) => t.slope), String)}`,
+  ].filter(Boolean).join(' · ');
 }
 export interface NearbyCourse { name: string; miles: number; website: string; phone: string; holes: string; isPrivate: boolean; lat: number; lon: number }
 

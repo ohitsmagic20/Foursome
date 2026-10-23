@@ -385,10 +385,6 @@ tr.me .mark.none { border-color: var(--green); }
 .booking-done { font-weight: 700; color: var(--good); }
 .booking-open { font-weight: 700; color: var(--warn); }
 
-/* about a course */
-.about summary { cursor: pointer; font-size: 13px; color: var(--green); font-weight: 600; margin-top: 2px; }
-.about-body { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-.about-body p { margin: 0; font-size: 13px; line-height: 1.5; }
 
 /* owner stats */
 .stats-weeks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; align-items: end; height: 140px; }
