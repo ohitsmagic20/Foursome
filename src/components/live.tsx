@@ -63,7 +63,7 @@ export function WeatherStrip({ place, start, nights }: { place: string; start: s
         <Chip kind={kind}>{label}</Chip>
       </div>
       <div className="row-meta">
-        {data.mode === 'forecast' ? 'Forecast' : `Typical for ${rangeLabel(start, nights)}, last ${data.years} years`}
+        {data.mode === 'forecast' ? 'Forecast' : `Typical for ${rangeLabel(start, nights)}, ${data.years >= 30 ? '30-year average' : `last ${data.years} years`}`}
         {data.rain !== null && ` · ${data.mode === 'forecast' ? `${data.rain}% chance of rain` : `rain on ${data.rain}% of days`}`}
         {data.wind !== null && ` · wind ${data.wind} mph`}
       </div>
@@ -82,7 +82,7 @@ export function DayWeather({ day, mode }: { day: WeatherDay | undefined; mode: W
 }
 
 export function WeatherCredit() {
-  return <p className="hint">Within a week of the trip (US): the <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">National Weather Service</a> forecast. Further out: the average for the same dates over recent years, from <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA POWER</a>.</p>;
+  return <p className="hint">Within a week of the trip (US): the <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">National Weather Service</a> forecast. Further out: typical weather for those dates, from <a href="https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals" target="_blank" rel="noopener noreferrer">NOAA climate normals</a> and <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA POWER</a>.</p>;
 }
 
 /* ---------- lodging searches ---------- */

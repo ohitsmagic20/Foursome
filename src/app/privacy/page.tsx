@@ -29,7 +29,7 @@ export default function Privacy() {
         <li><strong>Vercel</strong>: hosting.</li>
         <li><strong>Resend</strong>: sign-in codes and trip reminder emails.</li>
         <li><strong>Duffel</strong>: flight search (receives your home airport, destination airport and dates when you search).</li>
-        <li><strong>National Weather Service</strong>, <strong>NASA POWER</strong> and <strong>OpenStreetMap</strong>: weather, place and golf course lookups (receive the destination’s location, never who you are).</li>
+        <li><strong>National Weather Service</strong>, <strong>NOAA</strong>, <strong>NASA POWER</strong> and <strong>OpenStreetMap</strong>: weather, place and golf course lookups (receive the destination’s location, never who you are).</li>
         <li><strong>Apple, Google or Mozilla</strong> push services: delivering notifications you turned on.</li>
       </ul>
       <p>Links to Airbnb, Vrbo, Booking.com, Expedia, Google, airlines and golf courses take you to their sites, where their own privacy policies apply.</p>
