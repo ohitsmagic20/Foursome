@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from './sheetTypes';
-import type { CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
+import type { CourseHit, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
+import { ACCESS_LABEL } from '@/lib/shared';
 import { addDays, autoGroups, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
@@ -221,17 +222,40 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   const [url, setUrl] = useState(d?.url ?? prefillUrl ?? '');
   const [day, setDay] = useState(Math.min(d?.day || startDay, days));
   const [fee, setFee] = useState(d?.fee ? String(d.fee) : '');
-  const [nearby, setNearby] = useState<NearbyCourse[]>([]);
   const [prices, setPrices] = useState<CoursePrices | null>(null);
+  // The course picked from the database (keeps its id, location and type). Typing a new name clears it.
+  const [picked, setPicked] = useState<CourseHit | null>(d?.courseId ? { id: d.courseId, name: d.course, city: '', state: '', access: d.access || '', lat: d.lat || 0, lon: d.lon || 0, website: d.url || '' } : null);
+  const [hits, setHits] = useState<CourseHit[]>([]);
+  const [open, setOpen] = useState(false);
 
   const weekday = date ? addDays(parseDay(date.data.start), day - 1).getDay() : -1;
   const weekend = weekday >= 0 && isWeekendDay(weekday);
   const dayName = date ? dayLabel(date.data.start, day) : '';
 
+  // Course suggestions from the database, nearest to the destination first.
   useEffect(() => {
-    if (!dest) return;
-    api<{ courses: NearbyCourse[] }>(`/api/courses?place=${encodeURIComponent(dest.data.name)}&miles=30`).then((r) => setNearby(r.courses)).catch(() => {});
-  }, [dest?.data.name]); // eslint-disable-line react-hooks/exhaustive-deps
+    const q = course.trim();
+    if (q.length < 3 || (picked && picked.name === q)) { setHits([]); return; }
+    const t = setTimeout(() => {
+      api<{ courses: CourseHit[] }>(`/api/course-search?q=${encodeURIComponent(q)}${dest ? `&place=${encodeURIComponent(dest.data.name)}` : ''}`)
+        .then((r) => {
+          setHits(r.courses);
+          // Opened from "Suggest" on a nearby course: pick the exact match automatically.
+          const same = r.courses.find((h) => h.name.toLowerCase() === q.toLowerCase() && (h.miles ?? 0) < 60);
+          if (same && !picked && q === (prefillCourse || '').trim()) { pick(same); }
+        })
+        .catch(() => setHits([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [course]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function pick(h: CourseHit) {
+    setPicked(h);
+    setCourse(h.name);
+    if (h.website && !url) setUrl(h.website);
+    setHits([]);
+    setOpen(false);
+  }
 
   useEffect(() => {
     const c = course.trim();
@@ -257,15 +281,35 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
           checkedAt: priceChanged ? new Date().toISOString() : d?.checkedAt || '',
           // A trip-idea estimate stays marked as one until someone enters a real price.
           ...(!priceChanged && d?.fromTemplate ? { fromTemplate: d.fromTemplate } : {}),
+          ...(picked && picked.name === course.trim() ? {
+            courseId: picked.id, lat: picked.lat, lon: picked.lon, access: picked.access,
+            where: picked.city ? `${picked.city}, ${picked.state}` : d?.where || '',
+          } : {}),
         };
         return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
       }}
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
       <div className="field">
         <label htmlFor="f-course">Course</label>
-        <input id="f-course" name="course" value={course} list="nearby-courses" autoComplete="off" required placeholder={nearby[0] ? `e.g. ${nearby[0].name}` : 'Course name'}
-          onChange={(e) => { const v = e.target.value; setCourse(v); const hit = nearby.find((c) => c.name === v); if (hit) setUrl(hit.website); }} />
-        <datalist id="nearby-courses">{nearby.filter((c) => !c.isPrivate).map((c) => <option key={c.name} value={c.name}>{`${c.miles} mi`}</option>)}</datalist>
+        <input id="f-course" name="course" value={course} autoComplete="off" required placeholder="Start typing a course name"
+          role="combobox" aria-expanded={open && hits.length > 0} aria-controls="course-hits"
+          onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onChange={(e) => { setCourse(e.target.value); setOpen(true); if (picked && e.target.value !== picked.name) setPicked(null); }} />
+        {open && hits.length > 0 && (
+          <ul className="course-hits" id="course-hits" role="listbox">
+            {hits.map((h) => (
+              <li key={h.id} role="option" aria-selected={false}>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(h)}>
+                  <span className="grow"><span className="row-title">{h.name}</span><span className="row-meta"> · {h.city}, {h.state}{h.miles !== undefined ? ` · ${h.miles} mi` : ''}</span></span>
+                  {h.access && <span className={`access ${h.access}`}>{ACCESS_LABEL[h.access]}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {picked && picked.name === course.trim()
+          ? <p className="hint">{[picked.access ? ACCESS_LABEL[picked.access] : '', picked.city ? `${picked.city}, ${picked.state}` : ''].filter(Boolean).join(' · ')}{picked.access === 'private' ? ' · members and guests only' : ''}</p>
+          : course.trim().length >= 3 && hits.length === 0 && <p className="hint">Not in the course list. You can still add it.</p>}
       </div>
       <div className="field">
         <label htmlFor="f-day">Day</label>

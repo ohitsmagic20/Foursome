@@ -1,11 +1,12 @@
 'use client';
 
 import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
-import { dayLabel, groupNames, isWeekendDay, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { ACCESS_LABEL, teeSummary, type CourseAccess } from '@/lib/shared';
+import { dayLabel, groupNames, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
-import { TripMap } from '../TripMap';
+import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
@@ -20,16 +21,21 @@ export function GolfTab() {
   const destOpt = pickOf<DestinationData>(state, 'destination').option;
   const wx = useWeather(destOpt?.data.name, date?.data.start, tripNights(state));
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
+  // Every round's course, looked up once for the map and the cards.
+  const stopOf = (r: Option<RoundData>, label: string): Stop => ({
+    name: r.data.course, label, courseId: r.data.courseId,
+    search: r.data.fromTemplate ? templateBySlug(r.data.fromTemplate)?.rounds.find((x) => x.course === r.data.course)?.mapAs : undefined,
+  });
+  const byTime = (a: Option<RoundData>, b: Option<RoundData>) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time);
+  const airport = destOpt ? destAirports(destOpt.data)[0] : undefined;
+  const all = useTripCourses(destOpt?.data.name, airport, rounds.slice().sort(byTime).map((r) => stopOf(r, '')));
+  const infoFor = (r: Option<RoundData>) => all.data?.courses.find((c) => c.name === r.data.course);
 
   return (
     <>
       <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
-      {destOpt && rounds.length > 0 && (
-        <TripMap
-          place={destOpt.data.name}
-          airport={destAirports(destOpt.data)[0]}
-          stops={(plan.length ? plan : rounds).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time)).map((r, i) => ({ name: r.data.course, label: String(i + 1), search: r.data.fromTemplate ? templateBySlug(r.data.fromTemplate)?.rounds.find((x) => x.course === r.data.course)?.mapAs : undefined }))}
-        />
+      {destOpt && rounds.length > 0 && !all.failed && (
+        <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))} />
       )}
       <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
@@ -41,7 +47,7 @@ export function GolfTab() {
             <div className="day-label">Day {d}{date ? ` · ${dayLabel(date.data.start, d)}` : ''}{planned >= 2 && <Chip kind="plain">36 holes</Chip>}{wx.data && <DayWeather day={wx.data.days[d - 1]} mode={wx.data.mode} />}</div>
             {rs.length === 0
               ? <button className="card empty dashed" onClick={() => roundSheet(ctx, undefined, d)}>{d === 1 ? 'Arrival day' : d === days ? 'Travel home day' : 'Open day'}: suggest a round</button>
-              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} />)}
+              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} info={infoFor(r)} />)}
           </section>
         );
       })}
@@ -49,7 +55,7 @@ export function GolfTab() {
         <section className="section">
           <div className="day-label">Outside the current dates</div>
           <Callout kind="warn">These fall after the trip ends. Move or remove them.</Callout>
-          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} />)}
+          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} info={infoFor(r)} />)}
         </section>
       )}
       {wx.data && <WeatherCredit />}
@@ -60,7 +66,7 @@ export function GolfTab() {
   );
 }
 
-function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
+function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; info?: MapCourse }) {
   const ctx = useTrip();
   const { state, me, act } = ctx;
   const dest = pickOf<DestinationData>(state, 'destination').option;
@@ -68,13 +74,27 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
   const ap = (r.data.time.match(/AM|PM/i) || [''])[0].toUpperCase();
   const early = first && teeMinutes(r.data.time) < 13 * 60;
   const search = `https://www.google.com/search?q=${encodeURIComponent(`${r.data.course} ${dest?.data.name || ''} tee times`)}`;
+  const access = (info?.access || r.data.access || '') as CourseAccess;
+  const where = info?.city ? `${info.city}, ${info.state}` : r.data.where || '';
+  // 18Birdies and The Grint have no public data access, so link to their reviews instead.
+  const reviews = `https://www.google.com/search?q=${encodeURIComponent(`${r.data.course} ${where || dest?.data.name || ''} reviews 18Birdies OR TheGrint`)}`;
+  const url = r.data.url || info?.website || '';
   return (
     <div className={`card opt ${r.locked ? 'locked' : ''}`}>
       <div className="round">
         <div className="tee">{r.data.time.replace(/\s*(AM|PM)/i, '')}<small>{ap}</small></div>
         <div style={{ minWidth: 0 }}>
           <div className="row-title">{r.data.course}</div>
-          <div className="row-meta">{r.data.fromTemplate ? 'Typical price' : r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
+          <div className="row-meta">
+            {access && <span className={`access ${access}`}>{ACCESS_LABEL[access]}</span>}
+            {[where, r.data.fromTemplate ? 'typical price' : r.data.checked ? `price checked ${r.data.checked}` : 'price not checked'].filter(Boolean).join(' · ')}
+          </div>
+          {(info?.par || info?.tees?.length) ? (
+            <div className="row-meta">
+              {[info.par ? `Par ${info.par}` : '', teeSummary(info.tees || [])].filter(Boolean).join(' · ')}
+              {' · '}<a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a>
+            </div>
+          ) : <div className="row-meta"><a href={reviews} target="_blank" rel="noopener noreferrer">Reviews</a></div>}
         </div>
         <div className="fee">{money(r.data.fee)}<small>per player</small></div>
       </div>
@@ -86,7 +106,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">
-        <a className="btn small" href={r.data.url || search} target="_blank" rel="noopener noreferrer">Tee times</a>
+        <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
         <LockButton option={r} lockLabel="Add to plan" unlockLabel="Remove from plan" />
         {me?.is_organizer && r.locked && (
           <button className="btn small ghost" onClick={() => act('update_option', { optionId: r.id, data: { ...r.data, booked: !r.data.booked } })}>{r.data.booked ? 'Not booked' : 'Booked it'}</button>

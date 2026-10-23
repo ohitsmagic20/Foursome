@@ -3,8 +3,40 @@
 import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 
-interface Stop { name: string; label: string; search?: string }
-interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: { name: string; lat: number; lon: number }[] }
+import type { CourseInfo } from '@/lib/shared';
+
+/** `search` is a different name to look up on the map; `courseId` is a course picked from the database. */
+export interface Stop { name: string; label: string; search?: string; courseId?: string }
+export type MapCourse = Partial<Omit<CourseInfo, 'name' | 'lat' | 'lon'>> & { name: string; lat: number; lon: number };
+interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: MapCourse[] }
+
+/* One request per trip for the map and the round cards: the answer is shared and kept for the visit. */
+const cache = new Map<string, Promise<MapData>>();
+function mapUrl(place: string, airport: string | undefined, stops: Stop[]) {
+  const q = new URLSearchParams({ place });
+  if (airport) q.set('airport', airport);
+  const names = [...new Set(stops.map((s) => (s.courseId ? `${s.name}::id:${s.courseId}` : s.search ? `${s.name}::${s.search}` : s.name)))];
+  names.forEach((n) => q.append('course', n));
+  return names.length ? `/api/map?${q}` : '';
+}
+/** Course locations and details (type, rating, slope) for a trip's rounds. */
+export function useTripCourses(place: string | undefined, airport: string | undefined, stops: Stop[]) {
+  const url = place ? mapUrl(place, airport, stops) : '';
+  const [state, setState] = useState<{ data: MapData | null; failed: boolean }>({ data: null, failed: false });
+  useEffect(() => {
+    if (!url) { setState({ data: null, failed: false }); return; }
+    if (!cache.has(url)) {
+      const p = fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(new Error('map'))));
+      p.catch(() => cache.delete(url));
+      cache.set(url, p);
+    }
+    let live = true;
+    setState((s) => ({ data: s.data, failed: false }));
+    cache.get(url)!.then((data) => live && setState({ data, failed: false }), () => live && setState({ data: null, failed: true }));
+    return () => { live = false; };
+  }, [url]);
+  return state;
+}
 
 const R = 3958.8;
 function miles(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
@@ -16,23 +48,11 @@ function miles(a: { lat: number; lon: number }, b: { lat: number; lon: number })
 const roadMiles = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.max(1, Math.round(miles(a, b) * 1.25));
 
 /** A small map of the trip: the arrival airport and each course in playing order, joined by dashed lines. */
-export function TripMap({ place, airport, stops }: { place: string; airport?: string; stops: Stop[] }) {
+export function TripMap({ place, airport, stops, data: given }: { place: string; airport?: string; stops: Stop[]; data?: MapData | null }) {
   const el = useRef<HTMLDivElement>(null);
-  const [data, setData] = useState<MapData | null>(null);
-  const [failed, setFailed] = useState(false);
-  const names = [...new Set(stops.map((s) => (s.search ? `${s.name}::${s.search}` : s.name)))];
-  const key = `${place}|${airport || ''}|${names.join('|')}`;
-
-  useEffect(() => {
-    if (!names.length) return;
-    const q = new URLSearchParams({ place });
-    if (airport) q.set('airport', airport);
-    names.forEach((n) => q.append('course', n));
-    let live = true;
-    setData(null); setFailed(false);
-    fetch(`/api/map?${q}`).then((r) => (r.ok ? r.json() : Promise.reject())).then((d: MapData) => live && setData(d)).catch(() => live && setFailed(true));
-    return () => { live = false; };
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const own = useTripCourses(given === undefined ? place : undefined, airport, stops);
+  const data = given === undefined ? own.data : given;
+  const failed = given === undefined && own.failed;
 
   // Stops in order, with coordinates where the course was found.
   const placed = data ? stops.map((s) => ({ ...s, at: data.courses.find((c) => c.name === s.name) || null })) : [];
@@ -66,7 +86,7 @@ export function TripMap({ place, airport, stops }: { place: string; airport?: st
     return () => { cancelled = true; map?.remove(); };
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!names.length || failed) return null;
+  if (!stops.length || failed) return null;
   const legs: { label: string; name: string; from?: number }[] = [];
   let prev = data?.airport ? { lat: data.airport.lat, lon: data.airport.lon } : null;
   for (const p of placed) {

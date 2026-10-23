@@ -161,7 +161,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
           <button className="btn small ghost" onClick={() => setShowPrivate(!showPrivate)}>{showPrivate ? 'Hide private clubs' : 'Show private clubs'}</button>
         )}
       </div>
-      <p className="hint">Courses: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a></p>
+      <p className="hint">Course data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> via <a href="https://opengolfapi.org/attribution" target="_blank" rel="noopener noreferrer">OpenGolfAPI</a></p>
     </section>
   );
 }

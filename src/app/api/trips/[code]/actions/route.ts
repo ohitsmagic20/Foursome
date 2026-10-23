@@ -71,6 +71,14 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         url: url(d.url),
         ...(Array.isArray(d.groups) ? { groups: cleanGroups(d.groups) } : {}),
         ...(typeof d.fromTemplate === 'string' && d.fromTemplate ? { fromTemplate: str(d.fromTemplate, 60) } : {}),
+        // Picked from the course database.
+        ...(/^[0-9a-f-]{36}$/i.test(str(d.courseId, 40)) ? {
+          courseId: str(d.courseId, 40),
+          lat: Number.isFinite(Number(d.lat)) ? Math.max(-90, Math.min(90, Number(d.lat))) : undefined,
+          lon: Number.isFinite(Number(d.lon)) ? Math.max(-180, Math.min(180, Number(d.lon))) : undefined,
+          access: ['public', 'semi-private', 'private', 'resort', 'municipal'].includes(String(d.access)) ? String(d.access) : '',
+          where: str(d.where, 80),
+        } : {}),
       };
     }
   }

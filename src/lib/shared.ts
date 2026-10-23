@@ -37,6 +37,12 @@ export interface RoundData {
   groups?: string[][];
   /** Added from a trip idea; the fee is an estimate until someone enters a real price. */
   fromTemplate?: string;
+  /** Picked from the course database: its id, location and how the public can play it. */
+  courseId?: string;
+  lat?: number;
+  lon?: number;
+  access?: CourseAccess;
+  where?: string;
 }
 
 export interface Option<T = unknown> {
@@ -211,6 +217,21 @@ export interface WeatherReport {
   hi: number | null; lo: number | null; rain: number | null; wind: number | null;
   verdict: 'good' | 'mixed' | 'wet' | 'cold' | 'hot';
   place?: string;
+}
+/** How the public can play a course: from the course database (blank when unknown). */
+export type CourseAccess = 'public' | 'semi-private' | 'private' | 'resort' | 'municipal' | '';
+export const ACCESS_LABEL: Record<CourseAccess, string> = {
+  public: 'Public', 'semi-private': 'Semi-private', private: 'Private', resort: 'Resort', municipal: 'Municipal', '': '',
+};
+export interface CourseHit { id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; website: string; miles?: number }
+export interface CourseTee { name: string; yards: number; rating: number; slope: number }
+export interface CourseInfo { id: string; name: string; city: string; state: string; access: CourseAccess; lat: number; lon: number; par: number; holes: number; yards: number; website: string; phone: string; tees: CourseTee[] }
+/** "Rating 72.0–75.6 · Slope 137–146" across the men's tees. */
+export function teeSummary(tees: CourseTee[]): string {
+  if (!tees.length) return '';
+  const r = tees.map((t) => t.rating), sl = tees.map((t) => t.slope);
+  const span = (xs: number[], f: (n: number) => string) => (Math.min(...xs) === Math.max(...xs) ? f(xs[0]) : `${f(Math.min(...xs))}–${f(Math.max(...xs))}`);
+  return `Rating ${span(r, (n) => n.toFixed(1))} · Slope ${span(sl, String)}`;
 }
 export interface NearbyCourse { name: string; miles: number; website: string; phone: string; holes: string; isPrivate: boolean; lat: number; lon: number }
 
