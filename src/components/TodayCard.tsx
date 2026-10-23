@@ -45,7 +45,9 @@ export function TodayCard() {
           <div className="today-when">{day === 0 ? 'Tomorrow' : 'Today'}</div>
           <div className="row-meta">Day {shown} · {dayLabel(start, shown)}{shown === 1 ? ' · arrival day' : shown === nights + 1 ? ' · travel home' : ''}</div>
         </div>
-        {wxDay && <div className="today-wx">{wxDay.hi ?? '–'}°<small>/{wxDay.lo ?? '–'}°{wxDay.rain ? ` · ${wxDay.rain}% rain` : ''}</small></div>}
+        {wxDay && (wxDay.hi !== null
+          ? <div className="today-wx">{wxDay.hi}°<small>/{wxDay.lo ?? '–'}°{wxDay.rain ? ` · ${wxDay.rain}% rain` : ''}</small></div>
+          : wxDay.lo !== null && <div className="today-wx"><small>Tonight </small>{wxDay.lo}°</div>)}
       </div>
 
       <div className="list">

@@ -394,3 +394,10 @@ tr.me .mark.none { border-color: var(--green); }
 .stats-weeks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; align-items: end; height: 140px; }
 .stats-week { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
 .stats-bar { width: 100%; min-height: 3px; background: var(--green); border-radius: 4px 4px 0 0; }
+
+/* forms: a little tighter */
+.sheet .form { gap: 14px; }
+.time-picker select { min-height: 44px; font-size: 21px; }
+.time-picker .ampm { min-height: 44px; }
+.time-picker .ampm button { min-height: 38px; }
+.quick-times button { min-height: 30px; }

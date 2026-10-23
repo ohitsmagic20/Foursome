@@ -79,7 +79,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
           <div className="card stack" style={{ gap: 8 }}>
             <div><span className="row-title">Fly into </span>{t.airports.join(' or ')}</div>
             <div><span className="row-title">{t.community ? 'When they went ' : 'Best time '}</span>{t.bestMonths}</div>
-            <div><span className="row-title">Stay </span>{t.lodging.note} <span className="row-meta">~{moneyRange([t.lodging.perNight.low, t.lodging.perNight.high])}/person/night</span></div>
+            {t.lodging.perNight.high > 0 && <div><span className="row-title">Stay </span>{t.lodging.note} <span className="row-meta">~{moneyRange([t.lodging.perNight.low, t.lodging.perNight.high])}/person/night</span></div>}
           </div>
         </section>
 

@@ -74,7 +74,7 @@ export function DayWeather({ day, mode }: { day: WeatherDay | undefined; mode: W
   if (!day) return null;
   return (
     <span className="wx-day">
-      {deg(day.hi)}/{deg(day.lo)}{day.rain !== null ? ` · ${day.rain}% rain` : ''}{day.wind !== null && day.wind >= 18 ? ` · windy` : ''}
+      {day.hi !== null ? `${deg(day.hi)}/${deg(day.lo)}` : `Tonight ${deg(day.lo)}`}{day.rain !== null ? ` · ${day.rain}% rain` : ''}{day.wind !== null && day.wind >= 18 ? ` · windy` : ''}
     </span>
   );
 }

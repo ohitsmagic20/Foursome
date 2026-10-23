@@ -336,7 +336,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
       </div>
       <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `${Math.ceil(state.members.length / 4)} tee times in a row` : undefined} />
       <div className="field">
-        <label htmlFor="f-fee">Greens fee per player, with cart ($)</label>
+        <label htmlFor="f-fee">Greens fee per player ($)</label>
         <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" required value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? String(range.median) : '150'} />
       </div>
       {range && (

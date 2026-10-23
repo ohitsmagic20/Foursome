@@ -7,7 +7,7 @@ import { firstName } from '@/lib/client';
 import { Icon, useTrip, type TripCtx } from './ui';
 import { meSheet } from './sheets';
 
-const cents = (n: number) => (Number.isInteger(n) ? money(n) : `$${n.toFixed(2)}`);
+const cents = (n: number) => (Number.isInteger(n) ? money(n) : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
 /** Who paid what for the group, and the fewest payments to even it out. */
 export function SettleUp() {
