@@ -21,7 +21,6 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
   if (!t) notFound();
   const c = templateCost(t);
   const days = Array.from({ length: t.nights + 1 }, (_, i) => i + 1);
-  const anyEstimate = t.rounds.some((r) => !r.fee.verified) || !t.lodging.perNight.verified;
 
   return (
     <div className="app no-tabs">
@@ -29,7 +28,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
         <div style={{ minWidth: 0 }}>
           <a className="eyebrow" href="/ideas" style={{ textDecoration: 'none' }}>‹ Trip ideas</a>
           <h1>{t.name}</h1>
-          <p className="sub" style={{ marginTop: 6 }}>{t.state} · {t.nights} nights, {t.rounds.length} rounds · Best {t.bestMonths}</p>
+          <p className="sub" style={{ marginTop: 6 }}>{t.state} · {t.nights} nights · {t.rounds.length} rounds</p>
         </div>
       </header>
 
@@ -38,12 +37,11 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
 
         <section className="plan">
           <div className="plan-head">
-            <div className="eyebrow">Estimated cost per golfer</div>
+            <div className="eyebrow">Per golfer, before flights</div>
             <div className="plan-title">{moneyRange(c.total)}</div>
-            <div className="row-meta">Before flights · golf {moneyRange(c.golf)} · stay {moneyRange(c.stay)} · food {moneyRange(c.food)}</div>
+            <div className="row-meta">Golf {moneyRange(c.golf)} · stay {moneyRange(c.stay)} · food {moneyRange(c.food)}</div>
           </div>
           <a className="btn primary block" href={`/?template=${t.slug}#start`}>Start a trip from this</a>
-          <p className="hint" style={{ margin: 0 }}>Adds the destination and these rounds as suggestions. Your group picks the dates and votes on every round.</p>
         </section>
 
         <section className="section">
@@ -59,10 +57,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
                     {rs.map((r) => (
                       <div key={r.course}>
                         <div className="row-title">{r.time} · {r.course}</div>
-                        <div className="row-meta">
-                          {moneyRange([r.fee.low, r.fee.high])} {r.fee.verified ? <span>({r.fee.asOf})</span> : <span className="chip plain">estimate</span>}
-                          {r.fee.note ? ` · ${r.fee.note}` : ''}
-                        </div>
+                        <div className="row-meta">{r.fee.verified ? '' : '~'}{moneyRange([r.fee.low, r.fee.high])}</div>
                         {r.access && <div className="row-meta">{r.access}</div>}
                       </div>
                     ))}
@@ -74,14 +69,11 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
         </section>
 
         <section className="section">
-          <h2>Getting there and staying</h2>
+          <h2>Getting there</h2>
           <div className="card stack" style={{ gap: 8 }}>
-            <div><span className="row-title">Fly into: </span>{t.airportNote}</div>
-            <div><span className="row-title">Stay: </span>{t.lodging.note}</div>
-            <div className="row-meta">
-              About {moneyRange([t.lodging.perNight.low, t.lodging.perNight.high])} per person per night
-              {t.lodging.perNight.verified ? ` (${t.lodging.perNight.asOf})` : ' (estimate)'}{t.lodging.perNight.note ? ` · ${t.lodging.perNight.note}` : ''}
-            </div>
+            <div><span className="row-title">Fly into </span>{t.airports.join(' or ')}</div>
+            <div><span className="row-title">Best time </span>{t.bestMonths}</div>
+            <div><span className="row-title">Stay </span>{t.lodging.note} <span className="row-meta">~{moneyRange([t.lodging.perNight.low, t.lodging.perNight.high])}/person/night</span></div>
           </div>
         </section>
 
@@ -91,11 +83,8 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
         </section>
 
         <section className="section">
-          <h2>Where the prices come from</h2>
-          <ul className="idea-tips">{t.sources.map((s) => <li key={s.url}><a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a></li>)}</ul>
           <p className="hint">
-            Prices checked October 2026. Green fees change by season and day of the week, so confirm with each course before booking.
-            {anyEstimate ? ' Numbers marked “estimate” are our best guess where no current price was published.' : ''} Food is estimated at $75–125 per person per day.
+            Prices checked Oct 2026 · {t.sources.map((s, i) => <span key={s.url}>{i ? ', ' : ''}<a href={s.url} target="_blank" rel="noopener noreferrer">{s.label.split(':')[0]}</a></span>)}
           </p>
         </section>
 

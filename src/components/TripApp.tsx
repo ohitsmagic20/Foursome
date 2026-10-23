@@ -192,7 +192,7 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
       {me === null && !signIn && (
         <form className="card form" onSubmit={(e) => { e.preventDefault(); join(Object.fromEntries(new FormData(e.currentTarget))); }}>
           <GuestFields />
-          <p className="hint">Your budget helps the group see what works for everyone. Only people on the trip can see it.</p>
+          <p className="hint">Only people on the trip see your budget.</p>
           {err && <p className="error" role="alert">{err}</p>}
           <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
           <p className="legal-links">By joining you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.</p>
@@ -208,7 +208,7 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
 
       {me && !me.complete && (
         <div className="card">
-          <ProfileForm profile={me.profile} submitLabel="Save and continue" intro={<p className="sub">Quick setup, once. Every trip you join uses these details.</p>} onSaved={(r) => setMe({ ...me, ...r })} />
+          <ProfileForm profile={me.profile} submitLabel="Save and continue" intro={<p className="sub">One-time setup.</p>} onSaved={(r) => setMe({ ...me, ...r })} />
         </div>
       )}
       {me && me.complete && (

@@ -22,11 +22,11 @@ export function StayTab() {
   return (
     <section className="section">
       <div className="section-head"><h2>Where we stay</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
-      <p className="sub">Paste an Airbnb, Vrbo or hotel link and add the total for your dates. The group votes, then the organizer books it on that site.</p>
-      <Callout>The group needs <strong>{need} beds</strong>: {state.members.filter((m) => m.bed === 'own').length} want their own and {state.members.filter((m) => m.bed === 'share').length} will share.</Callout>
+      <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. The group votes.</p>
+      <Callout>Need <strong>{need} beds</strong> ({state.members.filter((m) => m.bed === 'share').length} sharing).</Callout>
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
-        : <p className="hint">Once there are dates and a destination on the Trip tab, you’ll get one-tap searches on Airbnb, Vrbo, Booking.com and Expedia here.</p>}
+        : <p className="hint">Pick dates and a destination to search rentals.</p>}
       {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>Suggest the first place to stay.</button>}
       {shown.map((o) => {
         const fits = !o.data.beds || o.data.beds >= need;

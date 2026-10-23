@@ -22,7 +22,7 @@ function useTemplate(): [TripTemplate | null, () => void] {
 function TemplateBanner({ t, onClear }: { t: TripTemplate; onClear: () => void }) {
   return (
     <div className="callout good idea-banner">
-      <div className="grow">Starting from <strong>{t.name}</strong>: the destination and {t.rounds.length} rounds go in as suggestions for the group to vote on.</div>
+      <div className="grow">Starting from <strong>{t.name}</strong></div>
       <button type="button" className="link-btn" onClick={onClear}>Remove</button>
     </div>
   );
@@ -110,7 +110,7 @@ export default function Home() {
           }}>
             <Field name="tripName" label="Trip name" placeholder="Spring Golf Trip 2027" defaultValue={tpl ? `${tpl.name} trip` : undefined} required />
             <Field name="nights" label="Nights" type="number" defaultValue={tpl?.nights ?? 3} min={1} max={10} step={1} />
-            <p className="hint">You’ll be the organizer, flying from {me.profile.airport}. Next you’ll get an invite link for the group.</p>
+
             {err && <p className="error" role="alert">{err}</p>}
             <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Create trip'}</button>
           </form>

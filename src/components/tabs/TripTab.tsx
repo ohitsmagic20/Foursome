@@ -68,10 +68,11 @@ export function TripTab() {
         <div className="section-head"><h2>Cost per person</h2><span className="sub">{stay.option ? '' : 'Lodging not picked yet'}</span></div>
         <CostTable />
         {over.length > 0 && <Callout kind="warn">{over.map((m) => firstName(m.name)).join(', ')} {over.length > 1 ? 'are' : 'is'} over budget with the current picks.</Callout>}
-        <p className="hint">Stay uses the locked or leading place, split so people sharing a bed pay 25% less. Golf counts rounds in the plan. Food and extras: {money(state.trip.food)} each.</p>
+        <p className="hint">Sharing a bed saves 25% on the stay. Food: {money(state.trip.food)} each.</p>
       </section>
 
       <Crew />
+      <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
     </>
   );
 }
@@ -189,7 +190,7 @@ function Arrivals() {
           </div>
         ))}
       </div>
-      {firstRound && date.option && <p className="hint">First tee time: {firstRound.data.time} on {dayLabel(date.option.data.start, 1)} at {firstRound.data.course}. Flags anyone landing less than 90 minutes before.</p>}
+      {firstRound && date.option && <p className="hint">First tee: {firstRound.data.time}, {dayLabel(date.option.data.start, 1)}.</p>}
     </section>
   );
 }
@@ -244,7 +245,7 @@ function Crew() {
           </div>
         ))}
       </div>
-      {stay && <p className="hint">This group needs {need} beds. {stay.data.name} has {stay.data.beds || 'an unknown number of'}.</p>}
+      {stay && <p className="hint">Need {need} beds · {stay.data.name} has {stay.data.beds || '?'}.</p>}
       <InviteButton ctx={ctx} className="btn primary block" label="Invite people" />
       <GroupUpdate ctx={ctx} />
       {me?.is_organizer ? <RemoveMember ctx={ctx} /> : (

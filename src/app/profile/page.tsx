@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ProfileForm, SignIn, signOut, useMe } from '@/components/account';
 import { api, clearSession } from '@/lib/client';
+import { Icon } from '@/components/ui';
 import { initials } from '@/lib/client';
 import type { Profile } from '@/lib/shared';
 
@@ -49,9 +50,16 @@ export default function ProfilePage() {
                 ))}
               </div>
             </section>
+            <section className="section">
+              <h2>Privacy</h2>
+              <div className="list">
+                <a className="row" href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}><div className="grow row-title">Privacy policy</div>{Icon.chev}</a>
+                <a className="row" href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}><div className="grow row-title">Terms of use</div>{Icon.chev}</a>
+              </div>
+            </section>
             <button className="btn ghost danger block" onClick={async () => { await signOut(); location.href = '/'; }}>Sign out</button>
             <DeleteAccount />
-            <p className="hint" style={{ textAlign: 'center' }}><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+
           </>
         )}
       </main>
@@ -68,7 +76,7 @@ function DeleteAccount() {
   return (
     <section className="card form">
       <h2>Delete your account</h2>
-      <p className="sub">This removes your profile, your spot and votes on every trip, and your sign-in. Trips you organize pass to the next person on the trip; trips with only you are deleted. This can’t be undone.</p>
+      <p className="sub">Removes your profile and your spot on every trip. Can’t be undone.</p>
       <div className="field">
         <label htmlFor="del-confirm">Type DELETE to confirm</label>
         <input id="del-confirm" value={text} onChange={(e) => setText(e.target.value)} autoCapitalize="characters" autoComplete="off" />

@@ -20,9 +20,9 @@ export function GolfTab() {
 
   return (
     <>
-      <Callout>Your group of {n} needs <strong>{teeTimesNeeded(n)} back-to-back tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round. Golf in the plan so far: <strong>{money(perPerson)}</strong> per person.</Callout>
+      <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
       <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
-      <p className="sub">Anyone can suggest a course and tee time. Vote on each one, and the organizer adds the winners to the plan.</p>
+      <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const rs = rounds.filter((r) => r.data.day === d).sort((a, b) => Number(b.locked) - Number(a.locked) || teeMinutes(a.data.time) - teeMinutes(b.data.time));
         const planned = plan.filter((r) => r.data.day === d).length;
@@ -38,14 +38,14 @@ export function GolfTab() {
       {rounds.some((r) => r.data.day > days) && (
         <section className="section">
           <div className="day-label">Outside the current dates</div>
-          <Callout kind="warn">These rounds are on a day after the trip ends with the current dates. Edit them to move them to another day, or remove them.{plan.some((r) => r.data.day > days) ? ' Ones in the plan still count toward the cost.' : ''}</Callout>
+          <Callout kind="warn">These fall after the trip ends. Move or remove them.</Callout>
           {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} />)}
         </section>
       )}
       {wx.data && <WeatherCredit />}
       {destOpt
         ? <CoursesNearby dest={destOpt.data.name} />
-        : <p className="hint">Pick a destination on the Trip tab to see golf courses nearby.</p>}
+        : <p className="hint">Pick a destination to see courses nearby.</p>}
     </>
   );
 }
@@ -64,7 +64,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         <div className="tee">{r.data.time.replace(/\s*(AM|PM)/i, '')}<small>{ap}</small></div>
         <div style={{ minWidth: 0 }}>
           <div className="row-title">{r.data.course}</div>
-          <div className="row-meta">{r.data.fromTemplate ? <>Typical price from the <a href={`/ideas/${r.data.fromTemplate}`}>trip idea</a> · confirm when you book</> : r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
+          <div className="row-meta">{r.data.fromTemplate ? 'Typical price' : r.data.checked ? `Price checked ${r.data.checked}` : 'Price not checked'}{typeof r.data.weekday === 'number' && r.data.weekday >= 0 ? ` · ${isWeekendDay(r.data.weekday) ? 'weekend' : 'weekday'} rate` : ''}</div>
         </div>
         <div className="fee">{money(r.data.fee)}<small>per player</small></div>
       </div>
@@ -73,7 +73,7 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         {r.locked && (r.data.booked ? <Chip kind="good">Booked</Chip> : <Chip kind="warn">Not booked</Chip>)}
       </div>
       {r.locked && <Pairings r={r} />}
-      {early && <Callout kind="warn">This is an early round on arrival day. Check the Flights tab to see if everyone lands in time.</Callout>}
+      {early && <Callout kind="warn">Early on arrival day. Check everyone lands in time.</Callout>}
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">

@@ -77,7 +77,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
       <div>
         <h2>{step === 'email' ? title : 'Check your email'}</h2>
         <p className="sub" style={{ marginTop: 4 }}>
-          {step === 'email' ? (note || 'No password. We’ll email you a 6-digit code.') : <>We sent a 6-digit code to <strong>{email}</strong>. Enter it below, or tap the link in the email.</>}
+          {step === 'email' ? (note || 'No password. We’ll email you a 6-digit code.') : <>Code sent to <strong>{email}</strong>.</>}
         </p>
       </div>
       {step === 'email' ? (
@@ -190,7 +190,7 @@ export function ProfileForm({ profile, onSaved, submitLabel = 'Save', intro }: {
               </button>
             ))}
           </div>
-          <p className="hint">Flight searches start here. You can change it per trip by editing your profile.</p>
+
         </div>
       )}
       <div className="grid2">

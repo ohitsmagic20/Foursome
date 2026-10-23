@@ -63,9 +63,7 @@ export function WeatherStrip({ place, start, nights }: { place: string; start: s
         <Chip kind={kind}>{label}</Chip>
       </div>
       <div className="row-meta">
-        {data.mode === 'forecast' ? 'Forecast' : `Typical for ${rangeLabel(start, nights)}, ${data.years >= 30 ? '30-year average' : `last ${data.years} years`}`}
-        {data.rain !== null && ` · ${data.mode === 'forecast' ? `${data.rain}% chance of rain` : `rain on ${data.rain}% of days`}`}
-        {data.wind !== null && ` · wind ${data.wind} mph`}
+        {[data.rain !== null ? `${data.rain}% rain` : '', data.wind !== null ? `${data.wind} mph wind` : ''].filter(Boolean).join(' · ')}
       </div>
     </div>
   );
@@ -75,14 +73,14 @@ export function WeatherStrip({ place, start, nights }: { place: string; start: s
 export function DayWeather({ day, mode }: { day: WeatherDay | undefined; mode: WeatherReport['mode'] }) {
   if (!day) return null;
   return (
-    <span className="wx-day" title={mode === 'forecast' ? 'Forecast' : 'Typical for this date'}>
+    <span className="wx-day">
       {deg(day.hi)}/{deg(day.lo)}{day.rain !== null ? ` · ${day.rain}% rain` : ''}{day.wind !== null && day.wind >= 18 ? ` · windy` : ''}
     </span>
   );
 }
 
 export function WeatherCredit() {
-  return <p className="hint">Within a week of the trip (US): the <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">National Weather Service</a> forecast. Further out: typical weather for those dates, from <a href="https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals" target="_blank" rel="noopener noreferrer">NOAA climate normals</a> and <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA POWER</a>.</p>;
+  return <p className="hint">Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">NWS</a>, <a href="https://www.ncei.noaa.gov/" target="_blank" rel="noopener noreferrer">NOAA</a>, <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA</a></p>;
 }
 
 /* ---------- lodging searches ---------- */
@@ -105,7 +103,7 @@ export function StaySearch({ dest, start }: { dest: string; start: string }) {
           </a>
         ))}
       </div>
-      <p className="hint">Opens each site with your dates and group filled in. Find one you like, copy its link, and tap <strong>Place</strong> to put it to a vote.</p>
+      <p className="hint">Found one? Copy its link and tap <strong>Place</strong>.</p>
     </div>
   );
 }
@@ -163,7 +161,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
           <button className="btn small ghost" onClick={() => setShowPrivate(!showPrivate)}>{showPrivate ? 'Hide private clubs' : 'Show private clubs'}</button>
         )}
       </div>
-      <p className="hint">Course list from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>. Prices shown are what other Foresome groups entered. Tap Tee times for today’s rates.</p>
+      <p className="hint">Courses: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a></p>
     </section>
   );
 }

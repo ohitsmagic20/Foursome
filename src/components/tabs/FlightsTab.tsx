@@ -77,16 +77,16 @@ export function FlightsTab() {
             </div>
           </div>
         ) : (
-          <p className="sub">Look up flights from your home airport, then enter the one you pick so the group can see when you land.</p>
+          <p className="sub">No flight yet.</p>
         )}
       </section>
 
       <section className="section">
         <div className="section-head"><h2>Search</h2>{me.airport && to && <span className="sub">{me.airport} → {to}</span>}</div>
         {!me.airport && <Callout kind="warn">Add your home airport first. <button className="link-btn" onClick={() => meSheet(ctx)}>Add it</button></Callout>}
-        {!date.option && <Callout kind="warn">There are no dates to search yet. Suggest some on the Trip tab.</Callout>}
-        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport code before flights can be searched. Add it on the Trip tab.</Callout>}
-        {ready && (!date.locked || !dest.locked) && <Callout>The group hasn’t locked {!date.locked && !dest.locked ? 'the dates or destination' : !date.locked ? 'the dates' : 'the destination'} yet, so this searches the current leader. Prices are a preview.</Callout>}
+        {!date.option && <Callout kind="warn">Add dates on the Trip tab first.</Callout>}
+        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport. Add it on the Trip tab.</Callout>}
+        {ready && (!date.locked || !dest.locked) && <Callout>Not locked yet. Showing the current leader.</Callout>}
         {ready && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="row-title">{rangeLabel(outDate!, tripNights(state))} · round trip, 1 adult, economy</div>
@@ -103,15 +103,14 @@ export function FlightsTab() {
               <button className="btn small ghost" onClick={() => manualFlightSheet(ctx)}>Enter a flight myself</button>
               <button className="btn small ghost" onClick={async () => { if (await act('set_flight', { price: 0, summary: 'Driving' })) toast('Saved: you’re driving'); }}>I’m driving</button>
             </div>
-            {busy && <p className="hint">This can take up to 20 seconds while airlines respond.</p>}
-            {!state.flightSearch && <p className="hint">Found one you like? Tap “Enter a flight myself” with the price and landing time so the group can see when you arrive.</p>}
+            {busy && <p className="hint">Up to 20 seconds…</p>}
           </div>
         )}
         {err && <Callout kind="bad">{err}</Callout>}
         {result && (
           <>
-            {result.testMode && <Callout>Test mode: these are sample airlines from Duffel, not real fares. Switch to a live Duffel token for real prices.</Callout>}
-            {result.offers.length === 0 && <Callout kind="warn">No flights came back for these dates. Try Google Flights or enter one yourself.</Callout>}
+            {result.testMode && <Callout>Sample fares (test mode).</Callout>}
+            {result.offers.length === 0 && <Callout kind="warn">No flights found. Try Google Flights.</Callout>}
             <div className="list">
               {result.offers.map((o) => (
                 <div className="row" key={o.id} style={{ alignItems: 'flex-start' }}>
@@ -127,7 +126,7 @@ export function FlightsTab() {
                 </div>
               ))}
             </div>
-            <p className="hint">Picking saves the flight to the trip so everyone sees your arrival. You still book it with the airline.</p>
+            <p className="hint">Book with the airline after picking.</p>
           </>
         )}
       </section>

@@ -21,7 +21,6 @@ export function IdeaStrip() {
   return (
     <section className="section">
       <div className="section-head"><h2>Trip ideas</h2><a className="link-btn" href="/ideas">See all</a></div>
-      <p className="sub">Start from a ready-made itinerary. The group still votes on everything.</p>
       <div className="idea-strip">
         {TEMPLATES.map((t) => <IdeaCard key={t.slug} t={t} />)}
       </div>

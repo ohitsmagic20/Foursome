@@ -65,7 +65,7 @@ export function dateSheet(ctx: TripCtx) {
           <Field name="start" label="Arrival date" type="date" defaultValue={iso} required />
           <Select name="nights" label="Nights" defaultValue={String(ctx.state.trip.nights)} options={Array.from({ length: 14 }, (_, i) => [String(i + 1), `${i + 1} night${i ? 's' : ''}`] as [string, string])} />
         </div>
-        <p className="hint">Suggest a long weekend and a full week side by side and let the group pick. Your vote counts as “in”.</p>
+
       </SheetForm>
     ),
   });
@@ -125,7 +125,7 @@ function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationD
         <input id="f-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Myrtle Beach, SC" required autoComplete="off" />
       </div>
       {status === 'looking' && <p className="hint">Finding airports near {name.trim()}…</p>}
-      {status === 'notfound' && <p className="hint">Couldn’t find that on the map. Try “City, ST”, or add an airport code below.</p>}
+      {status === 'notfound' && <p className="hint">Not found. Try “City, ST”.</p>}
       {shown.length > 0 && (
         <div className="field">
           <label>Fly into {placeLabel && <span style={{ fontWeight: 500 }}>· near {placeLabel}</span>}</label>
@@ -141,7 +141,7 @@ function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationD
               </button>
             ))}
           </div>
-          <p className="hint">Pick one or more. Each person can search flights into any of them.</p>
+          <p className="hint">Pick one or more.</p>
         </div>
       )}
       <div className="field">
@@ -156,7 +156,7 @@ function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationD
           <div><strong>{courses.length}{courses.length >= 40 ? '+' : ''} public courses within 30 miles</strong>, including {courses.slice(0, 4).map((c) => c.name).join(', ')}. You’ll see them all on the Golf tab.</div>
         </div>
       )}
-      {courses && courses.length === 0 && <p className="hint">No golf courses showed up within 30 miles of this spot.</p>}
+      {courses && courses.length === 0 && <p className="hint">No courses within 30 miles.</p>}
     </SheetForm>
   );
 }
@@ -203,7 +203,7 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
         <Field name="bedrooms" label="Bedrooms" type="number" defaultValue={opt?.data.bedrooms || ''} />
         <Field name="beds" label="Beds" type="number" defaultValue={opt?.data.beds || ''} />
       </div>
-      <p className="hint">Copy the total from the listing for your dates. Booking still happens on the listing’s site.</p>
+      <p className="hint">Total for your dates, from the listing.</p>
     </SheetForm>
   );
 }
@@ -273,7 +273,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
           {Array.from({ length: days }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{`Day ${n}${date ? ` · ${dayLabel(date.data.start, n)}` : ''}`}</option>)}
         </select>
       </div>
-      <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `Your group needs ${Math.ceil(state.members.length / 4)} tee times in a row starting here.` : undefined} />
+      <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `${Math.ceil(state.members.length / 4)} tee times in a row` : undefined} />
       <div className="field">
         <label htmlFor="f-fee">Greens fee per player, with cart ($)</label>
         <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" required value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? String(range.median) : '150'} />
@@ -291,7 +291,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         {url && <a className="btn small" href={url} target="_blank" rel="noopener noreferrer">Course website</a>}
         <a className="btn small" href={teeSearch} target="_blank" rel="noopener noreferrer">Check live tee times{dayName ? ` for ${dayName}` : ''}</a>
       </div>
-      <p className="hint">Enter the rate you see for your day and time. It helps the next group: Foresome remembers prices so courses show typical weekday and weekend ranges.</p>
+
     </SheetForm>
   );
 }
@@ -329,7 +329,7 @@ function OrganizerTools({ ctx }: { ctx: TripCtx }) {
       {others.length > 0 && (
         <div className="section">
           <h2>Hand off organizer</h2>
-          <p className="sub">They’ll be able to lock decisions and edit the trip. You stay on the trip.</p>
+          <p className="sub">You stay on the trip.</p>
           <div style={{ display: 'flex', gap: 8 }}>
             <select className="mini-select" style={{ flex: 1, minHeight: 44, fontSize: 15 }} value={to} onChange={(e) => setTo(e.target.value)} aria-label="New organizer">
               {others.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -379,7 +379,7 @@ function PairingsForm({ ctx, r }: { ctx: TripCtx; r: Option<RoundData> }) {
   const tooBig = groups.some((g) => g.length > 4);
   return (
     <div className="stack">
-      <p className="sub">{r.data.course} · group 1 tees off at {r.data.time}, each next group 10 minutes later.</p>
+      <p className="sub">{r.data.course} · 10 minutes apart</p>
       <div className="btn-row">
         <button type="button" className="btn small" onClick={shuffle}>Shuffle</button>
         <button type="button" className="btn small ghost" disabled={count <= 1} onClick={() => setCount(count - 1)}>− Group</button>
@@ -402,7 +402,7 @@ function PairingsForm({ ctx, r }: { ctx: TripCtx; r: Option<RoundData> }) {
           })}
         </div>
       ))}
-      {tooBig && <p className="hint">Most courses allow at most 4 players per tee time.</p>}
+      {tooBig && <p className="hint">Most courses allow 4 per tee time.</p>}
       <div className="btn-row">
         <button className="btn primary" onClick={() => save(ctx, 'update_option', { optionId: r.id, data: { ...r.data, groups: groups.filter((g) => g.length) } }, 'Pairings saved')}>Save pairings</button>
         {r.data.groups?.length ? <button className="btn ghost" onClick={() => save(ctx, 'update_option', { optionId: r.id, data: { ...r.data, groups: [] } }, 'Pairings cleared')}>Clear</button> : null}

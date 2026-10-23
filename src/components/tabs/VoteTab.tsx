@@ -30,7 +30,7 @@ function When() {
         <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Suggest the first set of dates. Everyone else marks if they’re in.</button>
       ) : (
         <>
-          <p className="sub">Tap your row to mark each option: in, maybe, or out. Each option shows its own length.</p>
+          <p className="sub">Tap your row: in, maybe or out.</p>
           <div className="scroll">
             <table className="sc">
               <thead><tr><th className="name">Golfer</th>{dates.map((d) => <th key={d.id} className={colClass(d.id)}>{rangeLabel(d.data.start, nightsOf(state.trip, d.data))}</th>)}</tr></thead>
@@ -73,7 +73,7 @@ function When() {
               );
             })}
           </div>
-          {!me?.is_organizer && !locked && <p className="hint">The organizer locks the dates once the group agrees.</p>}
+
         </>
       )}
     </section>
@@ -115,7 +115,7 @@ function Where() {
       ))}
       {dests.length > 0 && (wxDate
         ? <WeatherCredit />
-        : <p className="hint">Suggest dates above to see the weather at each destination for those days.</p>)}
+        : <p className="hint">Add dates to see the weather.</p>)}
     </section>
   );
 }
