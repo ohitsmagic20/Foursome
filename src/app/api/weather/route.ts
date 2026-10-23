@@ -45,7 +45,7 @@ export function GET(req: Request) {
         typical(place.lat, place.lon, first, nights, today).catch((e) => { if (!(e instanceof HttpError)) console.error(e); return null; }),
       ]);
       if (normals) {
-        const days = normals.map((d, i) => ({ ...d, wind: nasa?.days[i]?.wind ?? null }));
+        const days = normals.map((d, i) => ({ ...d, rain: d.rain ?? nasa?.days[i]?.rain ?? null, wind: nasa?.days[i]?.wind ?? null }));
         report = { mode: 'typical', years: 30, days, ...summarize(days) };
       } else if (nasa) {
         report = { mode: 'typical', years: nasa.years, days: nasa.days, ...summarize(nasa.days) };
@@ -98,9 +98,10 @@ async function nwsForecast(lat: number, lon: number, start: string, count: numbe
 const NCEI = 'https://www.ncei.noaa.gov/access/services';
 const NORMALS = 'normals-daily-1991-2020';
 
-/** NOAA daily climate normals (1991–2020) at the nearest US station with temperature normals. Null if none nearby. */
+/** NOAA daily climate normals (1991–2020) from the nearest US stations: temperatures from the closest one that has them,
+ *  rain chances from the closest one that has those (some small stations only record temperature). Null if none nearby. */
 async function noaaNormals(lat: number, lon: number, first: Date, nights: number): Promise<WeatherDay[] | null> {
-  let station: string | null = null;
+  let stations: string[] = [];
   for (const pad of [0.3, 0.7]) {
     const bbox = [lat + pad, lon - pad, lat - pad, lon + pad].map((x) => x.toFixed(3)).join(',');
     const res = await fetch(`${NCEI}/search/v1/data?dataset=${NORMALS}&bbox=${bbox}&dataTypes=DLY-TMAX-NORMAL&limit=25`, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
@@ -109,10 +110,10 @@ async function noaaNormals(lat: number, lon: number, first: Date, nights: number
     const near = (j.results || [])
       .filter((x) => x.location?.coordinates && x.stations?.[0]?.id)
       .map((x) => ({ id: x.stations![0].id, d: Math.hypot(x.location!.coordinates![1] - lat, (x.location!.coordinates![0] - lon) * Math.cos((lat * Math.PI) / 180)) }))
-      .sort((a, b) => a.d - b.d)[0];
-    if (near) { station = near.id; break; }
+      .sort((a, b) => a.d - b.d).slice(0, 4).map((x) => x.id);
+    if (near.length) { stations = near; break; }
   }
-  if (!station) return null;
+  if (!stations.length) return null;
 
   // Normals are by calendar day; request the trip's days (split at New Year), keyed "MM-DD".
   const dates = Array.from({ length: nights + 1 }, (_, i) => addDays(first, i));
@@ -123,16 +124,20 @@ async function noaaNormals(lat: number, lon: number, first: Date, nights: number
     const last = ranges[ranges.length - 1];
     if (last && k > last[1]) last[1] = k; else ranges.push([k, k]);
   }
-  const rows: Record<string, Record<string, string>> = {};
+  const rows: Record<string, Record<string, string>[]> = {}; // "MM-DD" → rows, one per station
   for (const [a, b] of ranges) {
-    const res = await fetch(`${NCEI}/data/v1?dataset=${NORMALS}&stations=${station}&startDate=2010-${a}&endDate=2010-${b}&dataTypes=DLY-TMAX-NORMAL,DLY-TMIN-NORMAL,DLY-PRCP-PCTALL-GE010HI&format=json`, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
+    const res = await fetch(`${NCEI}/data/v1?dataset=${NORMALS}&stations=${stations.join(',')}&startDate=2010-${a}&endDate=2010-${b}&dataTypes=DLY-TMAX-NORMAL,DLY-TMIN-NORMAL,DLY-PRCP-PCTALL-GE010HI&format=json`, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
     if (!res.ok) return null;
-    for (const row of (await res.json()) as Record<string, string>[]) rows[row.DATE] = row;
+    for (const row of (await res.json()) as Record<string, string>[]) (rows[row.DATE] ||= []).push(row);
   }
-  const num = (v?: string) => { const n = Number(String(v ?? '').trim()); return Number.isFinite(n) && n > -90 ? n : NaN; };
+  // Blank means "not recorded here", not zero.
+  const num = (v?: string) => { const t = String(v ?? '').trim(); const n = t ? Number(t) : NaN; return Number.isFinite(n) && n > -90 ? n : NaN; };
+  const rank = (row: Record<string, string>) => stations.indexOf(row.STATION);
   const days = dates.map((d) => {
-    const row = rows[md(d) === '02-29' ? '02-28' : md(d)] || {};
-    return { date: isoDay(d), hi: r(num(row['DLY-TMAX-NORMAL'])), lo: r(num(row['DLY-TMIN-NORMAL'])), rain: r(num(row['DLY-PRCP-PCTALL-GE010HI'])), wind: null };
+    const list = (rows[md(d) === '02-29' ? '02-28' : md(d)] || []).slice().sort((a, b) => rank(a) - rank(b));
+    const temps = list.find((x) => Number.isFinite(num(x['DLY-TMAX-NORMAL'])));
+    const wet = list.find((x) => Number.isFinite(num(x['DLY-PRCP-PCTALL-GE010HI'])));
+    return { date: isoDay(d), hi: r(num(temps?.['DLY-TMAX-NORMAL'])), lo: r(num(temps?.['DLY-TMIN-NORMAL'])), rain: r(num(wet?.['DLY-PRCP-PCTALL-GE010HI'])), wind: null as number | null };
   });
   return days.some((d) => d.hi !== null) ? days : null;
 }
