@@ -15,8 +15,8 @@ No scorekeeping. This app is only for planning.
 
 - **Airports**: [OurAirports](https://ourairports.com/data/) (public domain), bundled in `src/data/airports.json`: airports with scheduled flights only. Typing a destination suggests the closest ones, favoring big airports with more flights.
 - **Golf courses**: [OpenStreetMap](https://www.openstreetmap.org/copyright) via Nominatim, with Overpass as a backup (free, attribution required).
-- **Weather**: [Open-Meteo](https://open-meteo.com/) (free for non-commercial use; needs a paid plan once the app earns money).
-- **Place lookup**: Open-Meteo geocoding.
+- **Weather**: [National Weather Service](https://www.weather.gov/documentation/services-web-api) forecast within 7 days (US), and [NASA POWER](https://power.larc.nasa.gov/) daily history for typical weather further out. Both free, no key, fine for commercial use.
+- **Place lookup**: OpenStreetMap Nominatim (cached a week per place).
 
 ## Stack
 

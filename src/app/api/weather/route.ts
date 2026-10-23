@@ -3,14 +3,13 @@ import { handle, HttpError, int, str } from '@/lib/server';
 import { addDays, isoDay, parseDay } from '@/lib/shared';
 import type { WeatherReport, WeatherDay } from '@/lib/shared';
 
-// Weather for a destination and trip dates, from Open-Meteo (free, no key).
-// Within 16 days: the real forecast. Further out: what those same dates were like over the last 5 years.
+// Weather for a destination and trip dates, from free US government sources (no key, fine for commercial use):
+//  - Within the next 7 days in the US: the National Weather Service forecast (api.weather.gov).
+//  - Otherwise: what those same dates were like over the last 5 years, from NASA POWER daily data (worldwide).
 
-const DAILY = 'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max';
-const UNITS = 'temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto';
+const UA = 'Foresome golf trip planner (https://www.foresomes.net; support@foresomes.net)';
 const RAIN_DAY_INCHES = 0.04; // about 1 mm: enough to notice on the course
-
-interface Daily { time: string[]; temperature_2m_max: (number | null)[]; temperature_2m_min: (number | null)[]; precipitation_sum: (number | null)[]; wind_speed_10m_max: (number | null)[]; precipitation_probability_max?: (number | null)[] }
+const FORECAST_DAYS = 7;
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
 const r = (n: number) => (Number.isFinite(n) ? Math.round(n) : null);
@@ -20,7 +19,7 @@ export function GET(req: Request) {
     const q = new URL(req.url).searchParams;
     const placeQ = str(q.get('place'), 80);
     const start = str(q.get('start'), 10);
-    const nights = int(q.get('nights'), 1, 10, 3);
+    const nights = int(q.get('nights'), 1, 14, 3);
     if (!placeQ) throw new HttpError(400, 'Missing place.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) throw new HttpError(400, 'Missing start date.');
 
@@ -31,62 +30,103 @@ export function GET(req: Request) {
     const count = nights + 1;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const offset = Math.round((first.getTime() - today.getTime()) / 864e5);
-    const base = `latitude=${place.lat}&longitude=${place.lon}&daily=${DAILY}&${UNITS}`;
 
-    let report: WeatherReport;
-
-    if (offset >= 0 && offset + count <= 16) {
-      const url = `https://api.open-meteo.com/v1/forecast?${base},precipitation_probability_max&start_date=${start}&end_date=${isoDay(addDays(first, nights))}`;
-      const res = await fetch(url, { next: { revalidate: 60 * 60 } });
-      if (!res.ok) throw new HttpError(502, 'The weather service did not respond. Try again in a minute.');
-      const d = ((await res.json()) as { daily: Daily }).daily;
-      const days: WeatherDay[] = d.time.map((date, i) => ({
-        date,
-        hi: r(d.temperature_2m_max[i] ?? NaN),
-        lo: r(d.temperature_2m_min[i] ?? NaN),
-        rain: r(d.precipitation_probability_max?.[i] ?? ((d.precipitation_sum[i] ?? 0) >= RAIN_DAY_INCHES ? 70 : 10)),
-        wind: r(d.wind_speed_10m_max[i] ?? NaN),
-      }));
-      report = { mode: 'forecast', years: 0, days, ...summarize(days) };
-    } else {
-      // Same calendar dates in the 5 most recent years that are fully in the past.
-      const last = addDays(first, nights);
-      const cutoff = addDays(today, -7); // the archive runs a few days behind
-      const years: number[] = [];
-      for (let y = today.getFullYear(); years.length < 5 && y > today.getFullYear() - 8; y--) {
-        const shift = y - first.getFullYear();
-        const e = new Date(last); e.setFullYear(last.getFullYear() + shift);
-        if (e <= cutoff) years.push(y);
-      }
-      const runs = await Promise.all(years.map(async (y) => {
-        const shift = y - first.getFullYear();
-        const s = new Date(first); s.setFullYear(first.getFullYear() + shift);
-        const e = addDays(s, nights);
-        const url = `https://archive-api.open-meteo.com/v1/archive?${base}&start_date=${isoDay(s)}&end_date=${isoDay(e)}`;
-        const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 * 7 } });
-        if (!res.ok) return null;
-        return ((await res.json()) as { daily: Daily }).daily;
-      }));
-      const good = runs.filter((x): x is Daily => !!x && Array.isArray(x.time));
-      if (!good.length) throw new HttpError(502, 'Past weather for these dates is not available right now.');
-      const days: WeatherDay[] = Array.from({ length: count }, (_, i) => {
-        const pick = (k: keyof Daily) => good.map((g) => (g[k] as (number | null)[] | undefined)?.[i]).filter((v): v is number => typeof v === 'number');
-        const rainYears = pick('precipitation_sum');
-        return {
-          date: isoDay(addDays(first, i)),
-          hi: r(avg(pick('temperature_2m_max'))),
-          lo: r(avg(pick('temperature_2m_min'))),
-          rain: rainYears.length ? Math.round((rainYears.filter((v) => v >= RAIN_DAY_INCHES).length / rainYears.length) * 100) : null,
-          wind: r(avg(pick('wind_speed_10m_max'))),
-        };
-      });
-      report = { mode: 'typical', years: good.length, days, ...summarize(days) };
+    let report: WeatherReport | null = null;
+    if (offset >= 0 && offset + count <= FORECAST_DAYS) {
+      const days = await nwsForecast(place.lat, place.lon, start, count);
+      if (days) report = { mode: 'forecast', years: 0, days, ...summarize(days) };
+    }
+    if (!report) {
+      const { days, years } = await typical(place.lat, place.lon, first, nights, today);
+      report = { mode: 'typical', years, days, ...summarize(days) };
     }
 
     return Response.json({ ...report, place: `${place.name}${place.region ? `, ${place.region}` : ''}` }, {
       headers: { 'Cache-Control': 'public, max-age=3600' },
     });
   });
+}
+
+interface NwsPeriod { startTime: string; isDaytime: boolean; temperature: number; temperatureUnit: string; windSpeed: string; probabilityOfPrecipitation?: { value: number | null } }
+
+/** The official NWS forecast, day and night periods folded into days. Null outside the US or if NWS is down. */
+async function nwsForecast(lat: number, lon: number, start: string, count: number): Promise<WeatherDay[] | null> {
+  const get = async (url: string, revalidate: number) => {
+    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/geo+json' }, next: { revalidate } });
+    return res.ok ? res.json() : null;
+  };
+  try {
+    const point = await get(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`, 60 * 60 * 24 * 30);
+    const url = point?.properties?.forecast as string | undefined;
+    if (!url) return null;
+    const fc = await get(url, 60 * 60);
+    const periods = (fc?.properties?.periods || []) as NwsPeriod[];
+    if (!periods.length) return null;
+    const first = parseDay(start);
+    const days: WeatherDay[] = [];
+    for (let i = 0; i < count; i++) {
+      const date = isoDay(addDays(first, i));
+      const ps = periods.filter((p) => p.startTime.slice(0, 10) === date);
+      if (!ps.length) return null; // the forecast doesn't reach this day
+      const f = (p: NwsPeriod) => (p.temperatureUnit === 'C' ? p.temperature * 9 / 5 + 32 : p.temperature);
+      const day = ps.find((p) => p.isDaytime), night = ps.find((p) => !p.isDaytime);
+      const pops = ps.map((p) => p.probabilityOfPrecipitation?.value).filter((v): v is number => typeof v === 'number');
+      const winds = ps.flatMap((p) => (p.windSpeed.match(/\d+/g) || []).map(Number));
+      days.push({
+        date,
+        hi: day ? r(f(day)) : null,
+        lo: night ? r(f(night)) : null,
+        rain: pops.length ? Math.max(...pops) : 0,
+        wind: winds.length ? Math.max(...winds) : null,
+      });
+    }
+    return days;
+  } catch { return null; }
+}
+
+type PowerParams = Record<'T2M_MAX' | 'T2M_MIN' | 'PRECTOTCORR' | 'WS10M_MAX', Record<string, number>>;
+
+/** The same calendar dates over the 5 most recent years fully in the past, averaged (NASA POWER, worldwide). */
+async function typical(lat: number, lon: number, first: Date, nights: number, today: Date) {
+  const last = addDays(first, nights);
+  const cutoff = addDays(today, -10); // NASA's daily data runs a few days behind
+  const years: number[] = [];
+  for (let y = today.getFullYear(); years.length < 5 && y > today.getFullYear() - 8; y--) {
+    const e = new Date(last); e.setFullYear(last.getFullYear() + (y - first.getFullYear()));
+    if (e <= cutoff) years.push(y);
+  }
+  const ymd = (d: Date) => isoDay(d).replace(/-/g, '');
+  const runs = await Promise.all(years.map(async (y) => {
+    const s = new Date(first); s.setFullYear(first.getFullYear() + (y - first.getFullYear()));
+    const e = addDays(s, nights);
+    const url = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M_MAX,T2M_MIN,PRECTOTCORR,WS10M_MAX&community=RE&latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&start=${ymd(s)}&end=${ymd(e)}&format=JSON`;
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
+      if (!res.ok) return null;
+      const p = (await res.json())?.properties?.parameter as PowerParams | undefined;
+      if (!p?.T2M_MAX) return null;
+      // Day i of the trip in that year.
+      return Array.from({ length: nights + 1 }, (_, i) => {
+        const k = ymd(addDays(s, i));
+        const v = (x: Record<string, number>) => (typeof x?.[k] === 'number' && x[k] > -900 ? x[k] : NaN);
+        return { hi: v(p.T2M_MAX) * 9 / 5 + 32, lo: v(p.T2M_MIN) * 9 / 5 + 32, rainIn: v(p.PRECTOTCORR) / 25.4, windMph: v(p.WS10M_MAX) * 2.237 };
+      });
+    } catch { return null; }
+  }));
+  const good = runs.filter((x): x is NonNullable<typeof x> => !!x);
+  if (!good.length) throw new HttpError(502, 'Past weather for these dates is not available right now.');
+  const days: WeatherDay[] = Array.from({ length: nights + 1 }, (_, i) => {
+    const col = (k: 'hi' | 'lo' | 'rainIn' | 'windMph') => good.map((g) => g[i][k]).filter(Number.isFinite);
+    const rain = col('rainIn');
+    return {
+      date: isoDay(addDays(first, i)),
+      hi: r(avg(col('hi'))),
+      lo: r(avg(col('lo'))),
+      rain: rain.length ? Math.round((rain.filter((v) => v >= RAIN_DAY_INCHES).length / rain.length) * 100) : null,
+      wind: r(avg(col('windMph'))),
+    };
+  });
+  return { days, years: good.length };
 }
 
 function summarize(days: WeatherDay[]) {

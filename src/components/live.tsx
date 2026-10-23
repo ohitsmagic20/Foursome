@@ -82,7 +82,7 @@ export function DayWeather({ day, mode }: { day: WeatherDay | undefined; mode: W
 }
 
 export function WeatherCredit() {
-  return <p className="hint">Weather by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Within 16 days it’s the forecast; further out it’s the average for the same dates in recent years.</p>;
+  return <p className="hint">Within a week of the trip (US): the <a href="https://www.weather.gov/" target="_blank" rel="noopener noreferrer">National Weather Service</a> forecast. Further out: the average for the same dates over recent years, from <a href="https://power.larc.nasa.gov/" target="_blank" rel="noopener noreferrer">NASA POWER</a>.</p>;
 }
 
 /* ---------- lodging searches ---------- */

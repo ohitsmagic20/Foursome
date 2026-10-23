@@ -4,7 +4,7 @@ import AIRPORTS from '@/data/airports.json';
 import type { NearbyAirport } from './shared';
 
 // Finding places on the map, with free services that need no API key:
-//   Open-Meteo geocoding (place → coordinates) and OpenStreetMap's Overpass API (golf courses nearby).
+//   OpenStreetMap's Nominatim (place → coordinates) and the bundled airport list.
 
 const STATES: Record<string, string> = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware',
@@ -18,7 +18,6 @@ const STATES: Record<string, string> = {
 
 export interface Place { name: string; region: string; country: string; lat: number; lon: number }
 
-interface GeoResult { name: string; latitude: number; longitude: number; admin1?: string; country?: string; country_code?: string; population?: number }
 
 // Nicknames people type for golf trip cities.
 const ALIASES: Record<string, string> = {
@@ -27,7 +26,16 @@ const ALIASES: Record<string, string> = {
   myrtle: 'Myrtle Beach, SC', scottsdale: 'Scottsdale, AZ', 'st andrews': 'St Andrews, Scotland', 'st. andrews': 'St Andrews, Scotland',
 };
 
-/** "Myrtle Beach, SC" → coordinates. Uses the part after the comma to pick the right state or country. */
+interface NominatimPlace {
+  name?: string; lat: string; lon: string; category?: string; type?: string; addresstype?: string; importance?: number;
+  address?: { city?: string; town?: string; village?: string; hamlet?: string; municipality?: string; county?: string; state?: string; country?: string; country_code?: string };
+}
+
+const UA = 'Foresome golf trip planner (https://www.foresomes.net; support@foresomes.net)';
+const PLACE_TYPES = new Set(['city', 'town', 'village', 'hamlet', 'municipality', 'suburb', 'administrative', 'county', 'island', 'locality']);
+
+/** "Myrtle Beach, SC" → coordinates, from OpenStreetMap's search (Nominatim: free, cached for a week per place).
+ *  Uses the part after the comma to pick the right state or country. */
 export async function geocode(rawQuery: string): Promise<Place | null> {
   const query = ALIASES[rawQuery.trim().toLowerCase()] || rawQuery;
   const parts = query.split(',').map((s) => s.trim()).filter(Boolean);
@@ -36,20 +44,33 @@ export async function geocode(rawQuery: string): Promise<Place | null> {
   const hint = (parts[1] || '').trim();
   const COUNTRY: Record<string, string> = { scotland: 'united kingdom', england: 'united kingdom', wales: 'united kingdom', uk: 'united kingdom', usa: 'united states', us: 'united states' };
   const hintFull = (COUNTRY[hint.toLowerCase()] || STATES[hint.toUpperCase()] || hint).toLowerCase();
+  const q = hint ? `${head}, ${STATES[hint.toUpperCase()] || hint}` : head;
 
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(head)}&count=10&language=en&format=json`;
-  const res = await fetch(url, { next: { revalidate: 60 * 60 * 24 * 7 } });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { results?: GeoResult[] };
-  const results = json.results || [];
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=10&addressdetails=1&accept-language=en`;
+  let results: NominatimPlace[] = [];
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, next: { revalidate: 60 * 60 * 24 * 7 } });
+    if (!res.ok) return null;
+    results = (await res.json()) as NominatimPlace[];
+  } catch { return null; }
   if (!results.length) return null;
 
-  const matchesHint = (r: GeoResult) =>
-    !!hint && ((r.admin1 || '').toLowerCase() === hintFull
-      || (r.country || '').toLowerCase() === hintFull
-      || (r.country_code || '').toUpperCase() === hint.toUpperCase());
-  const pick = results.find(matchesHint) || results.find((r) => r.country_code === 'US') || results[0];
-  return { name: pick.name, region: pick.admin1 || '', country: pick.country || '', lat: pick.latitude, lon: pick.longitude };
+  const isPlace = (r: NominatimPlace) => r.category === 'place' || r.category === 'boundary' || PLACE_TYPES.has(r.addresstype || '');
+  const matchesHint = (r: NominatimPlace) =>
+    !!hint && ((r.address?.state || '').toLowerCase() === hintFull
+      || (r.address?.country || '').toLowerCase() === hintFull
+      || (r.address?.country_code || '').toUpperCase() === hint.toUpperCase());
+  const places = results.filter(isPlace);
+  const pool = places.length ? places : results;
+  const pick = pool.find(matchesHint) || pool.find((r) => r.address?.country_code === 'us') || pool[0];
+  const a = pick.address || {};
+  return {
+    name: a.city || a.town || a.village || a.hamlet || a.municipality || pick.name || head,
+    region: a.state || '',
+    country: a.country || '',
+    lat: Number(pick.lat),
+    lon: Number(pick.lon),
+  };
 }
 
 export function miles(aLat: number, aLon: number, bLat: number, bLon: number): number {
