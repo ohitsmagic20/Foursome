@@ -68,19 +68,18 @@ function RoundCard({ r, first }: { r: Option<RoundData>; first: boolean }) {
         </div>
         <div className="fee">{money(r.data.fee)}<small>per player</small></div>
       </div>
-      <div className="tally" style={{ gap: 6 }}>
-        {r.locked ? <Chip kind="good">In the plan</Chip> : t.yes > state.members.length / 2 ? <Chip kind="flag">Most are in</Chip> : null}
-        {r.locked && (r.data.booked ? <Chip kind="good">Booked</Chip> : <Chip kind="warn">Not booked</Chip>)}
-      </div>
+      {r.locked
+        ? <div className="opt-status"><span className="good">In the plan</span><span className={r.data.booked ? 'good' : 'warn'}>{r.data.booked ? 'Booked' : 'Not booked'}</span></div>
+        : t.yes > state.members.length / 2 ? <div className="opt-status"><span className="flag">Most are in</span></div> : null}
       {r.locked && <Pairings r={r} />}
       {early && <Callout kind="warn">Early on arrival day. Check everyone lands in time.</Callout>}
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">
-        <a className="btn small" href={r.data.url || search} target="_blank" rel="noopener noreferrer">{r.data.url ? 'Book on course site' : 'Find tee times'}</a>
-        <LockButton option={r} lockLabel="Add to plan" unlockLabel="Take out of plan" />
+        <a className="btn small" href={r.data.url || search} target="_blank" rel="noopener noreferrer">Tee times</a>
+        <LockButton option={r} lockLabel="Add to plan" unlockLabel="Remove from plan" />
         {me?.is_organizer && r.locked && (
-          <button className="btn small ghost" onClick={() => act('update_option', { optionId: r.id, data: { ...r.data, booked: !r.data.booked } })}>{r.data.booked ? 'Mark not booked' : 'Mark booked'}</button>
+          <button className="btn small ghost" onClick={() => act('update_option', { optionId: r.id, data: { ...r.data, booked: !r.data.booked } })}>{r.data.booked ? 'Not booked' : 'Booked it'}</button>
         )}
         {canEdit(me, r) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => roundSheet(ctx, r)}>Edit</button>}
       </div>

@@ -137,25 +137,13 @@ export function VoteControl({ option }: { option: Option }) {
 
 export function Tally({ option }: { option: Option }) {
   const { state } = useTrip();
-  const t = tally(state, option.id);
-  const n = state.members.length || 1;
   const vs = votesFor(state, option.id);
   const names = (val: VoteValue) => state.members.filter((m) => vs[m.id] === val).map((m) => firstName(m.name));
   const waiting = state.members.filter((m) => !vs[m.id]).map((m) => firstName(m.name));
+  const parts: [string, string[]][] = [['In', names('yes')], ['Maybe', names('maybe')], ['Out', names('no')], ['Waiting on', waiting]];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div className="bar" aria-hidden="true"><i className="y" style={{ width: `${(t.yes / n) * 100}%` }} /><i className="m" style={{ width: `${(t.maybe / n) * 100}%` }} /></div>
-      <div className="tally">
-        <span><strong style={{ color: 'var(--ink)' }}>{t.yes}</strong> in</span>
-        {t.maybe > 0 && <span>{t.maybe} maybe</span>}
-        {t.no > 0 && <span>{t.no} out</span>}
-        {t.waiting > 0 && <span>{t.waiting} haven’t voted</span>}
-      </div>
-      <div className="voters">
-        {names('yes').length > 0 && <>In: {names('yes').join(', ')}. </>}
-        {names('no').length > 0 && <>Out: {names('no').join(', ')}. </>}
-        {waiting.length > 0 && <>Waiting on {waiting.join(', ')}.</>}
-      </div>
+    <div className="voters">
+      {parts.filter(([, n]) => n.length).map(([k, n], i) => <span key={k}>{i ? ' · ' : ''}<b>{k}</b> {n.join(', ')}</span>)}
     </div>
   );
 }

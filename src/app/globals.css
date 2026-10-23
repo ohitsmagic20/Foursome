@@ -287,3 +287,41 @@ tr.me .mark.none { border-color: var(--green); }
 .idea-day { flex: none; width: 52px; font-family: var(--font-display), sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-top: 1px; }
 .idea-tips { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .idea-banner { display: flex; gap: 10px; align-items: center; }
+
+/* ---------- calmer layout (Oct 2026) ----------
+   One container style: white grouped lists/cards on the paper background, no borders, no boxes inside boxes.
+   Status reads as colored text, secondary actions as quiet text buttons, sections separated by space. */
+.stack { gap: 28px; }
+.section { gap: 12px; }
+.card, .list { border: 0; box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
+.scroll { border: 0; }
+.dashed { border: 1.5px dashed var(--line); background: transparent; box-shadow: none; color: var(--muted); }
+
+.opt { gap: 12px; padding: 16px; }
+.opt.locked { border: 0; box-shadow: inset 3px 0 0 var(--good), 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
+.opt-status { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.opt-status .good { color: var(--good); }
+.opt-status .warn { color: var(--warn); }
+.opt-status .bad { color: var(--bad); }
+.opt-status .flag { color: var(--warn); }
+.voters { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.voters b { font-weight: 600; color: var(--ink); }
+.opt-foot { border-top: 0; padding-top: 0; gap: 4px; margin-left: -10px; }
+.opt-foot .btn { border-color: transparent; background: transparent; color: var(--green); padding: 0 10px; }
+.opt-foot .btn.ghost { color: var(--muted); }
+.seg { padding: 2px; border-radius: 9px; }
+.seg button { min-height: 32px; border-radius: 7px; }
+
+/* Weather and pairings sit inside an option as plain lines, not boxes. */
+.opt .wx { padding: 0; background: transparent; flex-direction: row; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.opt .wx-head { gap: 10px; }
+.opt .wx-temp { font-size: 20px; }
+.pairings { padding: 0; background: transparent; gap: 2px; }
+
+/* Neutral notes read as text; only warnings get a tint. */
+.callout:not(.warn):not(.bad):not(.good) { background: transparent; padding: 0; color: var(--muted); font-size: 14px; }
+.callout:not(.warn):not(.bad):not(.good) strong { color: var(--ink); }
+
+.summary::after { display: none; }
+.sc thead th, .sc tfoot td, .sc thead th.name, .sc tfoot td.name { background: var(--card); }
+.sc tfoot td { border-top: 1px solid var(--line); }

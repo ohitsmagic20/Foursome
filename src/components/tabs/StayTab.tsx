@@ -22,8 +22,7 @@ export function StayTab() {
   return (
     <section className="section">
       <div className="section-head"><h2>Where we stay</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
-      <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. The group votes.</p>
-      <Callout>Need <strong>{need} beds</strong> ({state.members.filter((m) => m.bed === 'share').length} sharing).</Callout>
+      <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. Need {need} beds.</p>
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
         : <p className="hint">Pick dates and a destination to search rentals.</p>}
@@ -40,10 +39,10 @@ export function StayTab() {
               </div>
               <div className="fee">{money(o.data.total)}<small>total</small></div>
             </div>
-            <div className="tally" style={{ gap: 6 }}>
-              {o.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
-              {o.data.beds > 0 && (fits ? <Chip kind="good">Fits everyone</Chip> : <Chip kind="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</Chip>)}
-              <span>About {own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
+            <div className="opt-status">
+              {o.locked ? <span className="good">Locked</span> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <span className="flag">Leading</span> : null}
+              {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
+              <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
             </div>
             {!locked && <VoteControl option={o} />}
             <Tally option={o} />

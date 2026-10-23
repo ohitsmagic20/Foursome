@@ -48,7 +48,6 @@ export function TripTab() {
       <GetStarted />
       <TripPlan />
       <YourTurn />
-      <NotifyCard />
 
       <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
@@ -71,6 +70,7 @@ export function TripTab() {
         <p className="hint">Sharing a bed saves 25% on the stay. Food: {money(state.trip.food)} each.</p>
       </section>
 
+      <NotifyCard />
       <Crew />
       <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
     </>
@@ -141,13 +141,10 @@ function YourTurn() {
   ].filter((r) => r.n > 0);
   const total = rows.reduce((s, r) => s + r.n, 0);
   if (!state.options.length) return null;
-  if (!total) return <Callout kind="good">You’ve voted on everything. Nice.</Callout>;
+  if (!total) return null;
   return (
-    <section className="your-turn">
-      <div className="your-turn-head">
-        <span className="badge-big">{total}</span>
-        <div><div className="row-title">Your vote is needed</div><div className="row-meta">The group can’t lock things in until everyone weighs in.</div></div>
-      </div>
+    <section className="section">
+      <div className="section-head"><h2>Your vote</h2><span className="sub">{total} waiting on you</span></div>
       <div className="list">
         {rows.map((r) => (
           <button key={r.one} className="row" onClick={() => go(r.tab)}>
@@ -269,7 +266,7 @@ function InviteButton({ ctx, className, label }: { ctx: TripCtx; className: stri
 function GroupUpdate({ ctx }: { ctx: TripCtx }) {
   const { state } = ctx;
   return (
-    <button className="btn block" onClick={() => {
+    <button className="btn ghost block" onClick={() => {
       const date = pickOf<DateData>(state, 'date'), dest = pickOf<DestinationData>(state, 'destination'), stay = pickOf<LodgingData>(state, 'lodging');
       const waiting = state.members.filter((m) => !state.votes.some((v) => v.member_id === m.id)).map((m) => firstName(m.name));
       const lines = [
@@ -280,7 +277,7 @@ function GroupUpdate({ ctx }: { ctx: TripCtx }) {
         waiting.length ? `Still need votes from: ${waiting.join(', ')}` : '',
       ].filter(Boolean);
       share(ctx, lines.join('\n'), `${location.origin}/t/${state.trip.code}`);
-    }}>Send a status update to the group text</button>
+    }}>Text the group an update</button>
   );
 }
 
@@ -354,6 +351,7 @@ function GetStarted() {
     { done: date.locked || dest.locked, title: org ? 'Lock the winners' : 'The organizer locks the winners', meta: 'Then pick a place to stay, add rounds of golf, and line up flights.' },
   ];
   const next = steps.findIndex((s) => !s.done);
+  if (steps.filter((s) => s.done).length >= 3) return null;
   return (
     <section className="card get-started">
       <div className="section-head">

@@ -82,35 +82,39 @@ export function NotifyCard() {
 
   if (status === 'loading' || status === 'unsupported') return me?.is_organizer ? <NudgeOnly /> : null;
   return (
-    <section className="notify card">
+    <div className="list">
       {status === 'on' ? (
-        <div className="notify-row">
-          <div className="grow"><div className="row-title">Notifications are on</div><div className="row-meta">You’ll hear about new suggestions, locked decisions and nudges.</div></div>
+        <div className="row">
+          <div className="grow row-title">Notifications on</div>
           <button className="btn small ghost" onClick={turnOff} disabled={busy}>Turn off</button>
         </div>
       ) : status === 'needs-home-screen' ? (
-        <div className="grow">
-          <div className="row-title">Get a heads-up when it’s your turn</div>
-          <div className="row-meta">On iPhone, add Foresome to your Home Screen first: tap Share, then <strong>Add to Home Screen</strong>, and open it from there.</div>
+        <div className="row">
+          <div className="grow"><div className="row-title">Notifications</div><div className="row-meta">Add Foresome to your Home Screen first (Share → Add to Home Screen).</div></div>
         </div>
       ) : status === 'blocked' ? (
-        <div className="grow">
-          <div className="row-title">Notifications are blocked</div>
-          <div className="row-meta">Turn them on in Settings → Notifications → Foresome.</div>
+        <div className="row">
+          <div className="grow"><div className="row-title">Notifications blocked</div><div className="row-meta">Settings → Notifications → Foresome</div></div>
         </div>
       ) : (
-        <div className="notify-row">
-          <div className="grow"><div className="row-title">Get a heads-up when it’s your turn</div><div className="row-meta">New suggestions, locked decisions, and nudges from the organizer.</div></div>
+        <div className="row">
+          <div className="grow row-title">Notifications</div>
           <button className="btn small primary" onClick={turnOn} disabled={busy}>{busy ? <span className="spinner" /> : 'Turn on'}</button>
         </div>
       )}
-      {me?.is_organizer && status !== 'needs-home-screen' && (
-        <button className="btn small block" onClick={nudge} disabled={busy}>Nudge everyone who hasn’t voted</button>
-      )}
-    </section>
+      {me?.is_organizer && status !== 'needs-home-screen' && <NudgeRow />}
+    </div>
   );
 
+  function NudgeRow() {
+    return (
+      <div className="row">
+        <div className="grow row-title">Nudge people who haven’t voted</div>
+        <button className="btn small" onClick={nudge} disabled={busy}>Nudge</button>
+      </div>
+    );
+  }
   function NudgeOnly() {
-    return <button className="btn small block" onClick={nudge} disabled={busy}>Nudge everyone who hasn’t voted</button>;
+    return <div className="list"><NudgeRow /></div>;
   }
 }

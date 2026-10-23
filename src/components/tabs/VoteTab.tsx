@@ -92,7 +92,6 @@ function Where() {
     <section className="section">
       <div className="section-head"><h2>Where</h2><button className="btn small" onClick={() => destSheet(ctx)}>{Icon.plus} Place</button></div>
       {dests.length === 0 && <button className="card empty dashed" onClick={() => destSheet(ctx)}>Suggest a destination, like Myrtle Beach, Scottsdale or Pinehurst.</button>}
-      {locked && <Callout kind="good"><strong>{locked.data.name}</strong> is locked in.</Callout>}
       {shown.map((d) => (
         <div key={d.id} className={`card opt ${d.locked ? 'locked' : ''}`} style={locked && !d.locked ? { opacity: .6 } : undefined}>
           <div className="opt-head">
