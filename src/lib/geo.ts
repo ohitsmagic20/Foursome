@@ -103,3 +103,31 @@ export function nearbyAirports(lat: number, lon: number, limit = 6): NearbyAirpo
   const second = rows.slice(1).find((a) => (HUBS.has(a.code) && a.miles <= 45) || (a.major && a.miles <= 30));
   return rows.map((a, i) => ({ code: a.code, name: a.name, city: a.city, miles: a.miles, major: a.major, suggested: i === 0 || a === second }));
 }
+
+/** Coordinates of an airport by its code, from the bundled list. */
+export function airportCoords(code: string): { lat: number; lon: number } | null {
+  const row = (AIRPORTS as AirportRow[]).find((a) => a[0] === code.toUpperCase());
+  return row ? { lat: row[3], lon: row[4] } : null;
+}
+
+/** Find a golf course by name near a point (within about 100 miles), from OpenStreetMap. Cached for a month. */
+export async function findCourse(name: string, near: { lat: number; lon: number }): Promise<{ lat: number; lon: number } | null> {
+  const base = name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
+  const inside = (name.match(/\((.*?)\)/) || [])[1] || '';
+  const pad = 1.5;
+  const box = [near.lon - pad, near.lat + pad, near.lon + pad, near.lat - pad].map((x) => x.toFixed(3)).join(',');
+  // "Whistling Straits (Irish)" → "Whistling Straits"; "The Commons (Sand Valley)" → "The Commons Sand Valley" first.
+  const tries = [...new Set([inside && !/^(north|south|east|west|old|new|irish|straits|river|lake|ridge|judge|stadium|monument|saguaro|cholla|bluffs|dye course)$/i.test(inside) ? `${base} ${inside}` : '', base, `${base} golf`].filter(Boolean))];
+  for (const q of tries) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=5&bounded=1&viewbox=${box}`, {
+        headers: { 'User-Agent': UA, Accept: 'application/json' }, next: { revalidate: 60 * 60 * 24 * 30 },
+      });
+      if (!res.ok) continue;
+      const hits = (await res.json()) as { lat: string; lon: string; category?: string; type?: string }[];
+      const golf = hits.find((h) => h.type === 'golf_course') || hits.find((h) => h.category === 'leisure') || hits[0];
+      if (golf) return { lat: Number(golf.lat), lon: Number(golf.lon) };
+    } catch { /* try the next wording */ }
+  }
+  return null;
+}

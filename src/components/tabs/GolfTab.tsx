@@ -5,6 +5,8 @@ import { dayLabel, groupNames, isWeekendDay, teeAfter, money, optionsOf, pickOf,
 import { Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
+import { TripMap } from '../TripMap';
+import { destAirports } from '@/lib/shared';
 
 export function GolfTab() {
   const ctx = useTrip();
@@ -21,6 +23,13 @@ export function GolfTab() {
   return (
     <>
       <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
+      {destOpt && rounds.length > 0 && (
+        <TripMap
+          place={destOpt.data.name}
+          airport={destAirports(destOpt.data)[0]}
+          stops={(plan.length ? plan : rounds).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time)).map((r, i) => ({ name: r.data.course, label: String(i + 1) }))}
+        />
+      )}
       <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
