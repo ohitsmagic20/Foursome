@@ -15,6 +15,9 @@ interface RawDetail {
   par?: number; holes?: number; yardage?: number; phone?: string | null; website?: string | null; tees?: RawTee[];
 }
 
+/** "Tpc Scottsdale" → "TPC Scottsdale". */
+const tidy = (n: string) => n.trim().replace(/\b(Tpc|Cc|Gc|Pga|Usga)\b/g, (m) => m.toUpperCase());
+
 export function accessOf(t: string | null | undefined): CourseAccess {
   const s = (t || '').toLowerCase().replace(/[\s_]+/g, '-');
   if (s.startsWith('semi')) return 'semi-private';
@@ -40,12 +43,19 @@ export async function searchCourses(q: string, near?: { lat: number; lon: number
   const hits = (j?.courses || [])
     .filter((c) => c.state && Number.isFinite(c.latitude) && Number.isFinite(c.longitude) && !/practice|driving range|putting/i.test(c.name))
     .map((c) => ({
-      id: c.id, name: (c.course_name || c.name).trim(), city: c.city || '', state: c.state || '', access: accessOf(c.type),
+      id: c.id, name: tidy(c.course_name || c.name), city: c.city || '', state: c.state || '', access: accessOf(c.type),
       lat: c.latitude, lon: c.longitude, website: c.website || '',
       miles: near ? Math.round(miles(near.lat, near.lon, c.latitude, c.longitude)) : undefined,
     }));
   if (near) hits.sort((a, b) => (a.miles ?? 0) - (b.miles ?? 0));
-  return hits.slice(0, limit);
+  // The same course listed twice ("Pine Needles" and "Pine Needles Lodge Golf Club" at one spot): keep the first.
+  const out: CourseHit[] = [];
+  for (const h of hits) {
+    const w = words(h.name);
+    const dup = out.some((o) => miles(o.lat, o.lon, h.lat, h.lon) < 1 && (() => { const ow = words(o.name); return ow.every((x) => w.includes(x)) || w.every((x) => ow.includes(x)); })());
+    if (!dup) out.push(h);
+  }
+  return out.slice(0, limit);
 }
 
 /** Full details for one course: type, location, par, and course rating / slope by tee. */
@@ -58,7 +68,7 @@ export async function courseDetail(id: string): Promise<CourseInfo | null> {
     .map((t) => ({ name: t.tee_name || '', yards: Number(t.yardage) || 0, rating: Number(t.course_rating), slope: Number(t.slope) }))
     .sort((a, b) => b.yards - a.yards);
   return {
-    id: d.id, name: d.course_name, city: d.city || '', state: d.state || '', access: accessOf(d.type), lat: d.lat, lon: d.lng,
+    id: d.id, name: tidy(d.course_name), city: d.city || '', state: d.state || '', access: accessOf(d.type), lat: d.lat, lon: d.lng,
     par: d.par || 0, holes: d.holes || 0, yards: d.yardage || 0, website: d.website || '', phone: d.phone || '', tees,
   };
 }
