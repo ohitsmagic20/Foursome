@@ -47,7 +47,7 @@ No scorekeeping. This app is only for planning.
 1. In Vercel, click **Add New → Project** and import the `Foresome` repo from GitHub.
 2. Before deploying, open **Environment Variables** and add the three values:
    `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `DUFFEL_ACCESS_TOKEN`
-3. Click **Deploy**. Vercel gives you a link like `foursome-xyz.vercel.app`.
+3. Click **Deploy**. Vercel gives you a link like `foresome-xyz.vercel.app`. The live app is at https://www.foresomes.net (domain registered at Netlify, DNS pointing to Vercel).
 
 ### 4. Try it on your iPhone
 

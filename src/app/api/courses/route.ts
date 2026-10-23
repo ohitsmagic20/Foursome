@@ -10,7 +10,7 @@ const NOT_GOLF = /\b(mini|miniature|putt|putting|disc|frisbee|foot ?golf|driving
 
 interface NominatimHit { name?: string; lat: string; lon: string; category?: string; type?: string; extratags?: Record<string, string> | null }
 
-const UA = 'Foresome golf trip planner (https://foresome-one.vercel.app)';
+const UA = 'Foresome golf trip planner (https://www.foresomes.net)';
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** OpenStreetMap's search service (Nominatim). Its usage policy asks for at most one request per second

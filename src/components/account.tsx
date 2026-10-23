@@ -34,7 +34,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
   const [err, setErr] = useState('');
   const [resent, setResent] = useState(false);
   const [nonce, setNonce] = useState('');
-  const [showCode, setShowCode] = useState(false);
+  const [showCode, setShowCode] = useState(true);
   const codeRef = useRef<HTMLInputElement>(null);
 
   // While waiting, check every few seconds whether the emailed link was opened (in Mail, Safari, anywhere).
@@ -59,6 +59,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
       const r = await api<{ nonce?: string }>('/api/auth/start', { body: { email } });
       setNonce(r.nonce || '');
       setStep('code');
+      setTimeout(() => codeRef.current?.focus(), 50);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Couldn’t send the email.'); }
     finally { setBusy(false); }
   }
@@ -76,7 +77,7 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
       <div>
         <h2>{step === 'email' ? title : 'Check your email'}</h2>
         <p className="sub" style={{ marginTop: 4 }}>
-          {step === 'email' ? (note || 'No password. We’ll email you a sign-in link.') : <>We sent a sign-in link to <strong>{email}</strong>. Tap it, then come back here. This screen signs you in by itself.</>}
+          {step === 'email' ? (note || 'No password. We’ll email you a 6-digit code.') : <>We sent a 6-digit code to <strong>{email}</strong>. Enter it below, or tap the link in the email.</>}
         </p>
       </div>
       {step === 'email' ? (
@@ -86,12 +87,10 @@ export function SignIn({ onDone, title = 'Sign in or create an account', note }:
             <input id="f-email" type="email" inputMode="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
           {err && <p className="error" role="alert">{err}</p>}
-          <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Email me a sign-in link'}</button>
+          <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Email me a code'}</button>
         </form>
       ) : (
         <form className="form" onSubmit={(e) => { e.preventDefault(); verify(); }}>
-          <div className="waiting"><span className="spinner" /> Waiting for you to tap the link…</div>
-          {!showCode && <button type="button" className="btn small ghost" onClick={() => { setShowCode(true); setTimeout(() => codeRef.current?.focus(), 50); }}>Got a 6-digit code instead?</button>}
           {showCode && <div className="field">
             <label htmlFor="f-code">Code</label>
             <input id="f-code" ref={codeRef} className="code-input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={8}

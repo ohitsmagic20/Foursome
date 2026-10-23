@@ -125,7 +125,7 @@ function SignedOut({ hero, onSignedIn }: { hero: React.ReactNode; onSignedIn: ()
         )}
         {signIn ? (
           <>
-            <SignIn onDone={() => onSignedIn()} note="Your trips follow you to any phone. No password: we’ll email you a sign-in link." />
+            <SignIn onDone={() => onSignedIn()} note="Your trips follow you to any phone. No password: we’ll email you a 6-digit code." />
             <button className="btn small ghost" onClick={() => setSignIn(false)}>Start a trip without an account</button>
           </>
         ) : (
