@@ -2,7 +2,7 @@
 
 import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
 import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
-import { TeeTable } from '../TeeTable';
+import { TeeStats } from '../TeeTable';
 import { dayLabel, groupNames, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
@@ -94,7 +94,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
         </div>
         <div className="fee">{money(r.data.fee)}<small>{r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player'}</small></div>
       </div>
-      {info?.tees?.length ? <TeeTable tees={info.tees} /> : null}
+      {info?.tees?.length ? <TeeStats tees={info.tees} /> : null}
       {r.locked
         ? <div className="opt-status"><span className="good">In the plan</span></div>
         : t.yes > state.members.length / 2 ? <div className="opt-status"><span className="flag">Most are in</span></div> : null}

@@ -6,6 +6,7 @@ import { ACCESS_LABEL } from '@/lib/shared';
 import { bedsNeeded, lodgingSearchLinks, rangeLabel, tripNights } from '@/lib/shared';
 import { Chip, useTrip } from './ui';
 import { roundSheet } from './sheets';
+import { TeeStats } from './TeeTable';
 
 /* ---------- shared fetch with a page-lifetime cache ---------- */
 const cache = new Map<string, Promise<unknown>>();
@@ -175,17 +176,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
                       })()}
                       {c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}
                     </div>
-                    {(() => {
-                      const back = db[c.name]?.tees?.[0];
-                      return back ? (
-                        <div className="course-stats" aria-label={`From the ${back.name} tees`}>
-                          {back.yards > 0 && <span><b>{back.yards.toLocaleString('en-US')}</b> yds</span>}
-                          <span><b>{back.rating.toFixed(1)}</b> rating</span>
-                          <span><b>{back.slope}</b> slope</span>
-                          {back.name && <span className="row-meta">{back.name} tees</span>}
-                        </div>
-                      ) : null;
-                    })()}
+                    {db[c.name]?.tees?.length ? <TeeStats tees={db[c.name].tees} /> : null}
                     {priced[c.name]?.all && <div className="price-tag">Groups paid ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
                   </div>
                   <div className="btn-row">

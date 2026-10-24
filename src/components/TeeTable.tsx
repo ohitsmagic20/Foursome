@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import type { CourseTee } from '@/lib/shared';
 
 const SWATCH: Record<string, string> = {
@@ -26,5 +29,23 @@ export function TeeTable({ tees }: { tees: CourseTee[] }) {
         })}
       </tbody>
     </table>
+  );
+}
+
+/** The longest tees' yardage, rating and slope; tap to see every set of tees. */
+export function TeeStats({ tees }: { tees: CourseTee[] }) {
+  const [open, setOpen] = useState(false);
+  if (!tees.length) return null;
+  const back = tees[0];
+  return (
+    <div className="tee-stats">
+      <button type="button" className="course-stats tee-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {back.yards > 0 && <span><b>{back.yards.toLocaleString('en-US')}</b> yds</span>}
+        <span><b>{back.rating.toFixed(1)}</b> rating</span>
+        <span><b>{back.slope}</b> slope</span>
+        {tees.length > 1 && <span className="tee-more">{open ? 'Hide tees' : `All ${tees.length} tees`} <span aria-hidden="true">{open ? '▴' : '▾'}</span></span>}
+      </button>
+      {open && <TeeTable tees={tees} />}
+    </div>
   );
 }
