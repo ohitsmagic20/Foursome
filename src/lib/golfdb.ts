@@ -9,7 +9,7 @@ const API = 'https://api.opengolfapi.org';
 const UA = 'Foresome golf trip planner (https://www.foresomes.net; support@foresomes.net)';
 
 interface RawHit { id: string; name: string; course_name?: string; latitude: number; longitude: number; state: string | null; city: string | null; type: string | null; website?: string | null }
-interface RawTee { tee_name?: string; gender?: string; course_rating?: number; slope?: number; yardage?: number; par?: number }
+interface RawTee { tee_name?: string; tee_color?: string; gender?: string; course_rating?: number; slope?: number; yardage?: number; par?: number }
 interface RawDetail {
   id: string; course_name: string; club_name?: string; city: string | null; state: string | null; lat: number; lng: number; type: string | null;
   par?: number; holes?: number; yardage?: number; phone?: string | null; website?: string | null; tees?: RawTee[];
@@ -65,7 +65,8 @@ export async function courseDetail(id: string): Promise<CourseInfo | null> {
   if (!d || !Number.isFinite(d.lat)) return null;
   const tees = (d.tees || [])
     .filter((t) => (t.gender || 'Male') === 'Male' && Number(t.course_rating) > 0 && Number(t.slope) > 0)
-    .map((t) => ({ name: t.tee_name || '', yards: Number(t.yardage) || 0, rating: Number(t.course_rating), slope: Number(t.slope) }))
+    .map((t) => ({ name: t.tee_name || '', color: (t.tee_color || '').toLowerCase().replace(/[^a-z]/g, ''), yards: Number(t.yardage) || 0, rating: Number(t.course_rating), slope: Number(t.slope) }))
+    .filter((t, i, all) => all.findIndex((x) => x.name === t.name && x.yards === t.yards) === i)
     .sort((a, b) => b.yards - a.yards);
   return {
     id: d.id, name: tidy(d.course_name), city: d.city || '', state: d.state || '', access: accessOf(d.type), lat: d.lat, lon: d.lng,

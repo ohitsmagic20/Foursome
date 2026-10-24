@@ -397,3 +397,13 @@ tr.me .mark.none { border-color: var(--green); }
 .time-picker .ampm { min-height: 44px; }
 .time-picker .ampm button { min-height: 38px; }
 .quick-times button { min-height: 30px; }
+
+/* course rating and slope by tee */
+.tee-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tee-table th { text-align: right; font-weight: 600; color: var(--muted); font-size: 12px; padding: 0 0 4px; }
+.tee-table td { text-align: right; padding: 5px 0; border-top: 1px solid var(--line); }
+.tee-table th:first-child, .tee-table td:first-child { text-align: left; }
+.tee-table td:first-child { font-weight: 600; }
+.tee-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.course-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.course-stats b { color: var(--ink); font-weight: 700; font-size: 14px; }

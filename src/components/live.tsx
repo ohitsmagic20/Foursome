@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CoursePrices, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
+import type { CourseAccess, CoursePrices, CourseTee, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
+import { ACCESS_LABEL } from '@/lib/shared';
 import { bedsNeeded, lodgingSearchLinks, rangeLabel, tripNights } from '@/lib/shared';
 import { Chip, useTrip } from './ui';
 import { roundSheet } from './sheets';
@@ -139,6 +140,9 @@ export function CoursesNearby({ dest }: { dest: string }) {
   const list = (data?.courses || []).filter((c) => showPrivate || !c.isPrivate);
   const names = list.slice(0, limit).map((c) => c.name).join('|');
   const priced = useLoad<{ prices: Record<string, CoursePrices> }>(names ? `/api/course-prices?courses=${encodeURIComponent(names)}` : null).data?.prices || {};
+  // Course type and tees from the course database, for the courses on screen.
+  const matchUrl = names ? `/api/course-match?place=${encodeURIComponent(dest)}${list.slice(0, limit).map((c) => `&course=${encodeURIComponent(c.name)}`).join('')}` : null;
+  const db = useLoad<{ courses: Record<string, { access: CourseAccess; tees: CourseTee[] }> }>(matchUrl).data?.courses || {};
   const google = useLoad<{ enabled: boolean; places: GooglePlace[] }>(`/api/google-ratings?place=${encodeURIComponent(dest)}&miles=${radius}`).data;
   const ratingOf = (c: NearbyCourse) => (google?.places.length ? googleFor(c, google.places) : null);
   const shownRatings = list.slice(0, limit).some((c) => ratingOf(c));
@@ -165,8 +169,23 @@ export function CoursesNearby({ dest }: { dest: string }) {
                     <div className="row-title">{c.name}</div>
                     <div className="row-meta">
                       {(() => { const g = ratingOf(c); return g ? <a className="g-rating" href={g.url} target="_blank" rel="noopener noreferrer" aria-label={`${g.rating} out of 5 on Google Maps, ${g.count} reviews`}>★ {g.rating.toFixed(1)} <span>({g.count.toLocaleString('en-US')})</span></a> : null; })()}
-                      {c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}{c.isPrivate ? ' · Private' : ''}
+                      {(() => {
+                        const access = db[c.name]?.access || (c.isPrivate ? 'private' : '');
+                        return access ? <span className={`access ${access}`}>{ACCESS_LABEL[access]}</span> : null;
+                      })()}
+                      {c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}
                     </div>
+                    {(() => {
+                      const back = db[c.name]?.tees?.[0];
+                      return back ? (
+                        <div className="course-stats" aria-label={`From the ${back.name} tees`}>
+                          {back.yards > 0 && <span><b>{back.yards.toLocaleString('en-US')}</b> yds</span>}
+                          <span><b>{back.rating.toFixed(1)}</b> rating</span>
+                          <span><b>{back.slope}</b> slope</span>
+                          {back.name && <span className="row-meta">{back.name} tees</span>}
+                        </div>
+                      ) : null;
+                    })()}
                     {priced[c.name]?.all && <div className="price-tag">Groups paid ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
                   </div>
                   <div className="btn-row">
