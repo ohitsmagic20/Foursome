@@ -52,9 +52,10 @@ export function TripTab() {
       <GetStarted />
       <TripPlan />
       <YourTurn />
+      <WaitingOn />
       <ToBook />
 
-      <section className="section">
+      {(countdown === null || countdown > 0) && <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
         <div className="list">
           {steps.map((s) => (
@@ -64,18 +65,11 @@ export function TripTab() {
             </button>
           ))}
         </div>
-      </section>
+      </section>}
 
       <Arrivals />
 
-      <section className="section">
-        <div className="section-head"><h2>Cost per person</h2><span className="sub">{stay.option ? '' : 'Lodging not picked yet'}</span></div>
-        <CostTable />
-        {over.length > 0 && <Callout kind="warn">{over.map((m) => firstName(m.name)).join(', ')} {over.length > 1 ? 'are' : 'is'} over budget with the current picks.</Callout>}
-        <p className="hint">Sharing a bed saves 25% on the stay. Food: {money(state.trip.food)} each.</p>
-      </section>
-
-      <SettleUp />
+      <Money over={over} planning={!(date.locked && dest.locked)} />
       <NotifyCard />
       <Crew />
       <AppFooter tripCode={state.trip.code} />
@@ -164,6 +158,44 @@ function YourTurn() {
   );
 }
 
+/** Who still has votes to cast, with a group text that names them. */
+function WaitingOn() {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  if (!me || !state.options.length) return null;
+  const KIND_WORD: Record<string, string> = { date: 'dates', destination: 'where we go', lodging: 'where we stay', round: 'tee times' };
+  const people = state.members
+    .filter((m) => m.id !== me.id)
+    .map((m) => {
+      const o = openVotes({ ...state, meId: m.id });
+      const kinds = (['date', 'destination', 'lodging', 'round'] as const).filter((k) => o[k] > 0);
+      return { m, n: o.date + o.destination + o.lodging + o.round, kinds };
+    })
+    .filter((p) => p.n > 0)
+    .sort((a, b) => b.n - a.n);
+  if (!people.length) return null;
+  const names = people.map((p) => firstName(p.m.name));
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const kinds = [...new Set(people.flatMap((p) => p.kinds))].map((k) => KIND_WORD[k]);
+  const what = kinds.length === 1 ? kinds[0] : `${kinds.slice(0, -1).join(', ')} and ${kinds[kinds.length - 1]}`;
+  const text = `${list}: still need your votes on ${what} for “${state.trip.name}”. Takes a minute:`;
+  return (
+    <section className="section">
+      <div className="section-head"><h2>Waiting on</h2><span className="sub">{people.length} {people.length === 1 ? 'person' : 'people'}</span></div>
+      <div className="list">
+        {people.slice(0, 6).map((p) => (
+          <div className="row" key={p.m.id}>
+            <div className="avatar">{initials(p.m.name)}</div>
+            <div className="grow"><div className="row-title">{p.m.name}</div><div className="row-meta">{p.n} vote{p.n > 1 ? 's' : ''} left · {p.kinds.map((k) => KIND_WORD[k]).join(', ')}</div></div>
+          </div>
+        ))}
+        {people.length > 6 && <div className="row"><div className="grow row-meta">and {people.length - 6} more</div></div>}
+      </div>
+      <button className="btn block" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Text {people.length === 1 ? names[0] : `these ${people.length}`}</button>
+    </section>
+  );
+}
+
 function Arrivals() {
   const { state } = useTrip();
   const date = pickOf<DateData>(state, 'date');
@@ -195,6 +227,38 @@ function Arrivals() {
         ))}
       </div>
       {firstRound && date.option && <p className="hint">First tee: {firstRound.data.time}, {dayLabel(date.option.data.start, 1)}.</p>}
+    </section>
+  );
+}
+
+/** Your cost up front; everyone's costs one tap away; settling up once there's something to settle. */
+function Money({ over, planning }: { over: Member[]; planning: boolean }) {
+  const { state, me } = useTrip();
+  if (!me) return null;
+  const stay = pickOf<LodgingData>(state, 'lodging');
+  const c = costOf(state, me);
+  const left = me.budget > 0 ? me.budget - c.total : null;
+  const parts: [string, number, boolean][] = [['Flight', c.flight, me.flight_price !== null], ['Stay', c.stay, !!stay.option], ['Golf', c.golf, true], ['Food', c.food, true]];
+  const showSettle = !planning || (state.expenses?.length || 0) > 0;
+  return (
+    <section className="section">
+      <div className="section-head"><h2>Money</h2>{!stay.option && <span className="sub">Stay not picked yet</span>}</div>
+      <div className="card my-cost">
+        <div className="my-cost-top">
+          <div><div className="row-meta">Your trip, so far</div><div className="my-cost-total">{money(c.total)}</div></div>
+          {left !== null && (left >= 0 ? <Chip kind="good">{money(left)} under budget</Chip> : <Chip kind="bad">{money(-left)} over budget</Chip>)}
+        </div>
+        <div className="my-cost-parts">
+          {parts.map(([k, v, known]) => <div key={k}><span className="row-meta">{k}</span><b>{known ? money(v) : '—'}</b></div>)}
+        </div>
+      </div>
+      {over.some((m) => m.id !== me.id) && <Callout kind="warn">{over.filter((m) => m.id !== me.id).map((m) => firstName(m.name)).join(', ')} {over.filter((m) => m.id !== me.id).length > 1 ? 'are' : 'is'} over budget with the current picks.</Callout>}
+      <details className="expenses">
+        <summary>Everyone’s cost · group total {money(state.members.reduce((s, m) => s + costOf(state, m).total, 0))}</summary>
+        <CostTable />
+        <p className="hint">Sharing a bed saves 25% on the stay. Food: {money(state.trip.food)} each.</p>
+      </details>
+      {showSettle && <SettleUp embedded />}
     </section>
   );
 }
@@ -349,7 +413,7 @@ function GetStarted() {
   const steps: { done: boolean; title: string; meta: string; action?: React.ReactNode }[] = [
     { done: state.members.length > 1, title: 'Invite the group', meta: 'One link. Friends join with their name and home city, no app or password.',
       action: org ? <InviteButton ctx={ctx} className="btn small" label="Share invite link" /> : undefined },
-    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Go to Trip tab</button> },
+    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Go to Plan tab</button> },
     { done: has('date'), title: 'Suggest when', meta: 'Add a few date options. Each can be a different length: a long weekend next to a full week.' },
     { done: voted('date') || voted('destination'), title: 'Everyone votes', meta: 'Tap in, maybe or out on each option. You can see who hasn’t answered.' },
     { done: date.locked || dest.locked, title: org ? 'Lock the winners' : 'The organizer locks the winners', meta: 'Then pick a place to stay, add rounds of golf, and line up flights.' },

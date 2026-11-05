@@ -35,7 +35,7 @@ export default function Privacy() {
       <p>Links to Airbnb, Vrbo, Booking.com, Expedia, Google, airlines and golf courses take you to their sites, where their own privacy policies apply.</p>
 
       <h2>Emails and notifications</h2>
-      <p>If you have an account, we email you sign-in codes and, unless you turn them off in your profile, trip updates such as reminders to vote and the final plan. Notifications on your phone are only sent if you turn them on, and you can turn them off on the trip’s Clubhouse tab.</p>
+      <p>If you have an account, we email you sign-in codes and, unless you turn them off in your profile, trip updates such as reminders to vote and the final plan. Notifications on your phone are only sent if you turn them on, and you can turn them off on the trip’s Home tab.</p>
 
       <h2>Keeping and deleting your data</h2>
       <ul>

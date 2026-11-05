@@ -178,7 +178,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           pings.push(['others', { title: trip.name, body: text, url: url(TAB[opt.kind]), tag: `lock-${opt.kind}` }, 0]);
           // One email per decision type per 30 minutes, so locking and unlocking doesn't flood inboxes.
           if (SINGLE_WINNER.includes(opt.kind) && await firstIn(`lockmail:${trip.id}:${opt.kind}`, 30)) {
-            const next = opt.kind === 'date' || opt.kind === 'destination' ? 'Time to look at flights.' : 'Check the cost per person on the Clubhouse tab.';
+            const next = opt.kind === 'date' || opt.kind === 'destination' ? 'Time to look at flights.' : 'Check the cost per person on the trip’s Home tab.';
             emails.push(['others', { subject: `${trip.name}: ${text}`, heading: text, lines: [`${first(me.name)} locked it in for ${trip.name}.`, next], button: { label: 'Open the trip', url: link(TAB[opt.kind]) } }]);
           }
         }

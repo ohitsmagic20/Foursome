@@ -84,8 +84,8 @@ export function FlightsTab() {
       <section className="section">
         <div className="section-head"><h2>Search</h2>{me.airport && to && <span className="sub">{me.airport} → {to}</span>}</div>
         {!me.airport && <Callout kind="warn">Add your home airport first. <button className="link-btn" onClick={() => meSheet(ctx)}>Add it</button></Callout>}
-        {!date.option && <Callout kind="warn">Add dates on the Trip tab first.</Callout>}
-        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport. Add it on the Trip tab.</Callout>}
+        {!date.option && <Callout kind="warn">Add dates on the Plan tab first.</Callout>}
+        {date.option && !airports.length && <Callout kind="warn">The destination needs an airport. Add it on the Plan tab.</Callout>}
         {ready && (!date.locked || !dest.locked) && <Callout>Not locked yet. Showing the current leader.</Callout>}
         {ready && (
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -435,3 +435,12 @@ tr.me .mark.none { border-color: var(--green); }
 .avail-day.out { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .avail-day.out .avail-sub { color: var(--bad); font-weight: 600; }
 .avail-best { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Home tab: money */
+.my-cost { display: flex; flex-direction: column; gap: 12px; }
+.my-cost-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.my-cost-total { font-family: var(--font-display), sans-serif; font-size: 34px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.my-cost-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.my-cost-parts > div { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.subsection { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.subsection h3 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 700; letter-spacing: .01em; }

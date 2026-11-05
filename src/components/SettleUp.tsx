@@ -10,7 +10,7 @@ import { meSheet } from './sheets';
 const cents = (n: number) => (Number.isInteger(n) ? money(n) : `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
 /** Who paid what for the group, and the fewest payments to even it out. */
-export function SettleUp() {
+export function SettleUp({ embedded = false }: { embedded?: boolean }) {
   const ctx = useTrip();
   const { state, me, act } = ctx;
   const expenses = state.expenses || [];
@@ -20,9 +20,9 @@ export function SettleUp() {
   const mine = me ? balance.get(me.id) || 0 : 0;
 
   return (
-    <section className="section">
+    <section className={embedded ? 'subsection' : 'section'}>
       <div className="section-head">
-        <h2>Settle up</h2>
+        {embedded ? <h3>Settle up</h3> : <h2>Settle up</h2>}
         <button className="btn small" onClick={() => expenseSheet(ctx)}>{Icon.plus} Expense</button>
       </div>
 

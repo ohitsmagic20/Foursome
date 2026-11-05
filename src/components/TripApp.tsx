@@ -15,8 +15,8 @@ import { tripSheet } from './sheets';
 import { registerServiceWorker } from './notify';
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'trip', label: 'Clubhouse' },
-  { id: 'vote', label: 'Trip' },
+  { id: 'trip', label: 'Home' },
+  { id: 'vote', label: 'Plan' },
   { id: 'stay', label: 'Stay' },
   { id: 'golf', label: 'Golf' },
   { id: 'flights', label: 'Flights' },
