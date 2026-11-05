@@ -43,7 +43,7 @@ export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
-export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string }
+export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string }
 export interface RoundData {
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
@@ -52,6 +52,8 @@ export interface RoundData {
   fromTemplate?: string;
   /** Who on the trip is booking this tee time (member id). */
   owner?: string;
+  /** Confirmation number from the course, once booked. */
+  confirmation?: string;
   /** Picked from the course database: its id, location and how the public can play it. */
   courseId?: string;
   lat?: number;

@@ -175,7 +175,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Editing a round's course or time keeps its pairings, and editing a place keeps who's booking it.
         if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
         const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
-        for (const k of ['owner', 'booked'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
+        for (const k of ['owner', 'booked', 'confirmation'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
         const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;
@@ -310,12 +310,37 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             }
           } else delete next.owner;
         }
+        let paid = 0;
         if ('booked' in b) {
           if (!me.is_organizer && opt.data.owner !== me.id) throw new HttpError(403, 'Only the person booking it or the organizer can mark it booked.');
           next.booked = b.booked === true;
+          if (next.booked) {
+            // Booking details: the confirmed time (courses often shift it), a confirmation number,
+            // and what the booker paid for the group, which goes straight into settle up.
+            const conf = str(b.confirmation, 40);
+            if (conf) next.confirmation = conf; else delete next.confirmation;
+            const time = str(b.time, 12).toUpperCase().replace(/\s*(AM|PM)$/, ' $1');
+            if (opt.kind === 'round' && /^(1[0-2]|[1-9]):[0-5]\d (AM|PM)$/.test(time)) next.time = time;
+            paid = Math.round(Number(b.paid) * 100) / 100;
+            if (!(paid > 0 && paid < 1000000)) paid = 0;
+          }
         }
         const r = await db().from('options').update({ data: next }).eq('id', opt.id);
         if (r.error) throw r.error;
+        if (paid) {
+          const what = opt.kind === 'round' ? `${opt.data.course} tee times` : String(opt.data.name || 'The stay');
+          const payer = str(next.owner, 40) || me.id;
+          // Re-marking a booking shouldn't log the same payment twice.
+          const { data: dup } = await db().from('expenses').select('id').eq('trip_id', trip.id).eq('paid_by', payer).eq('amount', paid).eq('note', what.slice(0, 80)).limit(1);
+          if (!dup?.length) {
+            const e = await db().from('expenses').insert({ trip_id: trip.id, paid_by: payer, amount: paid, note: what.slice(0, 80), split_with: [] });
+            if (e.error) throw e.error;
+          }
+        }
+        if (next.booked && b.booked === true && !opt.data.booked) {
+          const what = opt.kind === 'round' ? `${opt.data.course} at ${next.time}` : String(opt.data.name || 'the place to stay');
+          pings.push(['others', { title: trip.name, body: `${first(me.name)} booked ${what}.${paid ? ` Paid ${'$'}${Math.round(paid).toLocaleString('en-US')} for the group; it’s in settle up.` : ''}`, url: url(TAB[opt.kind]), tag: `booked-${opt.id}` }, 0]);
+        }
         break;
       }
       case 'update_me': {

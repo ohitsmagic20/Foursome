@@ -214,8 +214,9 @@ export function TimeField({ name, label, defaultValue, hint }: { name: string; l
 
 /* ---------- who books it ---------- */
 /** On a locked place or planned round: who's booking it and whether it's done. */
-export function BookingRow({ option }: { option: Option<{ owner?: string; booked?: boolean }> }) {
-  const { state, me, act, toast } = useTrip();
+export function BookingRow({ option }: { option: Option<{ owner?: string; booked?: boolean; confirmation?: string }> }) {
+  const ctx = useTrip();
+  const { state, me, act, toast } = ctx;
   if (!option.locked || !me) return null;
   const owner = state.members.find((m) => m.id === option.data.owner);
   const booked = !!option.data.booked;
@@ -223,19 +224,69 @@ export function BookingRow({ option }: { option: Option<{ owner?: string; booked
   return (
     <div className="booking">
       <span className={booked ? 'booking-done' : 'booking-open'}>{booked ? 'Booked' : 'Not booked'}</span>
-      {me.is_organizer ? (
-        <select className="mini-select" aria-label="Who books it" value={owner?.id || ''} onChange={async (e) => {
-          if (await act('set_booking', { optionId: option.id, owner: e.target.value })) toast(e.target.value ? 'Assigned' : 'Unassigned');
-        }}>
-          <option value="">Who books it?</option>
-          {state.members.map((m) => <option key={m.id} value={m.id}>{m.id === me.id ? 'Me' : firstName(m.name)}</option>)}
-        </select>
-      ) : (
-        <span className="row-meta">{owner ? (owner.id === me.id ? 'You’re booking it' : `${firstName(owner.name)} is booking it`) : 'Nobody assigned yet'}</span>
-      )}
-      {canMark && (
-        <button className="btn small" style={{ marginLeft: 'auto' }} onClick={() => act('set_booking', { optionId: option.id, booked: !booked })}>{booked ? 'Not booked' : 'Mark booked'}</button>
-      )}
+      {booked && option.data.confirmation
+        ? <span className="row-meta">Conf. {option.data.confirmation}{owner ? ` · ${owner.id === me.id ? 'you' : firstName(owner.name)}` : ''}</span>
+        : me.is_organizer && !booked ? (
+          <select className="mini-select" aria-label="Who books it" value={owner?.id || ''} onChange={async (e) => {
+            if (await act('set_booking', { optionId: option.id, owner: e.target.value })) toast(e.target.value ? 'Assigned' : 'Unassigned');
+          }}>
+            <option value="">Who books it?</option>
+            {state.members.map((m) => <option key={m.id} value={m.id}>{m.id === me.id ? 'Me' : firstName(m.name)}</option>)}
+          </select>
+        ) : (
+          <span className="row-meta">{owner ? (owner.id === me.id ? (booked ? 'You booked it' : 'You’re booking it') : `${firstName(owner.name)} ${booked ? 'booked it' : 'is booking it'}`) : booked ? '' : 'Nobody assigned yet'}</span>
+        )}
+      {canMark && (booked
+        ? <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => act('set_booking', { optionId: option.id, booked: false })}>Not booked</button>
+        : <button className="btn small primary" style={{ marginLeft: 'auto' }} onClick={() => bookedSheet(ctx, option as Option<Record<string, unknown>>)}>Mark booked</button>)}
     </div>
   );
+}
+
+/** "Mark booked": confirmed time, confirmation number, and what was paid for the group (into settle up). */
+function BookedForm({ ctx, option }: { ctx: TripCtx; option: Option<Record<string, unknown>> }) {
+  const round = option.kind === 'round';
+  const n = ctx.state.members.length;
+  const expected = round ? (Number(option.data.fee) || 0) * n : Number(option.data.total) || 0;
+  const [time, setTime] = useState(String(option.data.time || ''));
+  const [conf, setConf] = useState('');
+  const [prepaid, setPrepaid] = useState(!round);
+  const [paid, setPaid] = useState(expected ? String(expected) : '');
+  const [busy, setBusy] = useState(false);
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault();
+      setBusy(true);
+      const ok = await ctx.act('set_booking', { optionId: option.id, booked: true, confirmation: conf, time: round ? time : undefined, paid: prepaid ? Number(paid) || 0 : 0 });
+      setBusy(false);
+      if (ok) { ctx.sheet(null); ctx.toast(prepaid && Number(paid) ? 'Booked, and added to settle up' : 'Marked booked. The group’s been told.'); }
+    }}>
+      {round && (
+        <div className="field">
+          <label htmlFor="bk-time">Tee time they confirmed</label>
+          <input id="bk-time" value={time} onChange={(e) => setTime(e.target.value)} placeholder="1:10 PM" />
+        </div>
+      )}
+      <div className="field">
+        <label htmlFor="bk-conf">Confirmation number <span style={{ fontWeight: 400 }}>(optional)</span></label>
+        <input id="bk-conf" value={conf} onChange={(e) => setConf(e.target.value)} maxLength={40} autoComplete="off" />
+      </div>
+      <label className="check-row">
+        <input type="checkbox" checked={prepaid} onChange={(e) => setPrepaid(e.target.checked)} />
+        <span>{round ? 'I paid for everyone up front' : 'I paid for the stay'}</span>
+      </label>
+      {prepaid && (
+        <div className="field">
+          <label htmlFor="bk-paid">Amount paid ($)</label>
+          <input id="bk-paid" type="number" inputMode="decimal" min={0} step="0.01" value={paid} onChange={(e) => setPaid(e.target.value)} />
+          <p className="hint">Goes into Settle up, split evenly with the whole group.</p>
+        </div>
+      )}
+      <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Mark booked'}</button>
+    </form>
+  );
+}
+
+function bookedSheet(ctx: TripCtx, option: Option<Record<string, unknown>>) {
+  ctx.sheet({ title: option.kind === 'round' ? `Booked ${String(option.data.course || 'the round')}` : `Booked ${String(option.data.name || 'the stay')}`, body: <BookedForm ctx={ctx} option={option} /> });
 }
