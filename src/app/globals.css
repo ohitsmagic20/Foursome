@@ -473,3 +473,7 @@ tr.me .mark.none { border-color: var(--green); }
 .idea-rounds .row-meta { overflow-wrap: anywhere; }
 .check-row { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; cursor: pointer; }
 .check-row input { width: 20px; height: 20px; accent-color: var(--green); }
+.warn-text { color: var(--warn); font-weight: 600; }
+.today-round { align-items: flex-start; }
+.today-groups summary { cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 4px; }
+.today-groups[open] { display: flex; flex-direction: column; gap: 2px; }

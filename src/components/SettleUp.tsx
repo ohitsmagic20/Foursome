@@ -20,7 +20,7 @@ export function SettleUp({ embedded = false }: { embedded?: boolean }) {
   const mine = me ? balance.get(me.id) || 0 : 0;
 
   return (
-    <section className={embedded ? 'subsection' : 'section'}>
+    <section id="settle-up" className={embedded ? 'subsection' : 'section'}>
       <div className="section-head">
         {embedded ? <h3>Settle up</h3> : <h2>Settle up</h2>}
         <button className="btn small" onClick={() => expenseSheet(ctx)}>{Icon.plus} Expense</button>
