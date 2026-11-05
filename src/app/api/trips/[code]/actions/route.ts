@@ -374,11 +374,25 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           flight_depart_at: iso(b.departAt),
         }).eq('id', me.id);
         if (r.error) throw r.error;
+        // A newly picked flight isn't bought yet. (Ignored before migration 007.)
+        if (b.newPick) await db().from('members').update({ flight_booked: false }).eq('id', me.id);
         break;
       }
       case 'clear_flight': {
         const r = await db().from('members').update({ flight_price: null, flight_summary: null, flight_arrive_at: null, flight_depart_at: null }).eq('id', me.id);
         if (r.error) throw r.error;
+        await db().from('members').update({ flight_booked: false }).eq('id', me.id);
+        break;
+      }
+      case 'set_flight_booked': {
+        const r = await db().from('members').update({ flight_booked: b.booked === true }).eq('id', me.id);
+        if (r.error) {
+          if (/flight_booked/.test(r.error.message)) {
+            await logError('server', 'Run supabase/007_deadlines_booked.sql: members.flight_booked is missing', `/t/${trip.code}`);
+            throw new HttpError(503, 'This needs a quick database update. The app owner has been told.');
+          }
+          throw r.error;
+        }
         break;
       }
       case 'leave': {

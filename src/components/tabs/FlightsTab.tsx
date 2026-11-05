@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, clockLabel, destAirports, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
+import { addDays, clockLabel, destAirports, firstTee, landsTooLate, LANDING_BUFFER_MIN, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
 import { api, firstName } from '@/lib/client';
 import { Callout, Chip, useTrip } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
@@ -26,6 +26,7 @@ export function FlightsTab() {
   const [toPick, setToPick] = useState('');
 
   if (!me) return null;
+  const tee = firstTee(state);
   const airports = dest.option ? destAirports(dest.option.data) : [];
   const to = airports.includes(toPick) ? toPick : airports[0] || '';
   const ready = date.option && to && me.airport;
@@ -51,8 +52,9 @@ export function FlightsTab() {
       summary: `${o.airline} · ${stopsLabel(o.out)} out${o.back ? `, ${stopsLabel(o.back).toLowerCase()} back` : ''}`,
       arriveAt: o.out.arrive,
       departAt: o.back?.depart || null,
+      newPick: true,
     });
-    if (ok) { toast('Flight saved. Everyone can see when you land.'); setResult(null); }
+    if (ok) { toast('Saved. Book it with the airline, then tap Booked.'); setResult(null); }
   }
 
   return (
@@ -71,7 +73,11 @@ export function FlightsTab() {
               </div>
               <div className="fee">{money(me.flight_price)}<small>round trip</small></div>
             </div>
+            {landsTooLate(state, me.flight_arrive_at) && tee && <Callout kind="bad">This lands too late for the {tee.time} tee time on arrival day. Allow {LANDING_BUFFER_MIN} minutes to get bags, a car and to the course.</Callout>}
             <div className="opt-foot">
+              {me.flight_summary !== 'Driving' && 'flight_booked' in me && (me.flight_booked
+                ? <button className="btn small booked" aria-pressed="true" onClick={() => act('set_flight_booked', { booked: false })}>✓ Booked</button>
+                : <button className="btn small primary" onClick={async () => { if (await act('set_flight_booked', { booked: true })) toast('Marked booked. The group can see it.'); }}>I booked it</button>)}
               <button className="btn small" onClick={() => manualFlightSheet(ctx)}>Edit</button>
               <button className="btn small ghost" onClick={() => act('clear_flight')}>Clear</button>
             </div>
@@ -118,6 +124,7 @@ export function FlightsTab() {
                     <div className="row-title">{o.airline}</div>
                     <div className="row-meta">Out: {clockLabel(o.out.depart)} → lands {clockLabel(o.out.arrive, false)} · {stopsLabel(o.out)}</div>
                     {o.back && <div className="row-meta">Back: {clockLabel(o.back.depart)} → {clockLabel(o.back.arrive, false)} · {stopsLabel(o.back)}</div>}
+                    {landsTooLate(state, o.out.arrive) && tee && <span className="late-note">Lands too late for the {tee.time} tee</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                     <div className="fee">{o.currency === 'USD' ? money(o.price) : `${Math.round(o.price)} ${o.currency}`}</div>
@@ -140,13 +147,16 @@ export function FlightsTab() {
                 <div className="row-title">{m.name}{m.id === me.id && <span className="row-meta"> (you)</span>}</div>
                 <div className="row-meta">{m.flight_summary || (m.airport ? `From ${m.airport}` : 'No airport yet')}</div>
               </div>
-              {m.flight_arrive_at ? <Chip kind="good">Lands {clockLabel(m.flight_arrive_at)}</Chip>
-                : m.flight_price !== null ? <Chip kind="good">{m.flight_summary === 'Driving' ? 'Driving' : 'Flight set'}</Chip>
-                : <Chip kind="plain">No flight yet</Chip>}
+              <div className="flight-chips">
+                {m.flight_arrive_at ? <Chip kind={landsTooLate(state, m.flight_arrive_at) ? 'bad' : 'good'}>Lands {clockLabel(m.flight_arrive_at)}</Chip>
+                  : m.flight_price !== null ? <Chip kind="good">{m.flight_summary === 'Driving' ? 'Driving' : 'Flight set'}</Chip>
+                  : <Chip kind="plain">No flight yet</Chip>}
+                {m.flight_price !== null && m.flight_summary !== 'Driving' && 'flight_booked' in m && (m.flight_booked ? <Chip kind="good">Booked</Chip> : <Chip kind="warn">Not booked</Chip>)}
+              </div>
             </div>
           ))}
         </div>
-        <p className="hint">{state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name)).join(', ') || 'Everyone'}{state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}</p>
+        <p className="hint">{state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name)).join(', ') || 'Everyone'}{state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}{tee ? ` First tee: ${tee.time} on arrival day.` : ''}</p>
       </section>
     </>
   );

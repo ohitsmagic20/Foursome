@@ -355,3 +355,25 @@ export function rankWeekends(members: Member[], fridays: string[]): { answered: 
     .sort((a, b) => a.out.length - b.out.length || a.friday.localeCompare(b.friday));
   return { answered, ranked };
 }
+
+/** Time to get bags, a car and to the course after landing. */
+export const LANDING_BUFFER_MIN = 90;
+
+/** The first planned tee time on arrival day, if there's one and the dates are known. */
+export function firstTee(state: TripState): { start: string; time: string } | null {
+  const start = pickOf<DateData>(state, 'date').option?.data.start;
+  if (!start) return null;
+  const r = plannedRounds(state).filter((x) => x.data.day === 1).sort((a, b) => teeMinutes(a.data.time) - teeMinutes(b.data.time))[0];
+  return r ? { start, time: r.data.time } : null;
+}
+
+/** True when a flight landing at `arriveIso` (local time) won't make the first tee time. */
+export function landsTooLate(state: TripState, arriveIso: string | null | undefined): boolean {
+  const tee = firstTee(state);
+  if (!tee || !arriveIso) return false;
+  const [d, t = '00:00'] = arriveIso.split('T');
+  if (d > tee.start) return true;
+  if (d < tee.start) return false;
+  const [h, mi] = t.split(':').map(Number);
+  return h * 60 + mi + LANDING_BUFFER_MIN > teeMinutes(tee.time);
+}

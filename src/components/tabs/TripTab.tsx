@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { clockLabel, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { clockLabel, firstTee, landsTooLate, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
@@ -35,7 +35,7 @@ export function TripTab() {
     { tab: 'vote' as const, title: 'Destination', meta: dest.option ? `${dest.option.data.name} ${dest.locked ? 'locked' : 'leading'}` : 'Nobody has suggested a place yet', chip: status(dest.locked, dest.option ? 'Voting' : 'To do') },
     { tab: 'stay' as const, title: 'Where we’re staying', meta: stay.option ? `${stay.option.data.name} ${stay.locked ? 'locked' : 'leading'}` : 'Suggest a house or hotel', chip: status(stay.locked, stay.option ? 'Voting' : 'To do') },
     { tab: 'golf' as const, title: 'Tee times', meta: rounds.length ? `${booked} of ${rounds.length} rounds booked · ${teeTimesNeeded(n)} tee times each` : 'No rounds in the plan yet', chip: status(rounds.length > 0 && booked === rounds.length, rounds.length ? `${rounds.length - booked} to book` : 'To do') },
-    { tab: 'flights' as const, title: 'Flights', meta: `${flown} of ${n} have picked a flight`, chip: status(flown === n, `${n - flown} left`) },
+    { tab: 'flights' as const, title: 'Flights', meta: `${flown} of ${n} have picked a flight${state.members.some((m) => 'flight_booked' in m) && flown ? ` · ${state.members.filter((m) => m.flight_booked).length} booked` : ''}`, chip: status(flown === n, `${n - flown} left`) },
   ];
   const doneCount = steps.filter((s) => s.chip.props.kind === 'good').length;
   const over = state.members.filter((m) => m.budget > 0 && costOf(state, m).total > m.budget);
@@ -198,22 +198,12 @@ function WaitingOn() {
 
 function Arrivals() {
   const { state } = useTrip();
-  const date = pickOf<DateData>(state, 'date');
   const withFlights = state.members.filter((m) => m.flight_arrive_at);
   if (!withFlights.length) return null;
   const sorted = withFlights.slice().sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
   const last = sorted[sorted.length - 1];
-  const firstRound = plannedRounds(state).filter((r) => r.data.day === 1).sort((a, b) => teeMinutes(a.data.time) - teeMinutes(b.data.time))[0];
-  let late: Member[] = [];
-  if (firstRound && date.option) {
-    const tee = teeMinutes(firstRound.data.time);
-    late = sorted.filter((m) => {
-      const [d, t] = m.flight_arrive_at!.split('T');
-      if (d > date.option!.data.start) return true;
-      const [h, mi] = t.split(':').map(Number);
-      return h * 60 + mi + 90 > tee; // 90 minutes to get bags, a car and to the course
-    });
-  }
+  const tee = firstTee(state);
+  const late: Member[] = sorted.filter((m) => landsTooLate(state, m.flight_arrive_at));
   return (
     <section className="section">
       <div className="section-head"><h2>Who lands when</h2><span className="sub">Last in: {firstName(last.name)}</span></div>
@@ -226,7 +216,7 @@ function Arrivals() {
           </div>
         ))}
       </div>
-      {firstRound && date.option && <p className="hint">First tee: {firstRound.data.time}, {dayLabel(date.option.data.start, 1)}.</p>}
+      {tee && <p className="hint">First tee: {tee.time}, {dayLabel(tee.start, 1)}.</p>}
     </section>
   );
 }
