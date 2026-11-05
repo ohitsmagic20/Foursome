@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { clockLabel, firstTee, landsTooLate, openVotes, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { clockLabel, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
@@ -48,6 +48,7 @@ export function TripTab() {
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
 
+      {countdown !== null && countdown < -tripNights(state) ? <Recap /> : null}
       <TodayCard />
       <GetStarted />
       <TripPlan />
@@ -125,6 +126,50 @@ function TripPlan() {
         <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>
         {me?.is_organizer && <EmailPlan />}
         {me?.is_organizer && <ShareIdea />}
+      </div>
+    </section>
+  );
+}
+
+/** After the trip: what happened, what it cost, what's left to settle, and a way to run it back. */
+function Recap() {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  const date = pickOf<DateData>(state, 'date').option;
+  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const stay = pickOf<LodgingData>(state, 'lodging').option;
+  if (!date || !dest) return null;
+  const rounds = plannedRounds(state).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
+  const n = state.members.length;
+  const avg = n ? state.members.reduce((s, m) => s + costOf(state, m).total, 0) / n : 0;
+  const { payments } = settleUp(state);
+  const mineOwed = me ? payments.filter((p) => p.from === me.id) : [];
+  const start = date.data.start;
+  const text = [
+    `⛳ ${state.trip.name}: that’s a wrap`,
+    `${dest.data.name} · ${rangeLabel(start, tripNights(state))} · ${n} golfers`,
+    ...rounds.map((r) => `${dayLabel(start, r.data.day)}: ${r.data.course}`),
+    stay ? `Stayed at ${stay.data.name}` : '',
+    `About ${money(avg)} each`,
+  ].filter(Boolean).join('\n');
+  const again = state.sharedIdea ? `/?template=g-${state.sharedIdea}` : '/#start';
+  return (
+    <section className="plan recap">
+      <div className="plan-head">
+        <div className="eyebrow">That’s a wrap</div>
+        <div className="plan-title">{dest.data.name}</div>
+        <div className="row-meta">{rangeLabel(start, tripNights(state))} · {n} golfers · {rounds.length} round{rounds.length === 1 ? '' : 's'}</div>
+      </div>
+      <div className="plan-rows">
+        {rounds.map((r) => <div className="plan-row" key={r.id}><span className="k">{dayLabel(start, r.data.day)}</span><span>{r.data.course}</span></div>)}
+        {stay && <div className="plan-row"><span className="k">Stay</span><span>{stay.data.name}</span></div>}
+        <div className="plan-row"><span className="k">Cost</span><span>About <strong>{money(avg)}</strong> each</span></div>
+        <div className="plan-row"><span className="k">Settle up</span><span>{payments.length ? `${payments.length} payment${payments.length > 1 ? 's' : ''} left${mineOwed.length ? ', including yours' : ''}` : (state.expenses?.length ? 'Everyone’s even' : 'Nothing logged')}</span></div>
+      </div>
+      <div className="btn-row">
+        <button className="btn small" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Share the recap</button>
+        {me?.is_organizer && <ShareIdea />}
+        <a className="btn small primary" href={again}>Plan the next one</a>
       </div>
     </section>
   );

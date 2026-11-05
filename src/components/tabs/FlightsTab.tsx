@@ -156,7 +156,7 @@ export function FlightsTab() {
             </div>
           ))}
         </div>
-        <p className="hint">{state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name)).join(', ') || 'Everyone'}{state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}{tee ? ` First tee: ${tee.time} on arrival day.` : ''}</p>
+        <p className="hint">{state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name)).join(', ') || 'Everyone'}{state.members.filter((m) => m.flight_price === null).length === 1 ? ' still needs to pick a flight.' : state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}{tee ? ` First tee: ${tee.time} on arrival day.` : ''}</p>
       </section>
     </>
   );
