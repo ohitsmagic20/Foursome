@@ -281,6 +281,9 @@ export function GuestFields() {
           ))}
         </div>
       )}
+      <details className="more-fields">
+        <summary>Budget and sleeping <span className="row-meta">(optional)</span></summary>
+        <p className="hint" style={{ marginTop: 0 }}>Only people on the trip see your budget. You can add these later.</p>
       <div className="grid2">
         <div className="field">
           <label htmlFor="g-budget">Budget, all-in ($)</label>
@@ -294,6 +297,7 @@ export function GuestFields() {
           </select>
         </div>
       </div>
+      </details>
     </>
   );
 }

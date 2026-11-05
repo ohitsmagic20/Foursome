@@ -158,6 +158,30 @@ function unvoted(state: TripState, tab: TabId): number {
   return tab === 'vote' ? o.date + o.destination : tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
 }
 
+/** On the invite page: who's already in, and what's settled or still up for a vote. */
+function InvitePreview({ state }: { state: TripState }) {
+  const p = state.preview;
+  if (!p) return null;
+  const names = p.names || [];
+  const facts: [string, string][] = [
+    ['Where', p.place || (p.placeOptions ? `${p.placeOptions} place${p.placeOptions > 1 ? 's' : ''} suggested. Your vote counts.` : 'Not picked yet. Suggest one after you join.')],
+    ['When', p.dates || (p.dateOptions ? `${p.dateOptions} date option${p.dateOptions > 1 ? 's' : ''} so far` : 'Not picked yet. Mark the weekends you can’t make.')],
+  ];
+  return (
+    <div className="card invite-preview">
+      {names.length > 0 && (
+        <div className="invite-who">
+          <div className="avatars">{names.slice(0, 6).map((n, i) => <span className="avatar" key={i}>{n.slice(0, 1).toUpperCase()}</span>)}</div>
+          <span className="row-meta">{names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} and ${p.count - 3} more`} {p.count === 1 ? 'is' : 'are'} in</span>
+        </div>
+      )}
+      <div className="plan-rows">
+        {facts.map(([k, v]) => <div className="plan-row" key={k}><span className="k">{k}</span><span>{v}</span></div>)}
+      </div>
+    </div>
+  );
+}
+
 function JoinScreen({ state, code, onJoined }: { state: TripState; code: string; onJoined: () => void }) {
   const { me, setMe, reload } = useMe();
   const [busy, setBusy] = useState(false);
@@ -187,12 +211,12 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
         <h1>{state.trip.name}</h1>
         <p>{org ? `${org} is organizing` : 'A golf trip'} with {count} {count === 1 ? 'person' : 'people'} so far. Join to vote on dates, where to stay and where to play.</p>
       </div>
+      <InvitePreview state={state} />
       {me === undefined && <div className="empty"><span className="spinner" style={{ display: 'inline-block' }} /></div>}
 
       {me === null && !signIn && (
         <form className="card form" onSubmit={(e) => { e.preventDefault(); join(Object.fromEntries(new FormData(e.currentTarget))); }}>
           <GuestFields />
-          <p className="hint">Only people on the trip see your budget.</p>
           {err && <p className="error" role="alert">{err}</p>}
           <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : `Join ${state.trip.name}`}</button>
           <p className="legal-links">By joining you agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.</p>

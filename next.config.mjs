@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Fonts for the trip link preview image.
+  outputFileTracingIncludes: { '/t/[code]/opengraph-image': ['./assets/*.woff'] },
   // A unique id per deploy, used to tell open copies of the app that an update is available.
   env: { NEXT_PUBLIC_BUILD: process.env.VERCEL_GIT_COMMIT_SHA || (process.env.VERCEL ? String(Date.now()) : 'dev') },
   async headers() {

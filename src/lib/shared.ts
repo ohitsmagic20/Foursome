@@ -80,7 +80,7 @@ export interface TripState {
   votes: Vote[];
   meId: string | null;
   /** Only for people who haven't joined: just enough for the invite screen. */
-  preview?: { organizer: string; count: number };
+  preview?: { organizer: string; count: number; names?: string[]; place?: string | null; dates?: string | null; placeOptions?: number; dateOptions?: number };
   /** Read-only key for this person's calendar feed. */
   calKey?: string;
   /** Live flight search is on (a live Duffel token). In test mode the app only offers Google Flights and manual entry. */
