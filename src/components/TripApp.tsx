@@ -165,7 +165,7 @@ function InvitePreview({ state }: { state: TripState }) {
   const names = p.names || [];
   const facts: [string, string][] = [
     ['Where', p.place || (p.placeOptions ? `${p.placeOptions} place${p.placeOptions > 1 ? 's' : ''} suggested. Your vote counts.` : 'Not picked yet. Suggest one after you join.')],
-    ['When', p.dates || (p.dateOptions ? `${p.dateOptions} date option${p.dateOptions > 1 ? 's' : ''} so far` : 'Not picked yet. Mark the weekends you can’t make.')],
+    ['When', p.dates || (p.dateOptions ? `${p.dateOptions} date option${p.dateOptions > 1 ? 's' : ''} so far` : 'Not picked yet. Suggest dates after you join.')],
   ];
   return (
     <div className="card invite-preview">

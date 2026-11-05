@@ -28,9 +28,6 @@ export interface Member {
   /** Where to send this person money: Venmo username and Cash App $cashtag (without @ or $). */
   venmo?: string;
   cashapp?: string;
-  /** Weekends this person can't make (each weekend's Friday, YYYY-MM-DD). null = hasn't answered.
-   *  Missing entirely when the database doesn't have the column yet. */
-  blackout?: string[] | null;
   /** They've bought the flight they picked (migration 007). */
   flight_booked?: boolean;
 }
@@ -330,33 +327,6 @@ export interface CoursePrices { course: string; weekday: PriceRange | null; week
 /* ---------- accounts ---------- */
 export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed; email_updates?: boolean; venmo?: string; cashapp?: string }
 export interface MyTrip { code: string; name: string; nights: number; start: string | null; destination: string | null; members: number; organizer: boolean }
-
-/* ---------- weekend availability ---------- */
-/** The Fridays of the coming weekends, starting at least a week out. */
-export function weekendsAhead(count = 26, from = new Date()): string[] {
-  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 7);
-  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7)); // next Friday
-  return Array.from({ length: count }, (_, i) => isoDay(addDays(d, i * 7)));
-}
-
-/** Arrival day for a trip on a given weekend: Friday for 1–2 nights, otherwise Thursday. */
-export function weekendStart(friday: string, nights: number): string {
-  return nights <= 2 ? friday : isoDay(addDays(parseDay(friday), -1));
-}
-
-export interface WeekendPick { friday: string; out: Member[]; free: number }
-
-/** Weekends ranked by how many of the people who answered are free, soonest first on ties. */
-export function rankWeekends(members: Member[], fridays: string[]): { answered: Member[]; ranked: WeekendPick[] } {
-  const answered = members.filter((m) => Array.isArray(m.blackout));
-  const ranked = fridays
-    .map((friday) => {
-      const out = answered.filter((m) => m.blackout!.includes(friday));
-      return { friday, out, free: answered.length - out.length };
-    })
-    .sort((a, b) => a.out.length - b.out.length || a.friday.localeCompare(b.friday));
-  return { answered, ranked };
-}
 
 /** Time to get bags, a car and to the course after landing. */
 export const LANDING_BUFFER_MIN = 90;

@@ -401,19 +401,6 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         }
         break;
       }
-      case 'set_blackout': {
-        const dates = Array.isArray(b.dates) ? b.dates : [];
-        const clean = [...new Set(dates.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().slice(0, 60);
-        const r = await db().from('members').update({ blackout: clean }).eq('id', me.id);
-        if (r.error) {
-          if (/blackout/.test(r.error.message)) {
-            await logError('server', 'Run supabase/006_availability_feedback.sql: members.blackout is missing', `/t/${trip.code}`);
-            throw new HttpError(503, 'Availability needs a quick database update. The app owner has been told.');
-          }
-          throw r.error;
-        }
-        break;
-      }
       case 'add_expense': {
         const amount = Math.round(Number(b.amount) * 100) / 100;
         if (!(amount > 0 && amount < 1000000)) throw new HttpError(400, 'Enter the amount paid.');

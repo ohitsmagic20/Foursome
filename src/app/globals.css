@@ -424,18 +424,6 @@ tr.me .mark.none { border-color: var(--green); }
 .field textarea { border-radius: 12px; border: 1px solid var(--line); background: var(--card); padding: 10px 12px; font: inherit; font-size: 16px; width: 100%; resize: vertical; color: var(--ink); }
 .feedback-done { text-align: center; }
 
-/* Weekend availability */
-.avail { display: flex; flex-direction: column; gap: 12px; }
-.avail-month { display: flex; flex-direction: column; gap: 6px; }
-.avail-mlabel { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-.avail-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.avail-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 52px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
-.avail-day .avail-num { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.avail-day .avail-sub { font-size: 11px; color: var(--muted); }
-.avail-day.out { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
-.avail-day.out .avail-sub { color: var(--bad); font-weight: 600; }
-.avail-best { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
-
 /* Home tab: money */
 .my-cost { display: flex; flex-direction: column; gap: 12px; }
 .my-cost-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }

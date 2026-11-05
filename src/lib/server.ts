@@ -153,7 +153,7 @@ export async function memberFromRequest(req: Request, tripId: string, required =
 
 /** Member columns added by later migrations; each is skipped while the database doesn't have it yet,
  *  and checked again every few minutes. */
-const OPTIONAL_MEMBER_COLS = ['blackout', 'flight_booked'];
+const OPTIONAL_MEMBER_COLS = ['flight_booked'];
 const missingCols = new Map<string, number>();
 async function tripMembers(tripId: string) {
   for (const [c, at] of missingCols) if (Date.now() - at > 5 * 60000) missingCols.delete(c);
