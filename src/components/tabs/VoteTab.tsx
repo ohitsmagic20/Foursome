@@ -6,6 +6,7 @@ import { WeatherCredit, WeatherStrip } from '../live';
 import { firstName } from '@/lib/client';
 import { Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { dateSheet, destSheet } from '../sheets';
+import { Availability } from '../Availability';
 
 const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };
 const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
@@ -26,8 +27,9 @@ function When() {
   return (
     <section className="section">
       <div className="section-head"><h2>When</h2><button className="btn small" onClick={() => dateSheet(ctx)}>{Icon.plus} Dates</button></div>
+      <Availability />
       {dates.length === 0 ? (
-        <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Suggest the first set of dates. Everyone else marks if they’re in.</button>
+        <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Or suggest specific dates yourself. Everyone else marks if they’re in.</button>
       ) : (
         <>
           <p className="sub">Tap your row: in, maybe or out.</p>

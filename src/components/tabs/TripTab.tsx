@@ -9,6 +9,7 @@ import { meSheet } from '../sheets';
 import { NotifyCard } from '../notify';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
+import { AppFooter } from '../Feedback';
 
 export function TripTab() {
   const ctx = useTrip();
@@ -77,7 +78,7 @@ export function TripTab() {
       <SettleUp />
       <NotifyCard />
       <Crew />
-      <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+      <AppFooter tripCode={state.trip.code} />
     </>
   );
 }

@@ -141,9 +141,23 @@ export async function memberFromRequest(req: Request, tripId: string, required =
   return member;
 }
 
+/** Whether members.blackout exists (migration 006). Rechecked every few minutes until it does. */
+let blackoutCheckedAt = 0;
+let hasBlackout = true;
+async function tripMembers(tripId: string) {
+  if (!hasBlackout && Date.now() - blackoutCheckedAt > 5 * 60000) hasBlackout = true;
+  if (hasBlackout) {
+    const r = await db().from('members').select(`${MEMBER_COLS},blackout`).eq('trip_id', tripId).order('created_at');
+    if (!r.error || !/blackout/.test(r.error.message)) return r;
+    hasBlackout = false;
+    blackoutCheckedAt = Date.now();
+  }
+  return db().from('members').select(MEMBER_COLS).eq('trip_id', tripId).order('created_at');
+}
+
 export async function loadState(trip: Trip, me: Member | null): Promise<TripState> {
   const [m, o] = await Promise.all([
-    db().from('members').select(MEMBER_COLS).eq('trip_id', trip.id).order('created_at'),
+    tripMembers(trip.id),
     db().from('options').select('id,kind,data,locked,created_by').eq('trip_id', trip.id).order('created_at'),
   ]);
   if (m.error) throw m.error;

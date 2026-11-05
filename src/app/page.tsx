@@ -7,6 +7,7 @@ import { rangeLabel } from '@/lib/shared';
 import { Field, Icon } from '@/components/ui';
 import { GuestFields, ProfileForm, SignIn, useMe } from '@/components/account';
 import { IdeaStrip } from '@/components/IdeaCards';
+import { AppFooter } from '@/components/Feedback';
 import { templateBySlug, type TripTemplate } from '@/data/templates';
 
 /** The trip idea picked on /ideas/[slug] (?template=slug), if any. */
@@ -121,7 +122,7 @@ export default function Home() {
         <IdeaStrip />
         <HowItWorks />
         <p className="hint">On iPhone, tap Share → Add to Home Screen to keep Foresome next to your other apps.</p>
-        <p className="legal-links"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
+        <AppFooter askEmail={false} />
       </div>
     </div>
   );
@@ -189,6 +190,7 @@ function SignedOut({ hero, onSignedIn, tpl, clearTpl }: { hero: React.ReactNode;
         )}
         <IdeaStrip />
         <HowItWorks />
+        <AppFooter />
       </div>
     </div>
   );
