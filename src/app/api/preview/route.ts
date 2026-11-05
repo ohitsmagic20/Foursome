@@ -1,8 +1,11 @@
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
 import { body, handle, HttpError, str } from '@/lib/server';
+import { parseListing } from '@/lib/listing';
 
 export const runtime = 'nodejs';
+
+const EMPTY = { title: '', image: '', name: '', bedrooms: 0, beds: 0, sleeps: 0, rating: 0 };
 
 /** True for addresses that aren't on the public internet (loopback, private, link-local, cloud metadata, etc.). */
 function privateAddress(ip: string): boolean {
@@ -25,7 +28,7 @@ async function assertPublic(u: URL) {
   if (!addrs.length || addrs.some(privateAddress)) throw new HttpError(400, 'That link is not a public website.');
 }
 
-// Best-effort title and photo for a pasted Airbnb, Vrbo or hotel link, read from the page's
+// Best-effort name, photo, bedrooms and beds for a pasted Airbnb, Vrbo or hotel link, read from the page's
 // public share tags (the same ones a text message preview uses). Many sites block this,
 // so the app always lets people type the details themselves.
 export function POST(req: Request) {
@@ -57,8 +60,7 @@ export function POST(req: Request) {
         target = new URL(next, target);
         await assertPublic(target);
       }
-      if (!res) return Response.json({ title: '', image: '' });
-      if (!res.ok) return Response.json({ title: '', image: '' });
+      if (!res || !res.ok) return Response.json(EMPTY);
       const html = (await res.text()).slice(0, 300000);
       const meta = (prop: string) => {
         const re = new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']+)["']`, 'i');
@@ -68,9 +70,10 @@ export function POST(req: Request) {
       const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
       const title = decode(meta('og:title') || (html.match(/<title>([^<]+)<\/title>/i) || [])[1] || '').trim().slice(0, 100);
       const image = decode(meta('og:image'));
-      return Response.json({ title, image: /^https:\/\//.test(image) ? image : '' });
+      const facts = parseListing(title, decode(meta('og:description') || meta('description')), decode(meta('og:site_name')));
+      return Response.json({ title, image: /^https:\/\//.test(image) ? image : '', ...facts });
     } catch {
-      return Response.json({ title: '', image: '' });
+      return Response.json(EMPTY);
     } finally {
       clearTimeout(timer);
     }

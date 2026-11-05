@@ -5,7 +5,7 @@ import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from '.
 import type { CourseHit, CourseInfo, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
 import { ACCESS_LABEL } from '@/lib/shared';
 import { TeeStats } from './TeeTable';
-import { addDays, autoGroups, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { addDays, autoGroups, bedsNeeded, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
@@ -175,16 +175,30 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
   const [url, setUrl] = useState(opt?.data.url || '');
   const [name, setName] = useState(opt?.data.name || '');
   const [image, setImage] = useState(opt?.data.image || '');
+  const [bedrooms, setBedrooms] = useState(opt?.data.bedrooms ? String(opt.data.bedrooms) : '');
+  const [beds, setBeds] = useState(opt?.data.beds ? String(opt.data.beds) : '');
   const [looking, setLooking] = useState(false);
+  const [found, setFound] = useState<string | null>(null);
+  const last = useRef('');
+  const need = bedsNeeded(ctx.state.members);
   async function lookup(u: string) {
-    if (!/^https?:\/\//.test(u)) return;
+    if (!/^https?:\/\//.test(u) || u === last.current) return;
+    last.current = u;
     setLooking(true);
+    setFound(null);
     try {
-      const r = await api<{ title: string; image: string }>('/api/preview', { body: { url: u } });
-      if (r.title && !name) setName(r.title);
-      if (r.image) setImage(r.image);
-    } catch { /* type it in by hand */ } finally { setLooking(false); }
+      const r = await api<{ title: string; name: string; image: string; bedrooms: number; beds: number; sleeps: number; rating: number }>('/api/preview', { body: { url: u } });
+      const got: string[] = [];
+      if ((r.name || r.title) && !name) { setName(r.name || r.title); got.push('name'); }
+      if (r.image) { setImage(r.image); got.push('photo'); }
+      if (r.bedrooms && !bedrooms) { setBedrooms(String(r.bedrooms)); got.push(`${r.bedrooms} bedrooms`); }
+      if (r.beds && !beds) { setBeds(String(r.beds)); got.push(`${r.beds} beds`); }
+      if (r.sleeps && !r.beds) got.push(`sleeps ${r.sleeps}`);
+      if (r.rating) got.push(`★${r.rating}`);
+      setFound(got.length ? `Found ${got.join(' · ')}. Check it and add the total.` : 'That site didn’t share its details. Fill them in below.');
+    } catch { setFound('Couldn’t read that link. Fill in the details below.'); } finally { setLooking(false); }
   }
+  const bedCount = Number(beds) || 0;
   return (
     <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
       onSubmit={(fd) => {
@@ -194,22 +208,29 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
       <div className="field">
         <label htmlFor="f-url">Listing link (Airbnb, Vrbo, hotel)</label>
-        <input id="f-url" name="url" type="url" inputMode="url" placeholder="https://" value={url}
-          onChange={(e) => setUrl(e.target.value)} onBlur={() => lookup(url)}
-          onPaste={(e) => { const t = e.clipboardData.getData('text'); setTimeout(() => lookup(t), 0); }} />
+        <input id="f-url" name="url" type="url" inputMode="url" placeholder="Paste a link to fill in the details" value={url}
+          onChange={(e) => setUrl(e.target.value)} onBlur={() => lookup(url.trim())}
+          onPaste={(e) => { const t = e.clipboardData.getData('text').trim(); setTimeout(() => lookup(t), 0); }} />
       </div>
-      {looking && <p className="hint">Reading the listing…</p>}
+      {looking && <p className="hint" role="status"><span className="spinner" style={{ display: 'inline-block', width: 12, height: 12, marginRight: 6 }} />Reading the listing…</p>}
+      {!looking && found && <p className="hint" role="status">{found}</p>}
       {image && <img className="opt-img" src={image} alt="" />}
       <div className="field">
         <label htmlFor="f-name">Name</label>
-        <input id="f-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="6-bedroom beach house" />
+        <input id="f-name" name="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="6-bedroom beach house" />
       </div>
       <Field name="total" label={`Total for ${tripNights(ctx.state)} nights, with fees ($)`} type="number" defaultValue={opt?.data.total || ''} required />
       <div className="grid2">
-        <Field name="bedrooms" label="Bedrooms" type="number" defaultValue={opt?.data.bedrooms || ''} />
-        <Field name="beds" label="Beds" type="number" defaultValue={opt?.data.beds || ''} />
+        <div className="field">
+          <label htmlFor="f-bedrooms">Bedrooms</label>
+          <input id="f-bedrooms" name="bedrooms" type="number" inputMode="numeric" min={0} value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="f-beds">Beds</label>
+          <input id="f-beds" name="beds" type="number" inputMode="numeric" min={0} value={beds} onChange={(e) => setBeds(e.target.value)} />
+        </div>
       </div>
-      <p className="hint">Total for your dates, from the listing.</p>
+      <p className="hint">{bedCount ? (bedCount >= need ? `Enough beds: the group needs ${need}.` : `Short on beds: the group needs ${need}.`) : `The group needs ${need} beds. Use the total for your dates, with fees.`}</p>
     </SheetForm>
   );
 }
