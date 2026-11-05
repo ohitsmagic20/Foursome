@@ -26,10 +26,11 @@ export function Deadline({ kind }: { kind: DKind }) {
   const at = state.trip.deadlines?.[kind];
   const soon = at ? Date.parse(at) - Date.now() < 36 * 3600000 : false;
   if (!at && !me?.is_organizer) return null;
+  if (!at) return <button type="button" className="link-btn deadline-set" onClick={() => deadlineSheet(ctx, kind)}>Set a voting deadline</button>;
   return (
     <div className={`deadline${soon ? ' soon' : ''}`}>
-      {at ? <span>{closesLabel(at)}. The leader locks in then.</span> : <span className="row-meta">No deadline. Voting stays open until you lock a winner.</span>}
-      {me?.is_organizer && <button type="button" className="link-btn" onClick={() => deadlineSheet(ctx, kind, at)}>{at ? 'Change' : 'Set a deadline'}</button>}
+      <span>{closesLabel(at)}. The leader locks in then.</span>
+      {me?.is_organizer && <button type="button" className="link-btn" onClick={() => deadlineSheet(ctx, kind, at)}>Change</button>}
     </div>
   );
 }

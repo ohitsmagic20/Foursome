@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Member, Option, TripState, VoteValue } from '@/lib/shared';
-import { formatTee, parseTee, votesFor } from '@/lib/shared';
+import { andList, formatTee, parseTee, votesFor } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 
 /* ---------- icons ---------- */
@@ -144,7 +144,7 @@ export function Tally({ option }: { option: Option }) {
   return (
     <div className="voters">
       <div>{voted.length ? voted.map(([k, n], i) => <span key={k}>{i ? ' · ' : ''}<b>{k}</b> {n.join(', ')}</span>) : <span>No votes yet</span>}</div>
-      {waiting.length > 0 && <div className="voters-waiting"><b>Waiting on</b> {waiting.join(', ')}</div>}
+      {waiting.length > 0 && <div className="voters-waiting"><b>Waiting on</b> {andList(waiting)}</div>}
     </div>
   );
 }

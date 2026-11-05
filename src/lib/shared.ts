@@ -43,7 +43,7 @@ export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
-export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string }
+export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string; rooms?: string[][] }
 export interface RoundData {
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
@@ -415,4 +415,50 @@ export function rideGroups(members: Member[], destAirportsList: string[]): RideG
     flush();
   }
   return out.sort((a, b) => a.from.localeCompare(b.from));
+}
+
+/** "Joe", "Joe and Dan", "Joe, Dan and Chris". */
+export function andList(items: string[]): string {
+  const a = items.filter(Boolean);
+  return a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`;
+}
+
+/* ---------- rooms ---------- */
+/** Suggested rooms: everyone alone if there's space; otherwise people who want their own bed get one each and sharers pair up. If there aren't
+ *  enough rooms, the extra people double up in the emptiest rooms (sharers first). */
+export function autoRooms(members: Member[], bedrooms: number): string[][] {
+  const n = Math.max(1, bedrooms);
+  const rooms: string[][] = Array.from({ length: n }, () => []);
+  if (members.length <= n) return rooms.map((r, i) => (members[i] ? [members[i].id] : []));
+  const own = members.filter((m) => m.bed === 'own').map((m) => m.id);
+  const share = members.filter((m) => m.bed !== 'own').map((m) => m.id);
+  let i = 0;
+  for (const id of own) { if (i < n) rooms[i++].push(id); else share.push(id); }
+  for (let k = 0; k < share.length; k += 2) {
+    const pair = share.slice(k, k + 2);
+    if (i < n) rooms[i++].push(...pair);
+    else for (const id of pair) rooms.slice().sort((a, b) => a.length - b.length)[0].push(id);
+  }
+  return rooms;
+}
+
+/* ---------- what to pack ---------- */
+/** Forecast-based packing tips for the trip's days, most useful first. Only from a real forecast. */
+export function packingTips(days: WeatherDay[], start: string, rounds: { day: number; time: string }[]): string[] {
+  const tips: { score: number; text: string }[] = [];
+  const dayOf = (iso: string) => Math.round((parseDay(iso).getTime() - parseDay(start).getTime()) / 864e5) + 1;
+  const label = (iso: string) => DOW[parseDay(iso).getDay()];
+  const cold = days.filter((d) => d.lo !== null && d.lo <= 50 && rounds.some((r) => r.day === dayOf(d.date) && teeMinutes(r.time) < 11 * 60));
+  if (cold.length) {
+    const c = cold.slice().sort((a, b) => a.lo! - b.lo!)[0];
+    const r = rounds.filter((x) => x.day === dayOf(c.date)).sort((a, b) => teeMinutes(a.time) - teeMinutes(b.time))[0];
+    tips.push({ score: 3, text: `Layers: about ${c.lo}° for the ${r.time} tee ${label(c.date)}.` });
+  }
+  const wet = days.filter((d) => (d.rain ?? 0) >= 40).sort((a, b) => b.rain! - a.rain!);
+  if (wet.length) tips.push({ score: 3, text: `Rain gear: ${wet[0].rain}% chance ${andList(wet.slice(0, 2).sort((a, b) => a.date.localeCompare(b.date)).map((d) => label(d.date)))}${wet.length > 2 ? ' and more' : ''}.` });
+  const hot = days.filter((d) => (d.hi ?? 0) >= 88).sort((a, b) => b.hi! - a.hi!);
+  if (hot.length) tips.push({ score: 2, text: `Sunscreen and extra water: up to ${hot[0].hi}° ${label(hot[0].date)}.` });
+  const windy = days.filter((d) => (d.wind ?? 0) >= 18).sort((a, b) => b.wind! - a.wind!);
+  if (windy.length) tips.push({ score: 1, text: `Windy ${label(windy[0].date)} (${windy[0].wind} mph): a windbreaker and a few extra balls.` });
+  return tips.sort((a, b) => b.score - a.score).map((t) => t.text).slice(0, 4);
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, clockLabel, destAirports, firstTee, landsTooLate, LANDING_BUFFER_MIN, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
+import { addDays, andList, clockLabel, destAirports, firstTee, landsTooLate, LANDING_BUFFER_MIN, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
 import { api, firstName } from '@/lib/client';
 import { Callout, Chip, useTrip } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
@@ -156,7 +156,7 @@ export function FlightsTab() {
             </div>
           ))}
         </div>
-        <p className="hint">{state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name)).join(', ') || 'Everyone'}{state.members.filter((m) => m.flight_price === null).length === 1 ? ' still needs to pick a flight.' : state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}{tee ? ` First tee: ${tee.time} on arrival day.` : ''}</p>
+        <p className="hint">{andList(state.members.filter((m) => m.flight_price === null).map((m) => firstName(m.name))) || 'Everyone'}{state.members.filter((m) => m.flight_price === null).length === 1 ? ' still needs to pick a flight.' : state.members.some((m) => m.flight_price === null) ? ' still need to pick a flight.' : ' has a flight.'}{tee ? ` First tee: ${tee.time} on arrival day.` : ''}</p>
       </section>
     </>
   );

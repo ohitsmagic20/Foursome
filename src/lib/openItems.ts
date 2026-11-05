@@ -1,5 +1,5 @@
 import type { DateData, LodgingData, Member, Option, RoundData, TripState } from './shared';
-import { dayLabel, firstTee, landsTooLate, pickOf, plannedRounds, teeTimesNeeded } from './shared';
+import { andList, dayLabel, firstTee, landsTooLate, pickOf, plannedRounds, teeTimesNeeded } from './shared';
 
 /** `text` is for the organizer; `mine` is the same thing said to the person whose job it is. */
 export interface OpenItem { text: string; who: string[]; tab: 'stay' | 'golf' | 'flights'; mine?: string }
@@ -24,8 +24,9 @@ export function openItems(state: TripState): OpenItem[] {
   if (!rounds.length) items.push({ text: 'No golf is in the plan yet.', who: [], tab: 'golf' });
   for (const r of rounds) {
     if (!r.data.booked) items.push({ text: `${label(r)} isn’t marked booked${r.data.owner ? ` (${name(r.data.owner)} is booking it)` : ''}.`, who: r.data.owner ? [r.data.owner] : [], tab: 'golf', mine: `You’re booking ${label(r)}. Mark it booked once it’s done.` });
-    if (teeTimesNeeded(state.members.length) > 1 && !(r.data.groups || []).length) items.push({ text: `Pairings aren’t set for ${label(r)}.`, who: [], tab: 'golf' });
   }
+  const unpaired = teeTimesNeeded(state.members.length) > 1 ? rounds.filter((r) => !(r.data.groups || []).length) : [];
+  if (unpaired.length) items.push({ text: `Pairings aren’t set for ${unpaired.length === rounds.length && rounds.length > 2 ? 'any round' : andList(unpaired.map((r) => r.data.course))}.`, who: [], tab: 'golf' });
 
   const noFlight = state.members.filter((m) => m.flight_price === null);
   if (noFlight.length) {

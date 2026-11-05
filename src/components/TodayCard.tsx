@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, RoundData } from '@/lib/shared';
-import { addDays, cashAppLink, clockLabel, dayLabel, venmoLink, groupNames, isoDay, money, nightsOf, parseDay, pickOf, plannedRounds, settleUp, teeAfter, teeMinutes } from '@/lib/shared';
+import { addDays, andList, cashAppLink, clockLabel, dayLabel, venmoLink, groupNames, isoDay, money, nightsOf, parseDay, pickOf, plannedRounds, settleUp, teeAfter, teeMinutes } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 import { useTrip } from './ui';
 import { useWeather } from './live';
@@ -40,7 +40,7 @@ export function TodayCard() {
     const i = (r.data.groups || []).findIndex((g) => me && g.includes(me.id));
     if (i < 0) return null;
     const others = (r.data.groups![i] || []).filter((id) => id !== me!.id).map((id) => firstName(state.members.find((m) => m.id === id)?.name || '')).filter(Boolean);
-    return `You tee off ${teeAfter(r.data.time, i)}${others.length ? ` with ${others.join(', ')}` : ''}`;
+    return `You tee off ${teeAfter(r.data.time, i)}${others.length ? ` with ${andList(others)}` : ''}`;
   };
 
   return (
@@ -96,7 +96,7 @@ export function TodayCard() {
         ))}
         {shown === nights + 1 && owe.length > 0 && (
           <div className="row">
-            <div className="grow"><div className="row-title">Settle up before you go</div><div className="row-meta">You owe {owe.map((p) => `${firstName(state.members.find((m) => m.id === p.to)?.name || '')} ${money(Math.round(p.amount))}`).join(', ')}</div></div>
+            <div className="grow"><div className="row-title">Settle up before you go</div><div className="row-meta">You owe {andList(owe.map((p) => `${firstName(state.members.find((m) => m.id === p.to)?.name || '')} ${money(Math.round(p.amount))}`))}</div></div>
             {(() => {
               const p = owe[0], to = state.members.find((m) => m.id === p.to);
               const href = owe.length === 1 && to?.venmo ? venmoLink(to.venmo, p.amount, state.trip.name) : owe.length === 1 && to?.cashapp ? cashAppLink(to.cashapp, p.amount) : '';

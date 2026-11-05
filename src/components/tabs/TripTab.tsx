@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { andList, packingTips, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
@@ -10,6 +10,7 @@ import { NotifyCard, useNudge } from '../notify';
 import { openItems } from '@/lib/openItems';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
+import { useWeather } from '../live';
 import { AppFooter } from '../Feedback';
 
 export function TripTab() {
@@ -90,9 +91,6 @@ function TripPlan() {
   const start = date.option.data.start;
   const stay = pickOf<LodgingData>(state, 'lodging');
   const rounds = plannedRounds(state).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
-  const landed = state.members.filter((m) => m.flight_arrive_at).sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
-  const lastIn = landed[landed.length - 1];
-  const mine = me ? costOf(state, me) : null;
   const cal = me && state.calKey ? `/api/trips/${state.trip.code}/calendar?m=${me.id}&k=${state.calKey}` : '';
 
   const shareText = [
@@ -120,8 +118,6 @@ function TripPlan() {
             </div>
           );
         })}
-        {lastIn && <div className="plan-row"><span className="k">Arrivals</span><span>{landed.length} of {state.members.length} have flights · last in {firstName(lastIn.name)}, {clockLabel(lastIn.flight_arrive_at!)}</span></div>}
-        {mine && <div className="plan-row"><span className="k">Your cost</span><span><strong>{money(mine.total)}</strong> <span className="row-meta">flight {money(mine.flight)} · stay {money(mine.stay)} · golf {money(mine.golf)} · food {money(mine.food)}</span></span></div>}
       </div>
       <div className="btn-row">
         {cal && <a className="btn small" href={cal}>Add to Calendar</a>}
@@ -136,22 +132,35 @@ function TripPlan() {
 /** The last two weeks: what's still open. The organizer sees everything; others see their own. */
 function BeforeYouGo({ days }: { days: number }) {
   const { state, me, go } = useTrip();
+  const date = pickOf<DateData>(state, 'date').option;
+  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const wx = useWeather(dest?.data.name, date?.data.start, tripNights(state));
   if (!me) return null;
   const all = openItems(state);
   const rows = me.is_organizer ? all.map((i) => ({ text: i.who.includes(me.id) && i.mine ? i.mine : i.text, tab: i.tab })) : all.filter((i) => i.who.includes(me.id)).map((i) => ({ text: i.mine || i.text, tab: i.tab }));
-  if (!rows.length) return me.is_organizer ? <Callout kind="good">Everything’s booked for the trip in {days} day{days > 1 ? 's' : ''}. Nice work.</Callout> : null;
+  const tips = wx.data?.mode === 'forecast' && date ? packingTips(wx.data.days, date.data.start, plannedRounds(state).map((r) => r.data)) : [];
+  if (!rows.length && !tips.length) return me.is_organizer ? <Callout kind="good">Everything’s booked for the trip in {days} day{days > 1 ? 's' : ''}. Nice work.</Callout> : null;
   return (
     <section className="section">
       <div className="section-head"><h2>Before you go</h2><span className="sub">{days} day{days > 1 ? 's' : ''} out</span></div>
-      <div className="list">
-        {rows.map((r, i) => (
-          <button key={i} className="row" onClick={() => go(r.tab)}>
-            <span className="todo-dot" aria-hidden="true" />
-            <div className="grow"><div className="row-title before-text">{r.text}</div></div>
-            <span className="chev" aria-hidden="true">›</span>
-          </button>
-        ))}
-      </div>
+      {rows.length > 0 && (
+        <div className="list">
+          {rows.map((r, i) => (
+            <button key={i} className="row" onClick={() => go(r.tab)}>
+              <span className="todo-dot" aria-hidden="true" />
+              <div className="grow"><div className="row-title before-text">{r.text}</div></div>
+              <span className="chev" aria-hidden="true">›</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {tips.length > 0 && (
+        <div className="card pack">
+          <div className="row-title">What to pack</div>
+          <ul>{tips.map((t) => <li key={t}>{t}</li>)}</ul>
+          <div className="row-meta">From the {dest?.data.name.split(',')[0]} forecast.</div>
+        </div>
+      )}
     </section>
   );
 }
@@ -264,27 +273,22 @@ function WaitingOn() {
     .sort((a, b) => b.n - a.n);
   if (!people.length) return null;
   const names = people.map((p) => firstName(p.m.name));
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const list = andList(names);
   const kinds = [...new Set(people.flatMap((p) => p.kinds))].map((k) => KIND_WORD[k]);
   const what = kinds.length === 1 ? kinds[0] : `${kinds.slice(0, -1).join(', ')} and ${kinds[kinds.length - 1]}`;
   const text = `${list}: still need your votes on ${what} for “${state.trip.name}”. Takes a minute:`;
+  const most = people[0];
   return (
     <section className="section">
       <div className="section-head"><h2>Waiting on</h2><span className="sub">{people.length} {people.length === 1 ? 'person' : 'people'}</span></div>
-      <div className="list">
-        {people.slice(0, 6).map((p) => (
-          <div className="row" key={p.m.id}>
-            <div className="avatar">{initials(p.m.name)}</div>
-            <div className="grow"><div className="row-title">{p.m.name}</div><div className="row-meta">{p.n} vote{p.n > 1 ? 's' : ''} left · {p.kinds.map((k) => KIND_WORD[k]).join(', ')}</div></div>
-          </div>
-        ))}
-        {people.length > 6 && <div className="row"><div className="grow row-meta">and {people.length - 6} more</div></div>}
-      </div>
+      <div className="card waiting">
+        <div className="avatars">{people.slice(0, 6).map((p) => <span className="avatar" key={p.m.id} title={p.m.name}>{initials(p.m.name)}</span>)}</div>
+        <div className="row-meta">{list} {people.length === 1 ? 'still has' : 'still have'} votes to cast on {what}{people.length > 1 && most.n > people[people.length - 1].n ? `. ${firstName(most.m.name)} has the most left (${most.n}).` : '.'}</div>
       <div className="btn-row">
         <button className="btn primary grow" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Text {people.length === 1 ? names[0] : `these ${people.length}`}</button>
         {me.is_organizer && <button className="btn" onClick={nudge} disabled={busy}>{busy ? <span className="spinner" /> : 'Send reminder'}</button>}
       </div>
-      {me.is_organizer && <p className="hint">Reminders reach anyone with notifications or trip emails on, at most once every few hours.</p>}
+      </div>
     </section>
   );
 }
@@ -293,7 +297,7 @@ function Arrivals() {
   const { state, me } = useTrip();
   const dest = pickOf<DestinationData>(state, 'destination').option;
   const rides = rideGroups(state.members, dest ? destAirports(dest.data) : []);
-  const names = (ms: Member[]) => { const n = ms.map((m) => (m.id === me?.id ? 'You' : firstName(m.name))); return n.length === 2 ? n.join(' and ') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`; };
+  const names = (ms: Member[]) => andList(ms.map((m) => (m.id === me?.id ? 'You' : firstName(m.name))));
   const withFlights = state.members.filter((m) => m.flight_arrive_at);
   if (!withFlights.length) return null;
   const sorted = withFlights.slice().sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
@@ -346,7 +350,7 @@ function Money({ over, planning }: { over: Member[]; planning: boolean }) {
           {parts.map(([k, v, known]) => <div key={k}><span className="row-meta">{k}</span><b>{known ? money(v) : '—'}</b></div>)}
         </div>
       </div>
-      {over.some((m) => m.id !== me.id) && <Callout kind="warn">{over.filter((m) => m.id !== me.id).map((m) => firstName(m.name)).join(', ')} {over.filter((m) => m.id !== me.id).length > 1 ? 'are' : 'is'} over budget with the current picks.</Callout>}
+      {over.some((m) => m.id !== me.id) && <Callout kind="warn">{andList(over.filter((m) => m.id !== me.id).map((m) => firstName(m.name)))} {over.filter((m) => m.id !== me.id).length > 1 ? 'are' : 'is'} over budget with the current picks.</Callout>}
       <details className="expenses">
         <summary>Everyone’s cost · group total {money(state.members.reduce((s, m) => s + costOf(state, m).total, 0))}</summary>
         <CostTable />
@@ -436,7 +440,7 @@ function GroupUpdate({ ctx }: { ctx: TripCtx }) {
         date.option ? `Dates: ${rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data))}${date.locked ? ' (locked)' : ' (leading)'}` : 'Dates: suggest some',
         dest.option ? `Where: ${dest.option.data.name}${dest.locked ? ' (locked)' : ' (leading)'}` : 'Where: suggest a place',
         stay.option ? `Stay: ${stay.option.data.name}${stay.locked ? ' (locked)' : ' (leading)'}` : '',
-        waiting.length ? `Still need votes from: ${waiting.join(', ')}` : '',
+        waiting.length ? `Still need votes from ${andList(waiting)}` : '',
       ].filter(Boolean);
       share(ctx, lines.join('\n'), `${location.origin}/t/${state.trip.code}`);
     }}>Text the group an update</button>

@@ -1,7 +1,8 @@
 'use client';
 
-import type { DateData, DestinationData, LodgingData } from '@/lib/shared';
-import { bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
+import type { DateData, DestinationData, LodgingData, Option } from '@/lib/shared';
+import { andList, bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
+import { firstName } from '@/lib/client';
 import { StaySearch } from '../live';
 import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
@@ -57,6 +58,43 @@ export function StayTab() {
           </div>
         );
       })}
+      {locked && <Rooms stay={locked} />}
     </section>
+  );
+}
+
+/** Who sleeps where. Anyone can move themselves; the organizer can auto-assign by bed preference. */
+function Rooms({ stay }: { stay: Option<LodgingData> }) {
+  const { state, me, act, toast } = useTrip();
+  if (!me) return null;
+  const n = Math.max(1, stay.data.bedrooms || 1);
+  const ids = new Set(state.members.map((m) => m.id));
+  const rooms = Array.from({ length: n }, (_, i) => (stay.data.rooms?.[i] || []).filter((id) => ids.has(id)));
+  const placed = new Set(rooms.flat());
+  const unplaced = state.members.filter((m) => !placed.has(m.id));
+  const mine = rooms.findIndex((r) => r.includes(me.id));
+  const who = (id: string) => { const m = state.members.find((x) => x.id === id); return m ? (m.id === me.id ? 'You' : firstName(m.name)) : ''; };
+  const wantsOwn = (id: string) => state.members.find((m) => m.id === id)?.bed === 'own';
+  return (
+    <div className="rooms-wrap">
+      <div className="section-head"><h3>Rooms</h3>{me.is_organizer && <div className="btn-row">
+        <button className="btn small" onClick={async () => { if (await act('rooms', { op: 'auto' })) toast('Rooms assigned. Everyone can still move.'); }}>{placed.size ? 'Re-assign' : 'Assign rooms'}</button>
+      </div>}</div>
+      <div className="rooms">
+        {rooms.map((r, i) => {
+          const crowded = r.length > 1 ? r.filter(wantsOwn).map(who) : [];
+          return (
+            <div key={i} className={`room${i === mine ? ' mine' : ''}`}>
+              <div className="room-name">Room {i + 1}</div>
+              <div className="room-who">{r.length ? andList(r.map(who)) : <span className="row-meta">Open</span>}</div>
+              {crowded.length > 0 && <div className="row-meta warn-text">{andList(crowded)} wanted {crowded.length > 1 ? 'their own beds' : crowded[0] === 'You' ? 'your own bed' : 'their own bed'}</div>}
+              {i !== mine && <button className="link-btn" onClick={() => act('rooms', { op: 'move', room: i })}>{mine >= 0 ? 'Move here' : 'Take this one'}</button>}
+            </div>
+          );
+        })}
+      </div>
+      {unplaced.length > 0 && placed.size > 0 && <p className="hint">No room yet: {andList(unplaced.map((m) => who(m.id)))}.</p>}
+      {!placed.size && <p className="hint">{stay.data.bedrooms ? `${n} bedrooms.` : 'Add the number of bedrooms to the listing to see them all here.'} Tap a room to claim it{me.is_organizer ? ', or assign everyone by who wants their own bed' : ''}.</p>}
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DateData } from '@/lib/shared';
-import { lockedOf, optionsOf, parseDay, rangeLabel, rankWeekends, weekendStart, weekendsAhead } from '@/lib/shared';
+import { andList, lockedOf, optionsOf, parseDay, rangeLabel, rankWeekends, weekendStart, weekendsAhead } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 import { useTrip } from './ui';
 
@@ -66,7 +66,7 @@ export function Availability() {
       <div className="section-head">
         <div>
           <div className="row-title">Which weekends can’t you make?</div>
-          <div className="row-meta">{answered.length} of {members.length} answered{waiting.length && waiting.length <= 4 ? ` · waiting on ${waiting.map((m) => (m.id === me.id ? 'you' : firstName(m.name))).join(', ')}` : ''}</div>
+          <div className="row-meta">{answered.length} of {members.length} answered{waiting.length && waiting.length <= 4 ? ` · waiting on ${andList(waiting.map((m) => (m.id === me.id ? 'you' : firstName(m.name))))}` : ''}</div>
         </div>
         {answeredMe && !isOpen && <button type="button" className="link-btn" onClick={() => setOpen(true)}>Edit mine</button>}
       </div>
@@ -110,7 +110,7 @@ export function Availability() {
                 <div className="row" key={w.friday}>
                   <div className="grow">
                     <div className="row-title">{rangeLabel(start, nights)}</div>
-                    <div className="row-meta">{w.out.length ? `Out: ${w.out.map((m) => (m.id === me.id ? 'you' : firstName(m.name))).join(', ')}` : `All ${answered.length} who answered are free`}</div>
+                    <div className="row-meta">{w.out.length ? `Out: ${andList(w.out.map((m) => (m.id === me.id ? 'you' : firstName(m.name))))}` : `All ${answered.length} who answered are free`}</div>
                   </div>
                   {added
                     ? <span className="row-meta">In the vote</span>

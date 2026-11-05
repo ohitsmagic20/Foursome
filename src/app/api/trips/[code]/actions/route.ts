@@ -1,7 +1,7 @@
 import { after } from 'next/server';
-import type { Kind, Member, Trip } from '@/lib/shared';
+import type { Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { autoRooms, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
@@ -175,7 +175,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Editing a round's course or time keeps its pairings, and editing a place keeps who's booking it.
         if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
         const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
-        for (const k of ['owner', 'booked', 'confirmation'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
+        for (const k of ['owner', 'booked', 'confirmation', 'rooms'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
         const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;
@@ -289,6 +289,29 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         mustOrganize(me);
         const r = await db().from('trip_ideas').delete().eq('trip_id', trip.id);
         if (r.error) throw r.error;
+        break;
+      }
+      case 'rooms': {
+        // Who sleeps where in the locked stay. Anyone can move themselves; the organizer can auto-assign or clear.
+        const { data: stay } = await db().from('options').select('id,data').eq('trip_id', trip.id).eq('kind', 'lodging').eq('locked', true).maybeSingle();
+        if (!stay) throw new HttpError(400, 'Lock in a place to stay first.');
+        const d = stay.data as LodgingData;
+        const n = Math.min(20, Math.max(1, d.bedrooms || 1));
+        const { data: everyone } = await db().from('members').select('id,name,bed').eq('trip_id', trip.id);
+        const ids = new Set((everyone || []).map((m) => m.id));
+        let rooms: string[][] = Array.from({ length: n }, (_, i) => (d.rooms?.[i] || []).filter((id) => ids.has(id)));
+        const op = str(b.op, 10);
+        if (op === 'auto' || op === 'clear') {
+          mustOrganize(me);
+          rooms = op === 'auto' ? autoRooms((everyone || []) as Member[], n) : Array.from({ length: n }, () => []);
+        } else if (op === 'move') {
+          const to = int(b.room, -1, n - 1, -1);
+          rooms = rooms.map((r) => r.filter((id) => id !== me.id));
+          if (to >= 0) rooms[to].push(me.id);
+        } else throw new HttpError(400, 'Unknown rooms change.');
+        const r = await db().from('options').update({ data: { ...d, rooms } }).eq('id', stay.id);
+        if (r.error) throw r.error;
+        if (op === 'auto') pings.push(['others', { title: trip.name, body: `${first(me.name)} assigned rooms at ${d.name}. See where you’re sleeping.`, url: url('stay'), tag: 'rooms' }, 0]);
         break;
       }
       case 'set_booking': {

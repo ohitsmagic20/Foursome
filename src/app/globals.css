@@ -480,3 +480,20 @@ tr.me .mark.none { border-color: var(--green); }
 .todo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
 .before-text { font-weight: 500; font-size: 15px; line-height: 1.35; }
 .ride { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--good-soft); }
+.deadline-set { align-self: flex-start; font-size: 14px; }
+.card.waiting { display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: left; background: var(--card); }
+.waiting .btn-row { display: flex; gap: 8px; }
+.waiting .btn-row .grow { flex: 1; }
+.waiting .avatars .avatar { width: 34px; height: 34px; font-size: 12px; }
+
+/* Rooms */
+.rooms-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.rooms-wrap h3 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 20px; font-weight: 700; }
+.rooms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.room { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); min-height: 92px; }
+.room.mine { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.room-name { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.room-who { font-weight: 600; font-size: 15px; line-height: 1.3; }
+.room .link-btn { margin-top: auto; align-self: flex-start; font-size: 13px; }
+.pack { display: flex; flex-direction: column; gap: 6px; }
+.pack ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; line-height: 1.4; }
