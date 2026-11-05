@@ -49,7 +49,7 @@ export function FlightsTab() {
   async function pick(o: FlightOffer) {
     const ok = await act('set_flight', {
       price: Math.round(o.price),
-      summary: `${o.airline} · ${stopsLabel(o.out)} out${o.back ? `, ${stopsLabel(o.back).toLowerCase()} back` : ''}`,
+      summary: `${o.airline} · ${o.out.from}→${o.out.to} · ${stopsLabel(o.out).toLowerCase()} out${o.back ? `, ${stopsLabel(o.back).toLowerCase()} back` : ''}`,
       arriveAt: o.out.arrive,
       departAt: o.back?.depart || null,
       newPick: true,

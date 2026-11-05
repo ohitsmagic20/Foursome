@@ -379,3 +379,40 @@ export function landsTooLate(state: TripState, arriveIso: string | null | undefi
   const [h, mi] = t.split(':').map(Number);
   return h * 60 + mi + LANDING_BUFFER_MIN > teeMinutes(tee.time);
 }
+
+/* ---------- shared rides from the airport ---------- */
+/** Minutes apart that two arrivals can still share a ride. */
+export const RIDE_WINDOW_MIN = 60;
+
+/** Where someone lands: from the route in their flight summary ("ORD→MYR"), else the destination's only airport. */
+export function arrivalAirport(m: Member, destAirportsList: string[]): string | null {
+  const hit = (m.flight_summary || '').match(/→\s*([A-Z]{3})\b/);
+  if (hit) return hit[1];
+  return destAirportsList.length === 1 ? destAirportsList[0] : null;
+}
+
+export interface RideGroup { airport: string; day: string; members: Member[]; from: string; to: string }
+
+/** People landing at the same airport within an hour of the last one, two or more to a group. */
+export function rideGroups(members: Member[], destAirportsList: string[]): RideGroup[] {
+  const mins = (iso: string) => { const [d, t = '00:00'] = iso.split('T'); const [h, mi] = t.split(':').map(Number); return Date.parse(`${d}T00:00:00Z`) / 60000 + h * 60 + mi; };
+  const byPort = new Map<string, Member[]>();
+  for (const m of members) {
+    if (!m.flight_arrive_at || m.flight_summary === 'Driving') continue;
+    const port = arrivalAirport(m, destAirportsList);
+    if (!port) continue;
+    byPort.set(port, [...(byPort.get(port) || []), m]);
+  }
+  const out: RideGroup[] = [];
+  for (const [port, list] of byPort) {
+    const sorted = list.slice().sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
+    let cur: Member[] = [];
+    const flush = () => { if (cur.length >= 2) out.push({ airport: port, day: cur[0].flight_arrive_at!.slice(0, 10), members: cur, from: cur[0].flight_arrive_at!, to: cur[cur.length - 1].flight_arrive_at! }); cur = []; };
+    for (const m of sorted) {
+      if (cur.length && mins(m.flight_arrive_at!) - mins(cur[cur.length - 1].flight_arrive_at!) > RIDE_WINDOW_MIN) flush();
+      cur.push(m);
+    }
+    flush();
+  }
+  return out.sort((a, b) => a.from.localeCompare(b.from));
+}

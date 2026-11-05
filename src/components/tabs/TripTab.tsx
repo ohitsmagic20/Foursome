@@ -1,8 +1,8 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { clockLabel, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
-import { api, clearToken, firstName, initials } from '@/lib/client';
+import { clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
@@ -177,7 +177,6 @@ function Recap() {
     stay ? `Stayed at ${stay.data.name}` : '',
     `About ${money(avg)} each`,
   ].filter(Boolean).join('\n');
-  const again = state.sharedIdea ? `/?template=g-${state.sharedIdea}` : '/#start';
   return (
     <section className="plan recap">
       <div className="plan-head">
@@ -194,9 +193,28 @@ function Recap() {
       <div className="btn-row">
         <button className="btn small" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Share the recap</button>
         {me?.is_organizer && <ShareIdea />}
-        <a className="btn small primary" href={again}>Plan the next one</a>
+        <RunItBack />
       </div>
     </section>
+  );
+}
+
+/** Start next year's trip from this one, then go there to invite everyone. */
+function RunItBack() {
+  const { state, toast } = useTrip();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button className="btn small primary" disabled={busy} onClick={async () => {
+      setBusy(true);
+      try {
+        const r = await api<{ code: string; token: string; name: string }>(`/api/trips/${state.trip.code}/again`, { code: state.trip.code, body: {} });
+        setToken(r.code, r.token);
+        location.href = `/t/${r.code}`;
+      } catch (e) {
+        toast(e instanceof Error ? e.message : 'Couldn’t start it. Try again.');
+        setBusy(false);
+      }
+    }}>{busy ? <span className="spinner" /> : 'Run it back next year'}</button>
   );
 }
 
@@ -272,7 +290,10 @@ function WaitingOn() {
 }
 
 function Arrivals() {
-  const { state } = useTrip();
+  const { state, me } = useTrip();
+  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const rides = rideGroups(state.members, dest ? destAirports(dest.data) : []);
+  const names = (ms: Member[]) => { const n = ms.map((m) => (m.id === me?.id ? 'You' : firstName(m.name))); return n.length === 2 ? n.join(' and ') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`; };
   const withFlights = state.members.filter((m) => m.flight_arrive_at);
   if (!withFlights.length) return null;
   const sorted = withFlights.slice().sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
@@ -291,6 +312,14 @@ function Arrivals() {
           </div>
         ))}
       </div>
+      {rides.map((g) => (
+        <div className="ride" key={g.airport + g.from}>
+          <div className="grow">
+            <div className="row-title">Share a ride from {g.airport}</div>
+            <div className="row-meta">{names(g.members)} land {clockLabel(g.from, false)}{g.to !== g.from ? `–${clockLabel(g.to, false)}` : ''}{g.members.some((m) => m.id === me?.id) ? '. Split one car instead of ' + g.members.length + '.' : '.'}</div>
+          </div>
+        </div>
+      ))}
       {tee && <p className="hint">First tee: {tee.time}, {dayLabel(tee.start, 1)}.</p>}
     </section>
   );
