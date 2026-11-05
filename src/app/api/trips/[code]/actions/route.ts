@@ -5,6 +5,8 @@ import { nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
+import { ideaBySlug } from '@/lib/ideas';
+import { typicalFee } from '@/data/templates';
 import { APP_URL, emailableCount, emailMembers, planEmail, type EmailBody } from '@/lib/email';
 
 const KINDS: Kind[] = ['date', 'destination', 'lodging', 'round'];
@@ -141,6 +143,29 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Adding something counts as a yes from the person who suggested it.
         await db().from('votes').upsert({ option_id: row.id, member_id: me.id, value: 'yes' });
         pings.push(['others', { title: trip.name, body: `${first(me.name)} suggested ${label(kind, data, trip)}. Are you in?`, url: url(TAB[kind]), tag: `new-${kind}` }, 15]);
+        break;
+      }
+      case 'add_idea_rounds': {
+        // Every round from a trip idea at once, as suggestions with my yes. Skips courses already on the list.
+        const tpl = await ideaBySlug(str(b.slug, 60));
+        if (!tpl) throw new HttpError(404, 'That trip idea isn’t available.');
+        const { data: existing } = await db().from('options').select('data').eq('trip_id', trip.id).eq('kind', 'round');
+        const have = new Set((existing || []).map((o) => String((o.data as { course?: string }).course || '').toLowerCase()));
+        const days = nightsOf(trip) + 1;
+        const fresh = tpl.rounds.filter((r) => !have.has(r.course.toLowerCase())).slice(0, Math.max(0, MAX_OPTIONS - (existing?.length || 0)));
+        if (!fresh.length) throw new HttpError(400, 'Those courses are already on the list.');
+        const rows = fresh.map((r) => ({
+          trip_id: trip.id, kind: 'round', created_by: me.id,
+          data: {
+            course: r.course, day: Math.min(r.day, days), time: r.time, fee: typicalFee(r.fee), booked: false,
+            checked: r.fee.verified ? `${r.fee.asOf} (trip idea)` : 'estimate (trip idea)', checkedAt: '', weekday: -1,
+            url: r.url || '', fromTemplate: tpl.slug, ...(r.courseId ? { courseId: r.courseId } : {}),
+          },
+        }));
+        const { data: added, error } = await db().from('options').insert(rows).select('id');
+        if (error) throw error;
+        if (added?.length) await db().from('votes').insert(added.map((o) => ({ option_id: o.id, member_id: me.id, value: 'yes' })));
+        pings.push(['others', { title: trip.name, body: `${first(me.name)} suggested ${fresh.length} rounds from the ${tpl.name} trip idea. Are you in?`, url: url('golf'), tag: 'new-round' }, 15]);
         break;
       }
       case 'update_option': {

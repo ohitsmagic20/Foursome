@@ -6,7 +6,7 @@ import { api, clearToken, firstName, initials } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
-import { NotifyCard } from '../notify';
+import { NotifyCard, useNudge } from '../notify';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
 import { AppFooter } from '../Feedback';
@@ -207,6 +207,7 @@ function YourTurn() {
 function WaitingOn() {
   const ctx = useTrip();
   const { state, me } = ctx;
+  const { nudge, busy } = useNudge();
   if (!me || !state.options.length) return null;
   const KIND_WORD: Record<string, string> = { date: 'dates', destination: 'where we go', lodging: 'where we stay', round: 'tee times' };
   const people = state.members
@@ -236,7 +237,11 @@ function WaitingOn() {
         ))}
         {people.length > 6 && <div className="row"><div className="grow row-meta">and {people.length - 6} more</div></div>}
       </div>
-      <button className="btn block" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Text {people.length === 1 ? names[0] : `these ${people.length}`}</button>
+      <div className="btn-row">
+        <button className="btn primary grow" onClick={() => share(ctx, text, `${location.origin}/t/${state.trip.code}`)}>Text {people.length === 1 ? names[0] : `these ${people.length}`}</button>
+        {me.is_organizer && <button className="btn" onClick={nudge} disabled={busy}>{busy ? <span className="spinner" /> : 'Send reminder'}</button>}
+      </div>
+      {me.is_organizer && <p className="hint">Reminders reach anyone with notifications or trip emails on, at most once every few hours.</p>}
     </section>
   );
 }

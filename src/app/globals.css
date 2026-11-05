@@ -469,3 +469,5 @@ tr.me .mark.none { border-color: var(--green); }
 .more-fields { border-top: 1px solid var(--line); padding-top: 10px; }
 .more-fields summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 .more-fields[open] summary { margin-bottom: 10px; }
+.idea-rounds { display: flex; flex-direction: column; gap: 10px; }
+.idea-rounds .row-meta { overflow-wrap: anywhere; }

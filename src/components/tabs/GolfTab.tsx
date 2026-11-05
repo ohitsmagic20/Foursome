@@ -8,7 +8,7 @@ import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdi
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
-import { templateBySlug } from '@/data/templates';
+import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
 export function GolfTab() {
@@ -40,6 +40,7 @@ export function GolfTab() {
       )}
       <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
+      <IdeaRounds />
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const rs = rounds.filter((r) => r.data.day === d).sort((a, b) => Number(b.locked) - Number(a.locked) || teeMinutes(a.data.time) - teeMinutes(b.data.time));
         const planned = plan.filter((r) => r.data.day === d).length;
@@ -64,6 +65,37 @@ export function GolfTab() {
         ? <CoursesNearby dest={destOpt.data.name} />
         : <p className="hint">Pick a destination to see courses nearby.</p>}
     </>
+  );
+}
+
+/** The destination matches one of our trip ideas: offer its courses in one tap. */
+function IdeaRounds() {
+  const ctx = useTrip();
+  const { state, act, toast } = ctx;
+  const dest = pickOf<DestinationData>(state, 'destination');
+  if (!dest.locked || !dest.option) return null;
+  const key = dest.option.data.name.toLowerCase().split(',')[0].trim();
+  const idea = TEMPLATES.find((t) => t.destination.toLowerCase().split(',')[0].trim() === key);
+  if (!idea) return null;
+  const have = new Set(optionsOf<RoundData>(state, 'round').map((r) => r.data.course.toLowerCase()));
+  const missing = idea.rounds.filter((r) => !have.has(r.course.toLowerCase()));
+  if (missing.length < 2) return null;
+  return (
+    <div className="card idea-rounds">
+      <div className="row-title">Courses from our {idea.name} trip idea</div>
+      <div className="list">
+        {missing.map((r) => (
+          <div className="row" key={r.course}>
+            <div className="grow"><div className="row-title">{r.course}</div><div className="row-meta">Day {r.day} · {r.time}</div></div>
+            <span className="row-meta">{r.fee.low === r.fee.high ? money(r.fee.low) : `${money(r.fee.low)}–${r.fee.high}`}</span>
+          </div>
+        ))}
+      </div>
+      <div className="btn-row">
+        <button className="btn primary" onClick={async () => { if (await act('add_idea_rounds', { slug: idea.slug })) toast(`Added ${missing.length} rounds to the vote`); }}>Add all {missing.length} to the vote</button>
+        <a className="btn" href={`/ideas/${idea.slug}`} target="_blank" rel="noopener noreferrer">See the trip idea</a>
+      </div>
+    </div>
   );
 }
 

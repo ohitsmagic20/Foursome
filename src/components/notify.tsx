@@ -67,20 +67,7 @@ export function NotifyCard() {
       setStatus('off');
     } finally { setBusy(false); }
   }
-  async function nudge() {
-    setBusy(true);
-    try {
-      const r = await api<{ waiting: number; reachable: number; emailed?: number }>(`/api/trips/${code}/actions`, { code, body: { type: 'nudge' } });
-      const how = [r.reachable ? `${r.reachable} by notification` : '', r.emailed ? `${r.emailed} by email` : ''].filter(Boolean).join(' and ');
-      toast(how
-        ? `Nudged ${how}. ${r.waiting} still need to vote.`
-        : `${r.waiting} still need to vote, but none have notifications or trip emails on. Send a group text instead.`);
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Couldn’t send the nudge.');
-    } finally { setBusy(false); }
-  }
-
-  if (status === 'loading' || status === 'unsupported') return me?.is_organizer ? <NudgeOnly /> : null;
+  if (status === 'loading' || status === 'unsupported') return null;
   return (
     <div className="list">
       {status === 'on' ? (
@@ -102,19 +89,27 @@ export function NotifyCard() {
           <button className="btn small primary" onClick={turnOn} disabled={busy}>{busy ? <span className="spinner" /> : 'Turn on'}</button>
         </div>
       )}
-      {me?.is_organizer && status !== 'needs-home-screen' && <NudgeRow />}
     </div>
   );
 
-  function NudgeRow() {
-    return (
-      <div className="row">
-        <div className="grow row-title">Nudge people who haven’t voted</div>
-        <button className="btn small" onClick={nudge} disabled={busy}>Nudge</button>
-      </div>
-    );
+}
+
+/** Organizer: push and email everyone who still has votes to cast (rate-limited on the server). */
+export function useNudge() {
+  const { state, toast } = useTrip();
+  const code = state.trip.code;
+  const [busy, setBusy] = useState(false);
+  async function nudge() {
+    setBusy(true);
+    try {
+      const r = await api<{ waiting: number; reachable: number; emailed?: number }>(`/api/trips/${code}/actions`, { code, body: { type: 'nudge' } });
+      const how = [r.reachable ? `${r.reachable} by notification` : '', r.emailed ? `${r.emailed} by email` : ''].filter(Boolean).join(' and ');
+      toast(how
+        ? `Reminded ${how}. ${r.waiting} still need to vote.`
+        : `None of them have notifications or trip emails on. Send the text instead.`);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Couldn’t send the reminder.');
+    } finally { setBusy(false); }
   }
-  function NudgeOnly() {
-    return <div className="list"><NudgeRow /></div>;
-  }
+  return { nudge, busy };
 }
