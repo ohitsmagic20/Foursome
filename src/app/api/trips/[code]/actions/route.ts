@@ -4,6 +4,7 @@ import type { DateData } from '@/lib/shared';
 import { nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
+import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
 import { APP_URL, emailableCount, emailMembers, planEmail, type EmailBody } from '@/lib/email';
 
 const KINDS: Kind[] = ['date', 'destination', 'lodging', 'round'];
@@ -172,6 +173,11 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         }
         const r = await db().from('options').update({ locked: lock }).eq('id', opt.id);
         if (r.error) throw r.error;
+        if (lock && trip.deadlines?.[opt.kind as DeadlineKind]) {
+          const next = { ...trip.deadlines };
+          delete next[opt.kind as DeadlineKind];
+          await db().from('trips').update({ deadlines: next }).eq('id', trip.id);
+        }
         if (lock) {
           const what = label(opt.kind, opt.data, trip);
           const text = opt.kind === 'round' ? `${what} is in the plan.` : opt.kind === 'lodging' ? `You’re staying at ${what}.` : `${what} is locked in.`;
@@ -297,6 +303,29 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           ...('cashapp' in b ? { cashapp: payHandle(b.cashapp) } : {}),
         }).eq('id', me.id);
         if (r.error) throw r.error;
+        break;
+      }
+      case 'set_deadline': {
+        mustOrganize(me);
+        const kind = String(b.kind) as DeadlineKind;
+        if (!DEADLINE_KINDS.includes(kind)) throw new HttpError(400, 'Deadlines are for dates, destination and the stay.');
+        const next = { ...(trip.deadlines || {}) };
+        if (b.at === null || b.at === '') delete next[kind];
+        else {
+          const at = Date.parse(String(b.at));
+          if (!Number.isFinite(at) || at < Date.now() + 30 * 60000 || at > Date.now() + 180 * 864e5) throw new HttpError(400, 'Pick a day between tomorrow and six months from now.');
+          next[kind] = new Date(at).toISOString();
+          const day = new Date(at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: str(b.tz, 60) || 'America/Chicago' });
+          pings.push(['others', { title: trip.name, body: `Voting on ${DECISION[kind]} closes ${day}. Get your vote in.`, url: url(TAB[kind]), tag: `deadline-${kind}` }, 0]);
+        }
+        const r = await db().from('trips').update({ deadlines: next }).eq('id', trip.id);
+        if (r.error) {
+          if (/deadlines/.test(r.error.message)) {
+            await logError('server', 'Run supabase/007_deadlines_booked.sql: trips.deadlines is missing', `/t/${trip.code}`);
+            throw new HttpError(503, 'Deadlines need a quick database update. The app owner has been told.');
+          }
+          throw r.error;
+        }
         break;
       }
       case 'set_blackout': {

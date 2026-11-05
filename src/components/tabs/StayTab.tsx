@@ -5,6 +5,7 @@ import { bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf,
 import { StaySearch } from '../live';
 import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
+import { Deadline } from '../Deadline';
 
 export function StayTab() {
   const ctx = useTrip();
@@ -23,6 +24,7 @@ export function StayTab() {
     <section className="section">
       <div className="section-head"><h2>Where we stay</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
       <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. Need {need} beds.</p>
+      <Deadline kind="lodging" />
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
         : <p className="hint">Pick dates and a destination to search rentals.</p>}

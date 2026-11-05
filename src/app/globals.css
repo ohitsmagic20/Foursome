@@ -444,3 +444,8 @@ tr.me .mark.none { border-color: var(--green); }
 .my-cost-parts > div { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
 .subsection { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 .subsection h3 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 700; letter-spacing: .01em; }
+
+/* Voting deadlines */
+.deadline { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
+.deadline.soon { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.deadline .link-btn { flex: none; }

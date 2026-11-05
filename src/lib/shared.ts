@@ -10,6 +10,8 @@ export interface Trip {
   name: string;
   nights: number;
   food: number;
+  /** When voting closes for each single-winner decision (ISO time). Missing before migration 007. */
+  deadlines?: Partial<Record<'date' | 'destination' | 'lodging', string>>;
 }
 
 export interface Member {
@@ -29,6 +31,8 @@ export interface Member {
   /** Weekends this person can't make (each weekend's Friday, YYYY-MM-DD). null = hasn't answered.
    *  Missing entirely when the database doesn't have the column yet. */
   blackout?: string[] | null;
+  /** They've bought the flight they picked (migration 007). */
+  flight_booked?: boolean;
 }
 
 /** Money someone paid for the group, split equally among `split_with` (everyone when empty). */

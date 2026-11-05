@@ -7,6 +7,7 @@ import { firstName } from '@/lib/client';
 import { Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { dateSheet, destSheet } from '../sheets';
 import { Availability } from '../Availability';
+import { Deadline } from '../Deadline';
 
 const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };
 const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
@@ -27,6 +28,7 @@ function When() {
   return (
     <section className="section">
       <div className="section-head"><h2>When</h2><button className="btn small" onClick={() => dateSheet(ctx)}>{Icon.plus} Dates</button></div>
+      <Deadline kind="date" />
       <Availability />
       {dates.length === 0 ? (
         <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Or suggest specific dates yourself. Everyone else marks if they’re in.</button>
@@ -93,6 +95,7 @@ function Where() {
   return (
     <section className="section">
       <div className="section-head"><h2>Where</h2><button className="btn small" onClick={() => destSheet(ctx)}>{Icon.plus} Place</button></div>
+      <Deadline kind="destination" />
       {dests.length === 0 && <button className="card empty dashed" onClick={() => destSheet(ctx)}>Suggest a destination, like Myrtle Beach, Scottsdale or Pinehurst.</button>}
       {shown.map((d) => (
         <div key={d.id} className={`card opt ${d.locked ? 'locked' : ''}`} style={locked && !d.locked ? { opacity: .6 } : undefined}>

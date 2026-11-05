@@ -1,4 +1,5 @@
 import { calendarKey, db, handle, loadState, memberFromRequest, tripByCode } from '@/lib/server';
+import { settleDeadlines } from '@/lib/deadlines';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,7 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
         preview: { organizer: org ? String(org.name).split(/\s+/)[0] : '', count: (data || []).length },
       }, { headers: { 'Cache-Control': 'no-store' } });
     }
+    await settleDeadlines(trip).catch(() => false); // a passed voting deadline locks the leader
     const state = await loadState(trip, me);
     const { data: t } = await db().from('members').select('token').eq('id', me.id).single();
     const flightSearch = (process.env.DUFFEL_ACCESS_TOKEN || '').startsWith('duffel_live') || process.env.FLIGHT_SEARCH_TEST === '1';

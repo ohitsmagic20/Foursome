@@ -96,8 +96,18 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
 /* ---------- loading ---------- */
 const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at,venmo,cashapp';
 
+let hasDeadlines = true;
+let deadlinesCheckedAt = 0;
 export async function tripByCode(code: string): Promise<Trip> {
-  const { data, error } = await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle();
+  if (!hasDeadlines && Date.now() - deadlinesCheckedAt > 5 * 60000) hasDeadlines = true;
+  let { data, error } = hasDeadlines
+    ? await db().from('trips').select('id,code,name,nights,food,deadlines').eq('code', code).maybeSingle()
+    : await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle();
+  if (error && hasDeadlines && /deadlines/.test(error.message)) {
+    hasDeadlines = false;
+    deadlinesCheckedAt = Date.now();
+    ({ data, error } = await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle());
+  }
   if (error) throw error;
   if (!data) throw new HttpError(404, 'This trip link is not valid. Ask the organizer to send it again.');
   return data as Trip;
@@ -141,16 +151,18 @@ export async function memberFromRequest(req: Request, tripId: string, required =
   return member;
 }
 
-/** Whether members.blackout exists (migration 006). Rechecked every few minutes until it does. */
-let blackoutCheckedAt = 0;
-let hasBlackout = true;
+/** Member columns added by later migrations; each is skipped while the database doesn't have it yet,
+ *  and checked again every few minutes. */
+const OPTIONAL_MEMBER_COLS = ['blackout', 'flight_booked'];
+const missingCols = new Map<string, number>();
 async function tripMembers(tripId: string) {
-  if (!hasBlackout && Date.now() - blackoutCheckedAt > 5 * 60000) hasBlackout = true;
-  if (hasBlackout) {
-    const r = await db().from('members').select(`${MEMBER_COLS},blackout`).eq('trip_id', tripId).order('created_at');
-    if (!r.error || !/blackout/.test(r.error.message)) return r;
-    hasBlackout = false;
-    blackoutCheckedAt = Date.now();
+  for (const [c, at] of missingCols) if (Date.now() - at > 5 * 60000) missingCols.delete(c);
+  for (let i = 0; i <= OPTIONAL_MEMBER_COLS.length; i++) {
+    const extra = OPTIONAL_MEMBER_COLS.filter((c) => !missingCols.has(c));
+    const r = await db().from('members').select([MEMBER_COLS, ...extra].join(',')).eq('trip_id', tripId).order('created_at');
+    const bad = r.error ? extra.find((c) => r.error!.message.includes(c)) : undefined;
+    if (!bad) return r;
+    missingCols.set(bad, Date.now());
   }
   return db().from('members').select(MEMBER_COLS).eq('trip_id', tripId).order('created_at');
 }
