@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
 import { NotifyCard, useNudge } from '../notify';
+import { openItems } from '@/lib/openItems';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
 import { AppFooter } from '../Feedback';
@@ -49,6 +50,7 @@ export function TripTab() {
       </div>
 
       {countdown !== null && countdown < -tripNights(state) ? <Recap /> : null}
+      {countdown !== null && countdown > 0 && countdown <= 14 ? <BeforeYouGo days={countdown} /> : null}
       <TodayCard />
       <GetStarted />
       <TripPlan />
@@ -126,6 +128,29 @@ function TripPlan() {
         <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>
         {me?.is_organizer && <EmailPlan />}
         {me?.is_organizer && <ShareIdea />}
+      </div>
+    </section>
+  );
+}
+
+/** The last two weeks: what's still open. The organizer sees everything; others see their own. */
+function BeforeYouGo({ days }: { days: number }) {
+  const { state, me, go } = useTrip();
+  if (!me) return null;
+  const all = openItems(state);
+  const rows = me.is_organizer ? all.map((i) => ({ text: i.who.includes(me.id) && i.mine ? i.mine : i.text, tab: i.tab })) : all.filter((i) => i.who.includes(me.id)).map((i) => ({ text: i.mine || i.text, tab: i.tab }));
+  if (!rows.length) return me.is_organizer ? <Callout kind="good">Everything’s booked for the trip in {days} day{days > 1 ? 's' : ''}. Nice work.</Callout> : null;
+  return (
+    <section className="section">
+      <div className="section-head"><h2>Before you go</h2><span className="sub">{days} day{days > 1 ? 's' : ''} out</span></div>
+      <div className="list">
+        {rows.map((r, i) => (
+          <button key={i} className="row" onClick={() => go(r.tab)}>
+            <span className="todo-dot" aria-hidden="true" />
+            <div className="grow"><div className="row-title before-text">{r.text}</div></div>
+            <span className="chev" aria-hidden="true">›</span>
+          </button>
+        ))}
       </div>
     </section>
   );

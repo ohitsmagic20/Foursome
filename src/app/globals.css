@@ -477,3 +477,5 @@ tr.me .mark.none { border-color: var(--green); }
 .today-round { align-items: flex-start; }
 .today-groups summary { cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 4px; }
 .today-groups[open] { display: flex; flex-direction: column; gap: 2px; }
+.todo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+.before-text { font-weight: 500; font-size: 15px; line-height: 1.35; }

@@ -2,6 +2,7 @@ import { db, handle, HttpError } from '@/lib/server';
 import { APP_URL, emailOwner } from '@/lib/email';
 import { ownerEmails } from '@/lib/owner';
 import { remindDeadlines } from '@/lib/deadlines';
+import { pretripChecks } from '@/lib/pretrip';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,8 @@ export function GET(req: Request) {
     await run('app_errors', db().from('app_errors').delete({ count: 'exact' }).lt('at', ago(30)));
     // Close passed voting deadlines and remind people about tomorrow's.
     try { results.deadlines = `ok (${await remindDeadlines()} reminder emails)`; } catch (e) { results.deadlines = `error: ${e instanceof Error ? e.message : e}`; }
+    // A week and two days out: what's still open on each trip.
+    try { results.pretrip = `ok (${await pretripChecks()} emails)`; } catch (e) { results.pretrip = `error: ${e instanceof Error ? e.message : e}`; }
     // Tell the owner about yesterday's errors (needs RESEND_API_KEY and OWNER_EMAIL).
     const { data: errs } = await db().from('app_errors').select('message,source').gte('at', ago(1)).limit(500);
     if (errs?.length) {
