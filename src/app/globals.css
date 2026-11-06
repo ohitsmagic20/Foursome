@@ -575,3 +575,24 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-rep-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .pkg-rep-list li + li { border-top: 1px solid var(--line); padding-top: 8px; }
 .pkg-rep-list a { color: var(--muted); }
+
+/* ---------- trip switcher ---------- */
+.trip-switch { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 0; margin: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.trip-switch h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-switch .down { flex: none; width: 22px; height: 22px; padding: 4px; margin-top: 4px; border-radius: 50%; background: var(--soft); color: var(--muted); box-sizing: border-box; }
+.trip-switch:active .down { background: var(--line); }
+.trip-groups { display: flex; flex-direction: column; gap: 14px; }
+.trip-group-h { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 2px 6px; }
+.trip-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; min-height: 64px; }
+.trip-row:first-child { border-top: 0; }
+.trip-row.here { background: var(--good-soft); }
+.trip-name, .trip-meta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-tile { flex: none; width: 44px; height: 46px; border-radius: 10px; background: var(--green); color: var(--green-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.trip-tile span { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.trip-tile b { font-family: var(--font-display), sans-serif; font-size: 22px; font-weight: 700; margin-top: 2px; }
+.trip-tile.none { background: var(--soft); color: var(--muted); }
+.trip-past summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); padding: 4px 2px 8px; list-style: none; }
+.trip-past summary::-webkit-details-marker { display: none; }
+.trip-past summary::after { content: " ›"; }
+.trip-past[open] summary::after { content: " ⌄"; }
+.trip-past .trip-tile { background: var(--soft); color: var(--muted); }

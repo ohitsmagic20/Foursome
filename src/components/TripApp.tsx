@@ -13,6 +13,7 @@ import { GolfTab } from './tabs/GolfTab';
 import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 import { registerServiceWorker } from './notify';
+import { SwitcherSheet } from './TripSwitcher';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'trip', label: 'Home' },
@@ -37,7 +38,14 @@ export default function TripApp({ code }: { code: string }) {
       const s = await api<TripState>(`/api/trips/${code}`, { code });
       if (pending.current === 0) setState(s); // don't overwrite a vote that's still saving
       setError('');
-      if (s.meId) rememberTrip(code, s.trip.name);
+      if (s.meId) {
+        // Remember what this trip looks like so the trip switcher can show its dates and place.
+        const d = pickOf<DateData>(s, 'date'), p = pickOf<DestinationData>(s, 'destination');
+        rememberTrip(code, s.trip.name, {
+          start: d.option?.data.start || null, nights: nightsOf(s.trip, d.option?.data), destination: p.option?.data.name || null,
+          members: s.members.length, tentative: (!!d.option && !d.locked) || (!!p.option && !p.locked),
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load the trip.');
     }
@@ -121,7 +129,9 @@ export default function TripApp({ code }: { code: string }) {
         <header className="top">
           <div style={{ minWidth: 0 }}>
             <div className="eyebrow">{eyebrow}</div>
-            <h1>{state.trip.name}</h1>
+            <button className="trip-switch" onClick={() => setSheet({ title: 'Your trips', body: <SwitcherSheet current={code} /> })} aria-label={`${state.trip.name}. Switch trips or start a new one`}>
+              <h1>{state.trip.name}</h1>{Icon.down}
+            </button>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {me?.is_organizer && <button className="icon-btn" aria-label="Edit trip" onClick={() => tripSheet(ctx)}>{Icon.edit}</button>}

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, initials, rememberTrip, savedTrips, setToken, type SavedTrip } from '@/lib/client';
-import { rangeLabel } from '@/lib/shared';
-import { Field, Icon } from '@/components/ui';
-import { GuestFields, ProfileForm, SignIn, useMe } from '@/components/account';
+import { api, initials, rememberTrip, setToken } from '@/lib/client';
+import { Field } from '@/components/ui';
+import { TripList, useMyTrips } from '@/components/TripSwitcher';
+import { GuestFields, ProfileForm, SignIn, useMe, type MeState } from '@/components/account';
 import { IdeaStrip } from '@/components/IdeaCards';
 import { AppFooter } from '@/components/Feedback';
 import { templateBySlug, type TripTemplate } from '@/data/templates';
@@ -74,24 +74,7 @@ export default function Home() {
       <div className="stack">
         <section className="section">
           <h2>Your trips</h2>
-          {me.trips.length === 0
-            ? <div className="card empty">No trips yet. Start one below, or open an invite link from a friend.</div>
-            : (
-              <div className="list">
-                {me.trips.map((t) => (
-                  <a key={t.code} className="row" href={`/t/${t.code}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                    <div className="grow">
-                      <div className="row-title">{t.name}</div>
-                      <div className="row-meta">
-                        {[t.destination, t.start ? rangeLabel(t.start, t.nights) : 'Dates not set', `${t.members} going`].filter(Boolean).join(' · ')}
-                      </div>
-                    </div>
-                    {t.organizer && <span className="chip plain">Organizer</span>}
-                    {Icon.chev}
-                  </a>
-                ))}
-              </div>
-            )}
+          <MyTrips account={me.trips} />
         </section>
 
         <section className="section" id="start">
@@ -131,25 +114,18 @@ export default function Home() {
 /** No account: start a trip with just your name, see trips saved on this phone, or sign in. */
 function SignedOut({ hero, onSignedIn, tpl, clearTpl }: { hero: React.ReactNode; onSignedIn: () => void; tpl: TripTemplate | null; clearTpl: () => void }) {
   const router = useRouter();
-  const [trips, setTrips] = useState<SavedTrip[]>([]);
+  const trips = useMyTrips(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [signIn, setSignIn] = useState(false);
-  useEffect(() => setTrips(savedTrips()), []);
   return (
     <div className="app no-tabs">
       {hero}
       <div className="stack">
-        {trips.length > 0 && (
+        {trips && trips.length > 0 && (
           <section className="section">
             <h2>Your trips</h2>
-            <div className="list">
-              {trips.map((t) => (
-                <a key={t.code} className="row" href={`/t/${t.code}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                  <div className="grow row-title">{t.name}</div>{Icon.chev}
-                </a>
-              ))}
-            </div>
+            <TripList trips={trips} />
           </section>
         )}
         {signIn ? (
@@ -194,6 +170,14 @@ function SignedOut({ hero, onSignedIn, tpl, clearTpl }: { hero: React.ReactNode;
       </div>
     </div>
   );
+}
+
+/** The signed-in person's trips, grouped by when they happen. */
+function MyTrips({ account }: { account: MeState['trips'] }) {
+  const trips = useMyTrips(account);
+  if (!trips) return null;
+  if (!trips.length) return <div className="card empty">No trips yet. Start one below, or open an invite link from a friend.</div>;
+  return <TripList trips={trips} />;
 }
 
 function HowItWorks() {

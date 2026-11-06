@@ -16,6 +16,7 @@ export const Icon = {
   edit: <svg viewBox="0 0 24 24" {...sv} strokeWidth={2}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>,
   info: <svg viewBox="0 0 24 24" {...sv} strokeWidth={2}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>,
   plus: <svg width="16" height="16" viewBox="0 0 24 24" {...sv} strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>,
+  down: <svg className="down" width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.4}><path d="m6 9 6 6 6-6" /></svg>,
   chev: <svg className="chev" width="16" height="16" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><path d="m9 6 6 6-6 6" /></svg>,
   lock: <svg width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>,
 };

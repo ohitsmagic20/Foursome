@@ -14,15 +14,24 @@ export function clearToken(code: string) {
   try { localStorage.removeItem(tokenKey(code)); } catch { /* storage blocked */ }
 }
 
-export interface SavedTrip { code: string; name: string }
+/** A trip remembered on this phone, with what we last saw of it (so the trip list can show dates and places). */
+export interface SavedTrip {
+  code: string; name: string;
+  start?: string | null; nights?: number; destination?: string | null; members?: number;
+  /** True when the dates or place are the current leader, not locked yet. */
+  tentative?: boolean;
+  /** When this phone last opened the trip (ms). */
+  seen?: number;
+}
 export function savedTrips(): SavedTrip[] {
   try { return JSON.parse(localStorage.getItem(TRIPS_KEY) || '[]'); } catch { return []; }
 }
-export function rememberTrip(code: string, name: string) {
+export function rememberTrip(code: string, name: string, info: Omit<SavedTrip, 'code' | 'name' | 'seen'> = {}) {
   try {
-    const list = savedTrips().filter((t) => t.code !== code);
-    list.unshift({ code, name });
-    localStorage.setItem(TRIPS_KEY, JSON.stringify(list.slice(0, 20)));
+    const list = savedTrips();
+    const prev = list.find((t) => t.code === code);
+    const next: SavedTrip = { ...prev, ...info, code, name, seen: Date.now() };
+    localStorage.setItem(TRIPS_KEY, JSON.stringify([next, ...list.filter((t) => t.code !== code)].slice(0, 30)));
   } catch { /* storage blocked */ }
 }
 
