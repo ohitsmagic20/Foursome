@@ -569,3 +569,9 @@ tr.me .mark.none { border-color: var(--green); }
 .resort-state .list-cards { padding: 12px; }
 .resort-state .list-cards .card { box-shadow: none; }
 .resort-row { text-decoration: none; color: inherit; }
+.pkg-rep { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.pkg-rep-head { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.pkg-rep-num { font-size: 15px; font-weight: 700; }
+.pkg-rep-num span { font-weight: 500; color: var(--muted); font-size: 13px; }
+.pkg-rep-src { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+.pkg-rep-src a { color: var(--muted); }

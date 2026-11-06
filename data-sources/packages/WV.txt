@@ -4,3 +4,5 @@ Canaan Valley Resort|Unlimited Golf|Davis|WV|Canaan Valley|1 night, unlimited go
 Pipestem Resort State Park|Golf Package|Pipestem|WV|Pipestem||||https://www.golfwestvirginia.com/stayandplay/28337
 Alpine Lake Resort|Custom Golf Package|Terra Alta|WV|Alpine Lake||||https://www.golfwestvirginia.com/stayandplay/28457
 Gilbert Lodge|Twisted Gun Stay and Play|Wharncliffe|WV|Twisted Gun||||https://www.golfwestvirginia.com/stayandplay/28372
+The Greenbrier|Group Golf Package (8+ rooms)|White Sulphur Springs|WV|The Old White TPC;The Meadows;The Greenbrier Course|2+ nights, a round per day incl. arrival and departure days|396|night|https://www.greenbrier.com/golf/group-golf-package/
+The Greenbrier|Unlimited Golf Package|White Sulphur Springs|WV|The Old White TPC;The Greenbrier Course;The Meadows|2+ nights, unlimited golf|830|room-night|https://www.greenbrier.com/offers/unlimited-golf-package/

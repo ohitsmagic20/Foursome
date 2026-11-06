@@ -16,6 +16,8 @@ export interface StayPlay {
   shape?: string;
   includes?: string;
   /** Published starting price. Missing means the resort quotes per group. */
+  /** What golfers actually paid for a trip here (association trips, packagers, trip reports), per golfer. */
+  reported?: { low: number; high: number; shape: string; year: string; covers: string; sources: { label: string; url: string }[] };
   /** More about the deal: season, discounts, what the rate covers. */
   detail?: string;
   price?: { from: number; per: 'person per night' | 'golfer per trip' | 'as listed'; to?: number; note?: string };

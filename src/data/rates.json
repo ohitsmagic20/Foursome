@@ -68,14 +68,14 @@
   "includes": "Room and unlimited golf on the East and West courses",
   "url": "https://www.broadmoor.com/special-packages/unlimited-golf-getaway",
   "source": "broadmoor.com",
-  "detail": "Rooms run from about $380 a night in winter and $390 in spring 2027; the golf package is priced when you book."
+  "detail": "Rooms run from about $380 a night in winter and $390 in spring 2027. Resort-guest green fees with cart: East $232–$361, West $232–$305 depending on season."
  },
  "l671a42f4": {
   "shape": "1 night, unlimited golf (Par Infinity)",
   "includes": "Room and unlimited golf on the Old Course and Cascades; also a 1-night, 1-round \"Your Way\" package",
   "url": "https://www.golfvirginia.com/stayandplay/28920",
   "source": "golfvirginia.com",
-  "detail": "Offered through Dec 31, 2026; the resort prices it when you inquire."
+  "detail": "Offered through Dec 31, 2026; the resort prices it when you inquire. Resort-guest green fees: Old Course $242, Cascades $342."
  },
  "ld617570f": {
   "price": {
@@ -184,5 +184,16 @@
   "url": "https://www.illinoisgolf.com/stayandplay/28518",
   "source": "illinoisgolf.com",
   "detail": "10% off 3 nights, 20% off 4, 30% off 5 or more. Priced on request through 2026."
+ },
+ "l17160bfd": {
+  "price": {
+   "from": 140,
+   "per": "person per night"
+  },
+  "shape": "Lodging by the night; golf booked per round",
+  "includes": "Lodge rooms, villas and 4–12-person cottages",
+  "url": "https://forestdunesgolf.com/accommodation-rates",
+  "source": "forestdunesgolf.com",
+  "detail": "2027 lodging is $140–$175 per person a night in a shared Lodge room and $230–$400 per person in villas and cottages; green fees are extra."
  }
 }

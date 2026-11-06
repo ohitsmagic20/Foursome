@@ -2,6 +2,7 @@ import RESORTS_JSON from '@/data/resorts.json';
 import COORDS from '@/data/package-coords.json';
 import LISTINGS from '@/data/listings.json';
 import RATES from '@/data/rates.json';
+import REPORTED from '@/data/reported.json';
 import { PACKAGES, type StayPlay } from '@/data/packages';
 import { miles } from './geo';
 
@@ -17,7 +18,10 @@ const PKG_AT = COORDS as unknown as Record<string, [number, number]>;
 export type Placed = StayPlay & { lat: number; lon: number };
 /** Every package we know of, with where it is. */
 // Rates and details looked up on resorts' own sites (data-sources/rates.txt) override what the listing says.
-const withRates = <T extends StayPlay>(p: T): T => ({ ...p, ...((RATES as Record<string, Partial<StayPlay>>)[p.id] || {}) });
+const REP = REPORTED as Record<string, StayPlay['reported']>;
+const withRates = <T extends StayPlay>(p: T): T => ({
+  ...p, ...((RATES as Record<string, Partial<StayPlay>>)[p.id] || {}), ...(REP[p.id] ? { reported: REP[p.id] } : {}),
+});
 export const ALL_PACKAGES: Placed[] = [
   ...PACKAGES.filter((p) => PKG_AT[p.id]).map((p) => withRates({ ...p, lat: PKG_AT[p.id][0], lon: PKG_AT[p.id][1] })),
   ...(LISTINGS as unknown as Omit<Placed, 'checked'>[]).map((l) => withRates({ ...l, checked: 'Nov 2026' })),

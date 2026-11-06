@@ -24,3 +24,17 @@ for (const line of fs.readFileSync(path.join(__dirname, 'rates.txt'), 'utf8').sp
 }
 fs.writeFileSync(path.join(__dirname, '../src/data/rates.json'), JSON.stringify(out, null, 1));
 console.log('rates', Object.keys(out).length);
+
+// typical.txt: what golfers actually paid (association trips, packagers, trip reports).
+const rep = {};
+for (const line of fs.readFileSync(path.join(__dirname, 'typical.txt'), 'utf8').split('\n')) {
+  if (!line.trim() || line.startsWith('#')) continue;
+  const p = line.split('|');
+  if (p.length !== 7) { console.error('bad typical line', p.length, line.slice(0, 60)); process.exitCode = 1; continue; }
+  const [id, low, high, shape, year, covers, src] = p.map((s) => s.trim());
+  rep[id] = { low: Number(low), high: Number(high), shape, year, covers,
+    sources: src.split(';').map((x) => { const [label, url] = x.split('::'); return { label: label.trim(), url: url.trim() }; }) };
+  if (!(rep[id].low > 0) || rep[id].high < rep[id].low) { console.error('bad range', id); process.exitCode = 1; }
+}
+fs.writeFileSync(path.join(__dirname, '../src/data/reported.json'), JSON.stringify(rep, null, 1));
+console.log('reported', Object.keys(rep).length);

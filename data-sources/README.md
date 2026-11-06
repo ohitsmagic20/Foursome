@@ -31,3 +31,11 @@ To rebuild `src/data/listings.json`:
 by package id: starting price and basis, nights and rounds, what's included,
 season and discounts. They override what a listing says. Rebuild with
 `node data-sources/build-rates.js`.
+
+## What golfers paid
+
+`typical.txt` records what golfers actually paid at resorts that quote packages
+per group: state golf association member trips (CDGA, FSGA, SCGA, Texas GA),
+packagers (Golfzoo, Golf Trip Junkie, TripCaddie) and club trips, each with
+nights, rounds, year and what it covered. Cards show it as "What golfers paid",
+separate from posted prices. `build-rates.js` turns it into `src/data/reported.json`.
