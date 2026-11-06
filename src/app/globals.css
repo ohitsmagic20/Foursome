@@ -555,3 +555,13 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
 .state-jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
 .state-jump .chip-btn { padding: 4px 12px; min-height: 34px; text-decoration: none; }
+.resort-list { margin-top: 8px; }
+.resort-list .row { align-items: flex-start; }
+.state-h { margin: 0 0 8px; font-family: var(--font-display), sans-serif; font-size: 22px; font-weight: 700; }
+.resort-states { display: flex; flex-direction: column; gap: 8px; }
+.resort-state { padding: 0; }
+.resort-state summary { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; }
+.resort-state summary::-webkit-details-marker { display: none; }
+.resort-state[open] summary { border-bottom: 1px solid var(--line); }
+.resort-state .list { padding: 0 16px 8px; }
+.resort-row { text-decoration: none; color: inherit; }
