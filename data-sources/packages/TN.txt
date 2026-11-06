@@ -1,0 +1,23 @@
+Hermitage Golf Course|Stay and Play Unlimited Rounds|Old Hickory|TN|General's Retreat;President's Reserve|Per night, unlimited golf, for four|970|group-night|https://www.golftennessee.com/stayandplay/27233
+MeadowView Marriott|Ultimate Golf Package|Kingsport|TN|Cattails at MeadowView||124|trip|https://www.golftennessee.com/stayandplay/27803
+Kirkwood National|Kirkwood National Par Package|Holly Springs|MS|Kirkwood National|2 nights, 3 rounds|255|trip|https://www.golftennessee.com/stayandplay/27292
+Memphis hotels|The Best Memphis Has to Offer|Memphis|TN|Four Memphis-area rounds|3 nights, 4 rounds|429|trip|https://www.golftennessee.com/stayandplay/27291
+Nashville hotels|Nashville Area Eagle Package|Nashville|TN|Four Nashville-area rounds|3 nights, 4 rounds|375|trip|https://www.golftennessee.com/stayandplay/27290
+Gaylord Opryland area|Opryland Stay and Play|Nashville|TN|Three Nashville-area rounds|2 nights, 3 rounds|369|trip|https://www.golftennessee.com/stayandplay/27289
+Downtown Nashville hotels|Music City Downtown Golf Package|Nashville|TN|Two Nashville-area rounds|2 nights, 2 rounds|379|trip|https://www.golftennessee.com/stayandplay/27288
+Nashville hotels|Honky Tonk Golf Getaway|Nashville|TN|Four Nashville-area rounds|3 nights, 4 rounds|440|trip|https://www.golftennessee.com/stayandplay/27275
+Fairfield Glade Resort|Quick Getaway|Fairfield Glade|TN|Fairfield Glade courses|2 nights, 2 rounds|219|trip|https://www.golftennessee.com/stayandplay/27287
+Lake Tansi Resort|Eagle Golf Retreat|Crossville|TN|Lake Tansi|3 nights, 4 rounds|349|trip|https://www.golftennessee.com/stayandplay/27286
+Comfort Inn Knoxville|Knoxville Stay and Play|Knoxville|TN|Two Knoxville-area rounds|2 nights, 2 rounds|229|trip|https://www.golftennessee.com/stayandplay/27284
+Tellico Village|Tellico Village Par Package with breakfast|Loudon|TN|Tellico Village courses|2 nights, 3 rounds|279|trip|https://www.golftennessee.com/stayandplay/27283
+Tellico Village|Tellico Village Eagle Package|Loudon|TN|Tellico Village courses|3 nights, 4 rounds|329|trip|https://www.golftennessee.com/stayandplay/27273
+Pigeon Forge hotels|Play in the Smokies|Pigeon Forge|TN|Two Smokies-area rounds|2 nights, 2 rounds|205|trip|https://www.golftennessee.com/stayandplay/27281
+Pigeon Forge hotels|Big Group Golf Package|Pigeon Forge|TN|Four Smokies-area rounds|3 nights, 4 rounds|449|trip|https://www.golftennessee.com/stayandplay/27271
+Bear Trace at Cumberland Mountain State Park|Stay and Play|Crossville|TN|Bear Trace at Cumberland Mountain||||https://www.golftennessee.com/stayandplay/
+Fall Creek Falls State Park|Stay and Play|Spencer|TN|Fall Creek Falls Golf Course||||https://www.golftennessee.com/stayandplay/
+Henry Horton State Park|Stay and Play|Chapel Hill|TN|Buford Ellington Golf Course||||https://www.golftennessee.com/stayandplay/
+Montgomery Bell State Park|Stay and Play|Burns|TN|Montgomery Bell Golf Course||||https://www.golftennessee.com/stayandplay/
+Paris Landing State Park|Stay and Play|Buchanan|TN|Paris Landing Golf Course||||https://www.golftennessee.com/stayandplay/
+Pickwick Landing State Park|Stay and Play|Pickwick Dam|TN|Pickwick Landing Golf Course||||https://www.golftennessee.com/stayandplay/
+Tennessee National|Stay and Play|Loudon|TN|Tennessee National||||https://www.golftennessee.com/stayandplay/
+Sweetens Cove Golf Club|Stay and Play|South Pittsburg|TN|Sweetens Cove||||https://www.golftennessee.com/stayandplay/

@@ -1,0 +1,6 @@
+The Coeur d'Alene Resort|The Hole-In-One Package|Coeur d'Alene|ID|The Coeur d'Alene Resort (floating green)|1 night, 1 round|||https://www.idahogolf.com/stayandplay/28994
+Coeur d'Alene Casino Resort Hotel|Circling Raven Stay and Play|Worley|ID|Circling Raven|1 night, 1 round|389||https://www.idahogolf.com/stayandplay/29376
+Tamarack Resort|Custom Golf Package|Tamarack|ID|Osprey Meadows||||https://www.idahogolf.com/stayandplay/28138
+Jug Mountain Ranch|Custom Golf Package|McCall|ID|Jug Mountain Ranch||||https://www.idahogolf.com/stayandplay/28139
+StoneRidge|Town Home Stay & Play|Blanchard|ID|StoneRidge|3 nights, 2 rounds|362|trip|https://www.idahogolf.com/stayandplay/28137
+Teton Reserve|Stay & Play|Victor|ID|Teton Reserve|2 nights, 3 rounds|||https://www.idahogolf.com/stayandplay/28136

@@ -1,0 +1,37 @@
+TPC Sawgrass|THE PLAYERS Stadium Package|Ponte Vedra Beach|FL|THE PLAYERS Stadium Course;Dye's Valley|1 night, 1 round|446|trip|https://www.floridagolfer.com/stayandplay/27393
+TPC Sawgrass|Dye's Duo Package|Ponte Vedra Beach|FL|THE PLAYERS Stadium Course;Dye's Valley|2 nights, 2 rounds|724|trip|https://www.floridagolfer.com/stayandplay/27391
+The Ritz-Carlton Orlando, Grande Lakes|Unlimited Golf Package|Orlando|FL|The Ritz-Carlton Golf Club, Grande Lakes|1 night, unlimited golf|499|night|https://www.floridagolfer.com/stayandplay/28599
+Innisbrook Resort|Diamond Golf Package|Palm Harbor|FL|Copperhead;Island;North;South|1 night, 1 round|189|night|https://www.floridagolfer.com/stayandplay/28111
+JW Marriott Marco Island|Golf Getaway|Marco Island|FL|The Rockery|1 night, 2 rounds|629|night|https://www.floridagolfer.com/stayandplay/28097
+The Ritz-Carlton Golf Resort, Naples|Stay & Play|Naples|FL|Tiburón (Gold);Tiburón (Black)|1 night, 1 round|629|night|https://www.floridagolfer.com/stayandplay/28105
+Mission Inn Resort & Club|Unlimited Golf Package|Howey-in-the-Hills|FL|El Campeón;Las Colinas|2 nights, unlimited golf|232||https://www.floridagolfer.com/stayandplay/28098
+Mission Inn Resort & Club|Mission Inn Special|Howey-in-the-Hills|FL|El Campeón;Las Colinas|4 nights, 4 rounds|170|night|https://www.floridagolfer.com/stayandplay/27737
+Walt Disney World|Golf Getaway, 3 nights|Lake Buena Vista|FL|Magnolia;Palm;Lake Buena Vista|3 nights, 3 rounds|294|night|https://www.floridagolfer.com/stayandplay/28116
+Naples Grande Beach Resort|Golf Package|Naples|FL|Naples Grande Golf Club|3 nights, 3 rounds|975||https://www.floridagolfer.com/stayandplay/28787
+PGA National Resort|Golf Package|Palm Beach Gardens|FL|The Champion;The Palmer;The Fazio;The Match;The Staple|2 nights, 2 rounds|615||https://www.floridagolfer.com/stayandplay/28746
+Saddlebrook Resort|Golf Package|Wesley Chapel|FL|Saddlebrook;Palmer|3 nights, 3 rounds|505||https://www.floridagolfer.com/stayandplay/28771
+Orange County National|Golf Package with the Lodge|Winter Garden|FL|Panther Lake;Crooked Cat|3 nights, 3 rounds|459||https://www.floridagolfer.com/stayandplay/28784
+Renaissance World Golf Village|Golf Package|St. Augustine|FL|Slammer & Squire;King & Bear|3 nights, 3 rounds|655||https://www.floridagolfer.com/stayandplay/28768
+Mystic Dunes Resort|Golf Package|Celebration|FL|Mystic Dunes|2 nights, 3 rounds|265||https://www.floridagolfer.com/stayandplay/27304
+Orange Lake Resort|Stay and Play|Kissimmee|FL|Legends;Crane's Bay;Reserve|2 nights, 3 rounds|279||https://www.floridagolfer.com/stayandplay/27302
+Grand Cypress|Grand Cypress Golf|Orlando|FL|The New Course;North;South;East|3 nights, 4 rounds|849||https://www.floridagolfer.com/stayandplay/27301
+Lake Jovita Golf & Country Club|Stay and Play Par Package|Dade City|FL|Lake Jovita (North);Lake Jovita (South)|3 nights, 4 rounds|412||https://www.floridagolfer.com/stayandplay/27300
+Sebring golf courses|Stay and Play|Sebring|FL|Sun 'N Lake (Deer Run);Sun 'N Lake (Turtle Run);Sebring Golf Club;Golf Hammock;Pinecrest;River Greens;Highlands Ridge|1 night, 1 round|99||https://www.floridagolfer.com/stayandplay/27509
+Inverrary Country Club|Fort Lauderdale Golf Package|Lauderhill|FL|Inverrary (East);Inverrary (West)|1 night, 1 round|199||https://www.floridagolfer.com/stayandplay/28581
+Cypress Head Golf Club|Daytona Golf Package|Port Orange|FL|Cypress Head|3 nights, 3 rounds|370||https://www.floridagolfer.com/stayandplay/28323
+Sandestin Golf and Beach Resort|The Classic Golf Package|Miramar Beach|FL|Baytowne;Burnt Pine;Raven;The Links|2 nights, 2 rounds|||https://www.floridagolfer.com/stayandplay/28964
+Bay Point Resort|Unlimited Golf Stay and Play|Panama City Beach|FL|Bay Point (Meadows)|1 night, unlimited golf|||https://www.floridagolfer.com/stayandplay/28038
+Hammock Beach Golf Resort|Stay and Play|Palm Coast|FL|The Ocean;The Conservatory||||https://www.floridagolfer.com/stayandplay/29091
+The Resort at Longboat Key Club|1 Night, 1 Round|Longboat Key|FL|Harbourside (Islandside)|1 night, 1 round|||https://www.floridagolfer.com/stayandplay/28122
+LaPlaya Beach & Golf Resort|Noble Adventures Package|Naples|FL|LaPlaya Golf Club|1 night, 1 round|||https://www.floridagolfer.com/stayandplay/28119
+Seagate Hotel & Spa|Winter Golf Package|Delray Beach|FL|Seagate Country Club|1 night, 1 round|||https://www.floridagolfer.com/stayandplay/28120
+Marriott Hutchinson Island Beach Resort|Swing & Stay|Stuart|FL|Martin County courses||||https://www.floridagolfer.com/stayandplay/29210
+Don Shula's Hotel & Golf Club|Custom Golf Packages|Miami Lakes|FL|Senator;Executive||||https://www.floridagolfer.com/stayandplay/28135
+LPGA International|Daytona Stay and Play|Daytona Beach|FL|Champions;Jones||||https://www.floridagolfer.com/stayandplay/28671
+Shingle Creek Golf Club|Orlando Golf Package|Orlando|FL|Shingle Creek|1 night, 1 round|||https://www.floridagolfer.com/stayandplay/28485
+Lost Key Golf Club|Gulf Shores & Pensacola Golf Package|Pensacola|FL|Lost Key||||https://www.floridagolfer.com/stayandplay/31227
+Crandon Golf at Key Biscayne|Golf Package|Key Biscayne|FL|Crandon Golf|3 nights, 3 rounds|||https://www.floridagolfer.com/stayandplay/28767
+Hyatt House Naples|5-Night Naples Golf Package|Bonita Springs|FL|Raptor Bay|5 nights, 4 rounds|||https://www.floridagolfer.com/stayandplay/28789
+The Dunes Golf & Tennis Club|Sanibel Stay and Play|Sanibel|FL|The Dunes||||https://www.floridagolfer.com/stayandplay/27850
+Citrus Golf Trail|Group Getaway|Sebring|FL|Citrus Golf Trail courses||||https://www.floridagolfer.com/stayandplay/31340
+Emerald Greens Condo Resort|Tampa Golf Package|Tampa|FL|Carrollwood Country Club;Area courses|2 nights, 2 rounds|475||https://www.floridagolfer.com/stayandplay/27324

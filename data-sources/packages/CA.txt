@@ -1,0 +1,23 @@
+The Lodge at Torrey Pines|Torrey Pines Golf Package|La Jolla|CA|Torrey Pines (South);Torrey Pines (North)|3 nights, 2 rounds|465|night|https://www.cagolf.com/stayandplay/29011
+Pebble Beach Resorts|Casa Palmero Golf Package|Pebble Beach|CA|Pebble Beach Golf Links;Spyglass Hill;The Links at Spanish Bay|2 nights, 2 rounds|2299||https://www.cagolf.com/stayandplay/28752
+Pebble Beach Resorts|Inn at Spanish Bay, 3 Nights, 3 Rounds|Pebble Beach|CA|Pebble Beach Golf Links;Spyglass Hill;The Links at Spanish Bay|3 nights, 3 rounds|2895||https://www.cagolf.com/stayandplay/28759
+TPC Monterey|Signature Golf Package|Monterey|CA|TPC Monterey|2 nights, 1 round|746|trip|https://www.cagolf.com/stayandplay/31338
+Quail Lodge & Golf Club|Carmel Package|Carmel|CA|Quail Lodge|1 night, 1 round|309||https://www.cagolf.com/stayandplay/28438
+La Quinta Resort & Club|PGA West Golf Package|La Quinta|CA|PGA West (Stadium);La Quinta (Mountain);La Quinta (Dunes)|3 nights, 3 rounds|519||https://www.cagolf.com/stayandplay/28683
+Westin Rancho Mirage Golf Resort|Golf Package|Rancho Mirage|CA|Westin Mission Hills (Pete Dye);Westin Mission Hills (Gary Player)|3 nights, 3 rounds|739||https://www.cagolf.com/stayandplay/28681
+Hyatt Regency Indian Wells|Golf Package|Indian Wells|CA|Indian Wells Golf Resort (Players);Indian Wells Golf Resort (Celebrity)|3 nights, 3 rounds|449||https://www.cagolf.com/stayandplay/28684
+Hilton Garden Inn Rancho Mirage|Golf Package|Rancho Mirage|CA|Three Coachella Valley rounds|3 nights, 3 rounds|639||https://www.cagolf.com/stayandplay/28812
+Mission Hills Palm Springs|Ultimate Mission Hills Package|Rancho Mirage|CA|Mission Hills (Dinah Shore);Mission Hills (Arnold Palmer);Mission Hills (Pete Dye)|4 nights, 4 rounds|112|night|https://www.cagolf.com/stayandplay/27718
+Marriott's Shadow Ridge|Custom Stay and Play|Palm Desert|CA|Shadow Ridge||129|night|https://www.cagolf.com/stayandplay/28022
+Park Hyatt Aviara|Golf Package|Carlsbad|CA|Aviara Golf Club|3 nights, 3 rounds|1969||https://www.cagolf.com/stayandplay/28826
+Singing Hills Golf Resort|Golf Package|El Cajon|CA|Singing Hills (Willow Glen);Singing Hills (Oak Glen)|3 nights, 3 rounds|499|trip|https://www.cagolf.com/stayandplay/28693
+Lake San Marcos Resort|St. Mark 1 Night, 1 Round|San Marcos|CA|St. Mark Golf Club|1 night, 1 round|229||https://www.cagolf.com/stayandplay/27978
+Barona Resort & Casino|Golf and Gaming Package|Lakeside|CA|Barona Creek|1 night, 1 round|||https://www.cagolf.com/stayandplay/28020
+Waldorf Astoria Monarch Beach|Unlimited Golf|Dana Point|CA|Monarch Beach Golf Links|1 night, unlimited golf|529|night|https://www.cagolf.com/stayandplay/28086
+Ojai Valley Inn|Unlimited Golf for One|Ojai|CA|Ojai Valley Inn|1 night, unlimited golf|474|night|https://www.cagolf.com/stayandplay/28025
+Silverado Resort|Fairways & Fine Wines|Napa|CA|Silverado (North);Silverado (South)|3 nights, 3 rounds|1299||https://www.cagolf.com/stayandplay/31262
+The Oasis at Death Valley|Stay and Play|Furnace Creek|CA|Furnace Creek Golf Course|1 night, 1 round|||https://www.cagolf.com/stayandplay/28090
+Rams Hill|Stay and Play|Borrego Springs|CA|Rams Hill||||https://www.cagolf.com/stayandplay/27236
+Rolling Hills Casino Resort|Casino Stay and Play|Corning|CA|The Links at Rolling Hills||||https://www.cagolf.com/stayandplay/27652
+Temecula wine country hotels|Temecula Stay and Play|Temecula|CA|CrossCreek;Temecula-area courses||||https://www.cagolf.com/stayandplay/29123
+Truckee and Tahoe lodging|Golf and Gaming Tahoe Package|Truckee|CA|Old Greenwood;Gray's Crossing;Schaffer's Mill;Grizzly Ranch||||https://www.cagolf.com/stayandplay/28428

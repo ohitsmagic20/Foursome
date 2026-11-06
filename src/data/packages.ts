@@ -10,13 +10,13 @@ export interface StayPlay {
   city: string;
   state: string;
   /** Airports a group would fly into; used to match a trip's destination. */
-  airports: string[];
+  airports?: string[];
   courses: string[];
   /** Nights and rounds as offered, e.g. "3 nights, 4 rounds" or "Up to 5 nights, up to 4 rounds". */
   shape?: string;
   includes?: string;
   /** Published starting price. Missing means the resort quotes per group. */
-  price?: { from: number; per: 'person per night' | 'golfer per trip'; to?: number; note?: string };
+  price?: { from: number; per: 'person per night' | 'golfer per trip' | 'as listed'; to?: number; note?: string };
   /** Where to see current rates and book. */
   url: string;
   source: string;
@@ -203,10 +203,15 @@ export const STATE_NAMES: Record<string, string> = {
 export function packagesFor(dest: { name: string; airports?: string[] }): StayPlay[] {
   const ports = new Set((dest.airports || []).map((a) => a.toUpperCase()));
   const [city = '', st = ''] = dest.name.split(',').map((x) => x.trim().toLowerCase());
-  return PACKAGES.filter((p) => p.airports.some((a) => ports.has(a)) || (p.city.toLowerCase() === city && p.state.toLowerCase() === st.slice(0, 2)))
+  return PACKAGES.filter((p) => (p.airports || []).some((a) => ports.has(a)) || (p.city.toLowerCase() === city && p.state.toLowerCase() === st.slice(0, 2)))
     .sort((a, b) => (a.price?.from ?? 1e9) - (b.price?.from ?? 1e9));
 }
 
-export const priceLabel = (p: StayPlay) => !p.price ? 'Quoted per group'
-  : p.price.per === 'golfer per trip' ? `$${p.price.from.toLocaleString('en-US')}–${p.price.to?.toLocaleString('en-US') ?? ''}+ per golfer`
-  : `From $${p.price.from}${p.price.to ? `–${p.price.to}` : ''} per person a night`;
+export function priceLabel(p: StayPlay): string {
+  if (!p.price) return 'Quoted per group';
+  const $ = (n: number) => `$${n.toLocaleString('en-US')}`;
+  const { from, to, per } = p.price;
+  if (per === 'person per night') return `From ${$(from)}${to ? `–${$(to).slice(1)}` : ''} per person a night`;
+  if (per === 'golfer per trip') return to ? `${$(from)}–${$(to).slice(1)}+ per golfer` : `From ${$(from)} per golfer`;
+  return `From ${$(from)}`;
+}

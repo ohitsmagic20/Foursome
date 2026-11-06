@@ -13,3 +13,14 @@ To rebuild `src/data/resorts.json` (adds each town's coordinates):
 
 `alias.json` maps small towns the city dataset doesn't include to the nearest
 larger town.
+
+## Packages
+
+`packages/*.txt` lists stay-and-play packages, one file per state, collected
+November 2026 from the GolfTrips network's state sites (arizonagolfer.com,
+golfmichigan.com, scgolf.com, floridagolfer.com and the rest) and GolfPass:
+`Resort | Package | Town | ST | course; course; … | nights and rounds | price | basis | URL`
+
+To rebuild `src/data/listings.json`:
+
+    node build-packages.js data-sources/packages src/data/listings.json

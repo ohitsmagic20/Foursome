@@ -1,0 +1,45 @@
+A-Ga-Ming Golf Resort|The Torch Lake Package|Kewadin|MI|Torch;Sundance;Antrim Dells|2 nights, 2 rounds|300|trip|https://www.golfmichigan.com/stayandplay/28507
+A-Ga-Ming Golf Resort|A-Ga-Ming Golf Package|Kewadin|MI|Torch;Sundance;Antrim Dells;Charlevoix CC|3 nights, 4 rounds|500|trip|https://www.golfmichigan.com/stayandplay/27143
+Bay Harbor Golf Club|The Champions Golf Package|Bay Harbor|MI|Bay Harbor Golf Club;Boyne courses|1 night, 1 round|735|night|https://www.golfmichigan.com/stayandplay/27783
+Bay Valley Resort|Weekday Golf Package|Bay City|MI|Bay Valley Golf Course|1 night, 1 round|159||https://www.golfmichigan.com/stayandplay/27167
+Black Lake Golf Club|The Tour Package|Onaway|MI|Black Lake;Area courses|2 nights, 4 rounds|245||https://www.golfmichigan.com/stayandplay/29175
+Boyne Mountain Resort|Super 5 Golf Vacation (unlimited golf)|Boyne Falls|MI|The Monument;The Alpine;The Heather;The Moor;Crooked Tree;Bay Harbor|5 nights, unlimited golf|||https://www.golfmichigan.com/stayandplay/27778
+The Highlands at Harbor Springs|Unlimited Golf Package|Harbor Springs|MI|The Heather;The Moor;Donald Ross Memorial;Arthur Hills|1 night, unlimited golf|||https://www.golfmichigan.com/stayandplay/27769
+Shanty Creek Resort|90 Holes for $90|Bellaire|MI|The Legend;Cedar River;Schuss Mountain;Summit;Hawk's Eye|3 nights, 5 rounds|90|golf-only|https://www.golfmichigan.com/stayandplay/27814
+Crystal Mountain|Unlimited Golf Package|Thompsonville|MI|Betsie Valley;Mountain Ridge||||https://www.golfmichigan.com/stayandplay/29182
+Forest Dunes Golf Club|Custom Stay and Play|Roscommon|MI|Forest Dunes;The Loop||||https://www.golfmichigan.com/stayandplay/31293
+Grand Traverse Resort|Championship Golf Getaway|Traverse City|MI|The Bear;Spruce Run;Wolverine|2 nights, 2 rounds|||https://www.golfmichigan.com/stayandplay/27513
+Island Resort & Casino|The Perfect 4-Some (Greywalls, Sweetgrass, Sage Run)|Harris|MI|Sweetgrass;Sage Run;Greywalls|2 nights, 3 rounds|300|trip|https://www.golfmichigan.com/stayandplay/27763
+Island Resort & Casino|Sweetgrass Stay and Play|Harris|MI|Sweetgrass;Sage Run|1 night, 1 round|136||https://www.golfmichigan.com/stayandplay/27665
+Gull Lake View Golf Club & Resort|Custom Golf Packages|Augusta|MI|East;West;Stonehedge North;Stonehedge South;Bedford Valley;Stoatin Brae|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/28183
+Harbor Shores Resort|Custom Stay and Play|Benton Harbor|MI|Harbor Shores||||https://www.golfmichigan.com/stayandplay/27682
+Manistee National Golf & Resort|Weekday 36-hole Package|Manistee|MI|Canthooke Valley;Cutters Ridge|1 night, 2 rounds|173||https://www.golfmichigan.com/stayandplay/27733
+Treetops Resort|Traditional Stay and Play|Gaylord|MI|Masterpiece;Premier;Signature;Tradition;Threetops|1 night, 1 round|107|trip|https://www.golfmichigan.com/stayandplay/28164
+Treetops Resort|5-3-1 Package, all five courses|Gaylord|MI|Masterpiece;Premier;Signature;Tradition;Threetops|3 nights, 5 rounds|465|trip|https://www.golfmichigan.com/stayandplay/28402
+FireKeepers Casino Hotel|Golf and Casino Package|Marshall|MI|The Medalist|1 night, 1 round|100|trip|https://www.golfmichigan.com/stayandplay/28109
+Lakeview Hills Resort|Weekday Stay & Play, unlimited golf|Lexington|MI|Lakeview Hills (North);Lakeview Hills (South)|1 night, unlimited golf|185|trip|https://www.golfmichigan.com/stayandplay/27825
+Candlestone Inn Golf & Resort|Weekend Golf Getaway|Belding|MI|Candlestone|1 night, 1 round|99|trip|https://www.golfmichigan.com/stayandplay/28173
+Grand Rapids area hotels|Par Package|Grand Rapids|MI|The Mines;Thornapple Pointe;Pilgrim's Run;Boulder Creek|1 night, 1 round|153||https://www.golfmichigan.com/stayandplay/27571
+Arthur Hills Golf Trail|2 Nights, 3 Rounds|Ann Arbor|MI|Leslie Park;Stonebridge;The Legacy|2 nights, 3 rounds|99||https://www.golfmichigan.com/stayandplay/27361
+Ravines Golf Club|Summer Stay & Play|Saugatuck|MI|Ravines|1 night, 2 rounds|179||https://www.golfmichigan.com/stayandplay/28184
+Lakewood Shores Resort|Weekday Summer Golf Package|Oscoda|MI|Gailes;Serradella;Blackshire|1 night, 1 round|189||https://www.golfmichigan.com/stayandplay/28179
+Timber Ridge Golf Club|Stay & Play Travel Package|East Lansing|MI|Timber Ridge|1 night, 1 round|112||https://www.golfmichigan.com/stayandplay/28169
+Grand Hotel|Golf at Grand Hotel|Mackinac Island|MI|The Jewel|1 night, unlimited golf|||https://www.golfmichigan.com/stayandplay/28167
+Arcadia Bluffs|Custom Golf and Lodging|Arcadia|MI|Arcadia Bluffs (Bluffs);Arcadia Bluffs (South)|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/25111
+Bay Mills Resort & Casino|Casino and Golf Package|Brimley|MI|Wild Bluff;Wild Bluff Driving Range|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/27410
+Little River Casino Resort|Golf & Stay|Manistee|MI|Wolf River Golf Park|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/28480
+Soaring Eagle Casino & Resort|Golf and Casino Package|Mount Pleasant|MI|Bucks Run;PohlCat|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/27495
+Caberfae Peaks|Unlimited Golf Package|Cadillac|MI|Caberfae Peaks||||https://www.golfmichigan.com/stayandplay/27356
+Evergreen Resort|1 Night, 2 Rounds|Cadillac|MI|Lakewood on the Green;Eldorado|1 night, 2 rounds|||https://www.golfmichigan.com/stayandplay/28171
+Dunmaglas Golf Club|Stay at The Cottages|Charlevoix|MI|Dunmaglas||||https://www.golfmichigan.com/stayandplay/27445
+LochenHeath Golf Club|Cottage Stay and Play|Williamsburg|MI|LochenHeath||||https://www.golfmichigan.com/stayandplay/28442
+True North Golf Club|Northern Michigan Stay and Play|Harbor Springs|MI|True North||||https://www.golfmichigan.com/stayandplay/29160
+HawksHead Links|Stay at The Inn at HawksHead|South Haven|MI|HawksHead Links|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/28181
+Island Hills Golf Club|Golf Villas Stay and Play|Centreville|MI|Island Hills||||https://www.golfmichigan.com/stayandplay/27583
+Otsego Resort|Custom Stay and Play|Gaylord|MI|The Tribute;The Classic|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/28494
+The Loon Golf Resort|Custom Stay and Play|Gaylord|MI|The Loon||||https://www.golfmichigan.com/stayandplay/28185
+Lac Vieux Desert Resort Casino|Casino Stay and Play|Watersmeet|MI|Lac Vieux Desert Golf Course||||https://www.golfmichigan.com/stayandplay/28180
+George Young Recreational Complex|U.P. Golf and Lodging|Gaastra|MI|George Young Golf Club||||https://www.golfmichigan.com/stayandplay/28712
+Indian River Golf Club|Stay and Play|Indian River|MI|Indian River Golf Club||||https://www.golfmichigan.com/stayandplay/28166
+Turtle Creek Casino & Hotel|Casino and Golf Package|Williamsburg|MI|Area courses|1 night, 1 round|||https://www.golfmichigan.com/stayandplay/27514
+Marquette Golf Club|Custom Stay and Play, Marquette and Greywalls|Marquette|MI|Heritage;Greywalls||||https://www.golfmichigan.com/stayandplay/27912

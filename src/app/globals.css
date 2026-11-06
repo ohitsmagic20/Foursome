@@ -553,6 +553,7 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-price.quote { color: var(--muted); font-weight: 600; }
 .pkg-courses { font-size: 14px; line-height: 1.4; }
 .pkg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.pkg-foot .btn { flex-shrink: 0; white-space: nowrap; }
 .state-jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
 .state-jump .chip-btn { padding: 4px 12px; min-height: 34px; text-decoration: none; }
 .resort-list { margin-top: 8px; }
@@ -564,4 +565,6 @@ tr.me .mark.none { border-color: var(--green); }
 .resort-state summary::-webkit-details-marker { display: none; }
 .resort-state[open] summary { border-bottom: 1px solid var(--line); }
 .resort-state .list { padding: 0 16px 8px; }
+.resort-state .list-cards { padding: 12px; }
+.resort-state .list-cards .card { box-shadow: none; }
 .resort-row { text-decoration: none; color: inherit; }
