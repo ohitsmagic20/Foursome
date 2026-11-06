@@ -12,6 +12,8 @@ export interface Trip {
   food: number;
   /** When voting closes for each single-winner decision (ISO time). Missing before migration 007. */
   deadlines?: Partial<Record<'date' | 'destination' | 'lodging', string>>;
+  /** The Cup (migration 008): null = not set up; missing = database not updated. */
+  cup?: Cup | null;
 }
 
 export interface Member {
@@ -431,4 +433,112 @@ export function packingTips(days: WeatherDay[], start: string, rounds: { day: nu
   const windy = days.filter((d) => (d.wind ?? 0) >= 18).sort((a, b) => b.wind! - a.wind!);
   if (windy.length) tips.push({ score: 1, text: `Windy ${label(windy[0].date)} (${windy[0].wind} mph): a windbreaker and a few extra balls.` });
   return tips.sort((a, b) => b.score - a.score).map((t) => t.text).slice(0, 4);
+}
+
+/* ---------- the Cup: team match play, Internet Invitational style ---------- */
+export type CupFormat = 'scramble' | 'alt' | 'bestball' | 'singles';
+export const CUP_FORMATS: Record<CupFormat, { label: string; per: number; blurb: string }> = {
+  scramble: { label: 'Scramble', per: 2, blurb: 'Both hit, play the better shot. Low pressure.' },
+  alt: { label: 'Alternate shot', per: 2, blurb: 'One ball, take turns. Pressure on every swing.' },
+  bestball: { label: 'Best ball', per: 2, blurb: 'Everyone plays their own ball; the better score on each hole counts.' },
+  singles: { label: 'Singles', per: 1, blurb: 'One on one. No one to hide behind.' },
+};
+export const CUP_MARGINS = ['1 up', '2 up', '2&1', '3&1', '3&2', '4&2', '4&3', '5&3', '5&4', '6&4', '6&5', '7&5', '7&6', '8&6', '8&7', '9&8', '10&8'];
+export interface CupTeam { name: string; captain: string; members: string[] }
+export type CupResult = 'a' | 'b' | 'half';
+export interface CupMatch { id: string; round: string; format: CupFormat; holes: 9 | 18; a: string[]; b: string[]; result?: CupResult | null; margin?: string; twice?: string[] }
+export interface Cup { name: string; teams: [CupTeam, CupTeam]; drafting: boolean; matches: CupMatch[]; sitting?: Record<string, string[]> }
+
+/** Team points so far (1 a win, ½ a half), points on the table, and what clinches it. */
+export function cupScore(cup: Cup) {
+  let a = 0, b = 0, played = 0;
+  for (const m of cup.matches) {
+    if (!m.result) continue;
+    played++;
+    if (m.result === 'a') a++; else if (m.result === 'b') b++; else { a += 0.5; b += 0.5; }
+  }
+  const total = cup.matches.length;
+  return { a, b, played, total, toWin: total / 2 + 0.5, left: total - played };
+}
+
+/** "4½" */
+export const pts = (n: number) => `${Math.floor(n) || (n % 1 ? '' : '0')}${n % 1 ? '½' : ''}`;
+
+/** Points each player has earned for their team. */
+export function cupPlayerPoints(cup: Cup): Map<string, { pts: number; played: number; w: number; l: number; h: number }> {
+  const out = new Map<string, { pts: number; played: number; w: number; l: number; h: number }>();
+  const add = (id: string, p: number, r: 'w' | 'l' | 'h') => { const x = out.get(id) || { pts: 0, played: 0, w: 0, l: 0, h: 0 }; x.pts += p; x.played++; x[r]++; out.set(id, x); };
+  for (const m of cup.matches) {
+    if (!m.result) continue;
+    for (const id of m.a) add(id, m.result === 'a' ? 1 : m.result === 'half' ? 0.5 : 0, m.result === 'a' ? 'w' : m.result === 'half' ? 'h' : 'l');
+    for (const id of m.b) add(id, m.result === 'b' ? 1 : m.result === 'half' ? 0.5 : 0, m.result === 'b' ? 'w' : m.result === 'half' ? 'h' : 'l');
+  }
+  return out;
+}
+
+/** Whose pick it is in a snake draft (A, B, B, A, A, B…), counting picks after the captains. */
+export function draftTurn(cup: Cup): 0 | 1 {
+  const picks = cup.teams[0].members.length + cup.teams[1].members.length - 2;
+  return ([0, 1, 1, 0] as const)[picks % 4];
+}
+
+/** Seeded shuffle, so "Shuffle" gives new partners but the server and the app agree. */
+export function seededShuffle<T>(list: T[], seed: number): T[] {
+  const a = list.slice();
+  let s = (Math.abs(Math.floor(seed)) % 2147483646) + 1;
+  for (let i = a.length - 1; i > 0; i--) { s = (s * 16807) % 2147483647; const j = s % (i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/** Matches for one round: each team split into sides of 1 or 2, side i of A against side i of B.
+ *  The bigger team sets the number of matches; on the smaller team, players fill the extra slots by
+ *  playing a second match (listed in `twice`). An odd player out on a team sits and plays first next time. */
+export function buildMatches(cup: Cup, round: string, format: CupFormat, holes: 9 | 18, seed: number): { matches: CupMatch[]; sitting: string[] } {
+  const per = CUP_FORMATS[format].per;
+  const [ta, tb] = cup.teams.map((t, i) => seededShuffle(t.members, seed + i * 7919));
+  const sat = new Set(Object.values(cup.sitting || {}).flat());
+  const first = (l: string[]) => [...l.filter((id) => sat.has(id)), ...l.filter((id) => !sat.has(id))];
+  const a = first(ta), b = first(tb);
+  const sides = (l: string[]) => Math.floor(l.length / per);
+  const n = Math.min(Math.max(sides(a), sides(b)), 12);
+  if (!n || sides(a) === 0 || sides(b) === 0) return { matches: [], sitting: [...a, ...b] };
+  // Fill n sides for a team, reusing its players (fewest matches first) when it's short.
+  const fill = (l: string[]) => {
+    const own = sides(l) * per;
+    const slots = l.slice(0, own);
+    const uses = new Map<string, number>(slots.map((id) => [id, 1]));
+    while (slots.length < n * per) {
+      const side = slots.slice(Math.floor(slots.length / per) * per);
+      const next = l.filter((id) => !side.includes(id)).sort((x, y) => (uses.get(x) || 0) - (uses.get(y) || 0))[0];
+      slots.push(next);
+      uses.set(next, (uses.get(next) || 0) + 1);
+    }
+    return { slots, left: l.slice(own).filter((id) => !uses.has(id)) };
+  };
+  const fa = fill(a), fb = fill(b);
+  const seen = new Set<string>();
+  const matches: CupMatch[] = Array.from({ length: n }, (_, i) => {
+    const sa = fa.slots.slice(i * per, i * per + per), sb = fb.slots.slice(i * per, i * per + per);
+    const twice = [...sa, ...sb].filter((id) => seen.has(id));
+    [...sa, ...sb].forEach((id) => seen.add(id));
+    return { id: `${round.slice(0, 8)}-${seed.toString(36)}-${i}`, round, format, holes, a: sa, b: sb, result: null, ...(twice.length ? { twice } : {}) };
+  });
+  return { matches, sitting: [...fa.left, ...fb.left] };
+}
+
+/** Tee-time groups from matches: a 2-v-2 match is a foursome; two singles matches share a tee time. */
+export function groupsFromMatches(matches: CupMatch[], sitting: string[] = []): string[][] {
+  const groups: string[][] = [];
+  const placed = new Set<string>();
+  for (const m of matches) {
+    const players = [...m.a, ...m.b].filter((id) => !placed.has(id));
+    players.forEach((id) => placed.add(id));
+    const last = groups[groups.length - 1];
+    if (last && last.length + players.length <= 4) last.push(...players); else groups.push(players);
+  }
+  for (const id of sitting) {
+    const open = groups.find((g) => g.length < 4);
+    if (open) open.push(id); else groups.push([id]);
+  }
+  return groups;
 }

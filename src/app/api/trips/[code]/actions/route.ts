@@ -1,7 +1,7 @@
 import { after } from 'next/server';
-import type { Kind, LodgingData, Member, Trip } from '@/lib/shared';
+import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { autoRooms, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { autoRooms, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
@@ -289,6 +289,96 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         mustOrganize(me);
         const r = await db().from('trip_ideas').delete().eq('trip_id', trip.id);
         if (r.error) throw r.error;
+        break;
+      }
+      case 'cup': {
+        // The Cup: two teams (drafted or random), match-play matches per round, and results.
+        const { data: everyone } = await db().from('members').select('id,name').eq('trip_id', trip.id);
+        const ids = new Set((everyone || []).map((m) => m.id));
+        const nameOf = (id: string) => first((everyone || []).find((m) => m.id === id)?.name || '');
+        const op = str(b.op, 12);
+        let cup = (trip.cup || null) as Cup | null;
+        if (cup) cup = { ...cup, teams: cup.teams.map((t) => ({ ...t, members: t.members.filter((id) => ids.has(id)) })) as Cup['teams'] };
+        const onTeam = (id: string) => (cup ? cup.teams.findIndex((t) => t.members.includes(id)) : -1);
+        if (op === 'setup') {
+          mustOrganize(me);
+          const caps = (Array.isArray(b.captains) ? b.captains : []).map(String);
+          if (caps.length !== 2 || caps[0] === caps[1] || !caps.every((c) => ids.has(c))) throw new HttpError(400, 'Pick two different captains.');
+          const names = (Array.isArray(b.teamNames) ? b.teamNames : []).map((x) => str(x, 30));
+          const teams = caps.map((c, i) => ({ name: names[i] || `Team ${nameOf(c)}`, captain: c, members: [c] })) as Cup['teams'];
+          const random = b.mode === 'random';
+          if (random) {
+            const rest = seededShuffle([...ids].filter((id) => !caps.includes(id)), Date.now() % 100000);
+            rest.forEach((id, i) => teams[([0, 1, 1, 0] as const)[i % 4]].members.push(id));
+          }
+          cup = { name: str(b.name, 40) || `${trip.name} Cup`, teams, drafting: !random, matches: [], sitting: {} };
+          pings.push(['others', { title: trip.name, body: random ? `The teams are set for the ${cup.name}. See whose side you’re on.` : `${cup.name}: ${nameOf(caps[0])} and ${nameOf(caps[1])} are captains. The draft is on.`, url: url('golf'), tag: 'cup' }, 0]);
+        } else {
+          if (!cup) throw new HttpError(400, 'Set up the cup first.');
+          if (op === 'pick') {
+            const who = str(b.member, 40);
+            const turn = draftTurn(cup);
+            if (!cup.drafting) throw new HttpError(400, 'The draft is over.');
+            if (me.id !== cup.teams[turn].captain && !me.is_organizer) throw new HttpError(403, `It’s ${nameOf(cup.teams[turn].captain)}’s pick.`);
+            if (!ids.has(who) || onTeam(who) >= 0) throw new HttpError(400, 'That player is already on a team.');
+            cup.teams[turn].members.push(who);
+            if ([...ids].every((id) => onTeam(id) >= 0)) cup.drafting = false;
+            pings.push(['others', { title: cup.name, body: `${cup.teams[turn].name} drafted ${nameOf(who)}.`, url: url('golf'), tag: 'cup-draft' }, 0]);
+          } else if (op === 'move') {
+            mustOrganize(me);
+            const who = str(b.member, 40), to = int(b.team, 0, 1, 0);
+            if (!ids.has(who)) throw new HttpError(400, 'That person isn’t on the trip.');
+            if (cup.teams.some((t) => t.captain === who) && onTeam(who) !== to) throw new HttpError(400, 'Captains stay with their team.');
+            cup.teams.forEach((t) => { t.members = t.members.filter((id) => id !== who); });
+            cup.teams[to].members.push(who);
+            if ([...ids].every((id) => onTeam(id) >= 0)) cup.drafting = false;
+          } else if (op === 'matches') {
+            mustOrganize(me);
+            const roundId = str(b.round, 40);
+            const { data: round } = await db().from('options').select('id,data,locked').eq('id', roundId).eq('trip_id', trip.id).eq('kind', 'round').maybeSingle();
+            if (!round || !round.locked) throw new HttpError(400, 'Add the round to the plan first.');
+            const format = (Object.keys(CUP_FORMATS).includes(String(b.format)) ? b.format : 'scramble') as CupFormat;
+            const holes = Number(b.holes) === 9 ? 9 : 18;
+            if (cup.matches.some((m) => m.round === roundId && m.result) && b.force !== true) throw new HttpError(409, 'Results are already in for this round. Clear them first.');
+            const built = buildMatches(cup, roundId, format, holes, Number(b.seed) || Date.now() % 100000);
+            if (!built.matches.length) throw new HttpError(400, `Each team needs at least ${CUP_FORMATS[format].per} players for ${CUP_FORMATS[format].label.toLowerCase()}.`);
+            cup.matches = [...cup.matches.filter((m) => m.round !== roundId), ...built.matches];
+            cup.sitting = { ...(cup.sitting || {}), [roundId]: built.sitting };
+            // The matches are the tee-time groups.
+            await db().from('options').update({ data: { ...(round.data as object), groups: groupsFromMatches(built.matches, built.sitting) } }).eq('id', roundId);
+            pings.push(['others', { title: cup.name, body: `Matches are set for ${String((round.data as { course?: string }).course)}: ${CUP_FORMATS[format].label.toLowerCase()}, ${holes} holes.`, url: url('golf'), tag: 'cup' }, 0]);
+          } else if (op === 'clear_round') {
+            mustOrganize(me);
+            const roundId = str(b.round, 40);
+            cup.matches = cup.matches.filter((m) => m.round !== roundId);
+            if (cup.sitting) delete cup.sitting[roundId];
+          } else if (op === 'result') {
+            const m = cup.matches.find((x) => x.id === str(b.match, 60));
+            if (!m) throw new HttpError(404, 'That match isn’t in the cup anymore.');
+            const r = b.result === 'a' || b.result === 'b' || b.result === 'half' ? b.result : null;
+            const before = cupScore(cup);
+            m.result = r;
+            m.margin = r && r !== 'half' && CUP_MARGINS.includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
+            const after = cupScore(cup);
+            if (r) {
+              const side = (x: string[]) => x.map(nameOf).join(' & ');
+              const text = r === 'half' ? `${side(m.a)} and ${side(m.b)} halved their match.` : `${side(r === 'a' ? m.a : m.b)} beat ${side(r === 'a' ? m.b : m.a)}${m.margin ? `, ${m.margin}` : ''}.`;
+              const won = [after.a, after.b].findIndex((x, i) => x >= after.toWin && [before.a, before.b][i] < before.toWin);
+              pings.push(['others', { title: cup.name, body: won >= 0 ? `${cup.teams[won].name} wins the ${cup.name}! ${pts(after.a)}–${pts(after.b)}.` : `${text} ${cup.teams[0].name} ${pts(after.a)}, ${cup.teams[1].name} ${pts(after.b)}.`, url: url('golf'), tag: 'cup-result' }, 0]);
+            }
+          } else if (op === 'delete') {
+            mustOrganize(me);
+            cup = null;
+          } else throw new HttpError(400, 'Unknown cup change.');
+        }
+        const r = await db().from('trips').update({ cup }).eq('id', trip.id);
+        if (r.error) {
+          if (/cup/.test(r.error.message)) {
+            await logError('server', 'Run supabase/008_cup.sql: trips.cup is missing', `/t/${trip.code}`);
+            throw new HttpError(503, 'The cup needs a quick database update. The app owner has been told.');
+          }
+          throw r.error;
+        }
         break;
       }
       case 'rooms': {

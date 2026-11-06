@@ -96,17 +96,20 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
 /* ---------- loading ---------- */
 const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at,venmo,cashapp';
 
-let hasDeadlines = true;
-let deadlinesCheckedAt = 0;
+/** Trip columns added by later migrations (007 deadlines, 008 cup); each is skipped while the database
+ *  doesn't have it yet, and checked again every few minutes. */
+const OPTIONAL_TRIP_COLS = ['deadlines', 'cup'];
+const missingTripCols = new Map<string, number>();
 export async function tripByCode(code: string): Promise<Trip> {
-  if (!hasDeadlines && Date.now() - deadlinesCheckedAt > 5 * 60000) hasDeadlines = true;
-  let { data, error } = hasDeadlines
-    ? await db().from('trips').select('id,code,name,nights,food,deadlines').eq('code', code).maybeSingle()
-    : await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle();
-  if (error && hasDeadlines && /deadlines/.test(error.message)) {
-    hasDeadlines = false;
-    deadlinesCheckedAt = Date.now();
-    ({ data, error } = await db().from('trips').select('id,code,name,nights,food').eq('code', code).maybeSingle());
+  for (const [c, at] of missingTripCols) if (Date.now() - at > 5 * 60000) missingTripCols.delete(c);
+  let data: unknown = null;
+  let error: { message: string } | null = null;
+  for (let i = 0; i <= OPTIONAL_TRIP_COLS.length; i++) {
+    const extra = OPTIONAL_TRIP_COLS.filter((c) => !missingTripCols.has(c));
+    ({ data, error } = await db().from('trips').select(['id,code,name,nights,food', ...extra].join(',')).eq('code', code).maybeSingle());
+    const bad = error ? extra.find((c) => error!.message.includes(c)) : undefined;
+    if (!bad) break;
+    missingTripCols.set(bad, Date.now());
   }
   if (error) throw error;
   if (!data) throw new HttpError(404, 'This trip link is not valid. Ask the organizer to send it again.');
