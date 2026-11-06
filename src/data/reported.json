@@ -1,238 +1,445 @@
 {
- "bandon-dunes": {
-  "low": 2650,
-  "high": 4950,
-  "shape": "4–5 nights, 6–8 rounds",
-  "year": "2024–2027",
-  "covers": "Lodging sharing a room, all green fees and replays, taxes and resort fees; caddies ($100+ a round), meals and flights extra",
-  "sources": [
-   {
-    "label": "CDGA member trip 2024",
-    "url": "https://cdga.org/pdf/2024CDGABandonDunesTrip.pdf"
-   },
-   {
-    "label": "Mass Golf trip 2027",
-    "url": "https://www.massgolf.org/wp-content/uploads/2026/06/27-bandon-event-breakdown.pdf"
-   }
-  ]
- },
- "sand-valley": {
-  "low": 2050,
-  "high": 5100,
-  "shape": "2–5 nights, 4–5 rounds",
-  "year": "2026",
-  "covers": "Lodge room (shared or single), all courses, taxes and fees; the 5-night trip also covered caddies, breakfast and receptions. Meals and travel extra",
-  "sources": [
-   {
-    "label": "CDGA member trip Jun 2026 (2 nights, $2,050–$2,400)",
-    "url": "https://www.cdga.org/pdf/SandValleyItinerary2026.pdf"
-   },
-   {
-    "label": "FSGA member trip Sep 2026 (5 nights, $4,100–$5,100)",
-    "url": "https://www.fsga.org/Tournament/Details/0053e1a4-95b5-4e22-aa56-244efb084060"
-   }
-  ]
- },
- "streamsong": {
-  "low": 1445,
-  "high": 3600,
-  "shape": "3–4 nights, 4–8 rounds",
-  "year": "2025–2026",
-  "covers": "Lodge room (shared or single), green fees on Red, Blue, Black and The Chain, taxes and resort fees; the low end is a September trip with two golfers sharing. Meals and travel extra",
-  "sources": [
-   {
-    "label": "CDGA member trip Nov 2025 (3 nights, 4 rounds, $2,750–$3,600)",
-    "url": "https://www.cdga.org/pdf/StreamsongItinerary2025.pdf"
-   },
-   {
-    "label": "Texas Golf Association trip Sep 2026 (4 nights, 8 rounds, $1,445 sharing)",
-    "url": "https://txga.org/streamsong/"
-   }
-  ]
- },
- "l4e1c505b": {
-  "low": 1300,
-  "high": 1650,
-  "shape": "1 night, 2 rounds",
-  "year": "2026",
-  "covers": "Lodge room or cottage (shared or single), green fees, walking caddies with tips, taxes and fees; meals and travel extra",
-  "sources": [
-   {
-    "label": "CDGA member trip May 2026",
-    "url": "https://www.cdga.org/pdf/ErinHillsItinerary2026.pdf"
-   }
-  ]
- },
- "lb0c56640": {
-  "low": 1100,
-  "high": 1325,
-  "shape": "2 nights, 3 rounds",
-  "year": "2025",
-  "covers": "French Lick Springs Hotel (shared or single), Donald Ross with cart, Pete Dye with forecaddie, one dinner, taxes and fees",
-  "sources": [
-   {
-    "label": "CDGA road trip May 2025",
-    "url": "https://cdga.org/pdf/FrenchLickItinerary2025.pdf"
-   }
-  ]
- },
- "pebble-fairway-escape": {
-  "low": 3600,
-  "high": 5100,
-  "shape": "3 nights, 3 rounds",
-  "year": "2026",
-  "covers": "The Lodge at Pebble Beach (shared or single), Spanish Bay, Spyglass Hill and Pebble Beach with carts, taxes and fees; meals and caddies extra",
-  "sources": [
-   {
-    "label": "CDGA member trip Mar 2026",
-    "url": "https://www.cdga.org/pdf/PebbleBeachItinerary2026.pdf"
-   }
-  ]
- },
- "pinehurst-resort": {
-  "low": 3299,
-  "high": 4099,
-  "shape": "3 nights, 4 rounds incl. No. 2",
-  "year": "2025",
-  "covers": "Carolina Hotel (shared or single), The Cradle, No. 10, No. 8 and No. 2, caddie fees, breakfast, two receptions",
-  "sources": [
-   {
-    "label": "FSGA member trip Jul 2025",
-    "url": "https://www.fsga.org/Tournament/Details/b64a8583-be45-47fa-8ca7-77e565fce965"
-   }
-  ]
- },
- "kohler-to-dye-four": {
-  "low": 3735,
-  "high": 4870,
-  "shape": "4–5 nights, 4 rounds (Straits, Irish, River, Meadow Valleys)",
-  "year": "2026",
-  "covers": "Inn on Woodlake or American Club (shared or single), four rounds, breakfast or meal credit, receptions; caddies included on the FSGA trip only",
-  "sources": [
-   {
-    "label": "FSGA member trip Jul 2026",
-    "url": "https://www.fsga.org/Tournament/Details/42fbc86f-46d6-421c-86ce-548936c3d564"
-   },
-   {
-    "label": "SCGA member outing Oct 2026 (5 nights, $3,735–$4,870)",
-    "url": "https://newfrontier.scga.org/scga-destinations-kohler-wi"
-   }
-  ]
- },
- "l13bd9f12": {
-  "low": 1475,
-  "high": 2000,
-  "shape": "2 nights, 3 rounds",
-  "year": "2026",
-  "covers": "Lodge at Arcadia Bluffs (shared or single), two rounds on The Bluffs and one on the South Course with carts, breakfast credit, taxes and fees",
-  "sources": [
-   {
-    "label": "CDGA road trip Sep 2026",
-    "url": "https://www.cdga.org/pdf/2026CDGAMemberTripToArcadiaBluffs_Itinerary.pdf"
-   }
-  ]
- },
- "kiawah-groups": {
-  "low": 1136,
-  "high": 2699,
-  "shape": "4–5 nights, 3–5 rounds incl. the Ocean Course",
-  "year": "2026",
-  "covers": "Villa lodging (own bedroom), rounds on the Ocean Course and Kiawah's other courses, carts, taxes and resort fees; the low end is low season with four golfers sharing a 3-bedroom villa",
-  "sources": [
-   {
-    "label": "Boston ski & sports club trip Oct 2026",
-    "url": "https://bssc.com/travel/bssc-golf-trip-experience-legendary-kiawah-island/"
-   },
-   {
-    "label": "Golf Trip Junkie low-season packages ($246–$306 a night)",
-    "url": "https://golftripjunkie.com/kiawah-island-golf-packages"
-   }
-  ]
- },
- "l4ce54de5": {
-  "low": 2199,
-  "high": 2899,
-  "shape": "4 nights, 4 rounds",
-  "year": "2026",
-  "covers": "Anglers Lodge room (shared or single), Cliffhangers, Buffalo Ridge, Ozarks National and Payne's Valley with carts",
-  "sources": [
-   {
-    "label": "TripCaddie ready-made trip Jun 2026",
-    "url": "https://tripcaddie.com/ultimatebigcedar/"
-   }
-  ]
- },
- "big-cedar": {
-  "low": 2199,
-  "high": 2899,
-  "shape": "4 nights, 4 rounds",
-  "year": "2026",
-  "covers": "Anglers Lodge room (shared or single), Cliffhangers, Buffalo Ridge, Ozarks National and Payne's Valley with carts",
-  "sources": [
-   {
-    "label": "TripCaddie ready-made trip Jun 2026",
-    "url": "https://tripcaddie.com/ultimatebigcedar/"
-   }
-  ]
- },
- "lc8349830": {
-  "low": 1175,
-  "high": 3125,
-  "shape": "2–5 nights, 3+ rounds",
-  "year": "2022–2026",
-  "covers": "Inn at Gamble Sands; the 2026 trip ($3,125, 5 nights) adds a round at Coeur d'Alene, the 2022 one ($1,175–$1,650, 2 nights) included meals",
-  "sources": [
-   {
-    "label": "Golf the High Sierra trip Jul 2026",
-    "url": "https://golfthehighsierra.com/trips/washington-golf-trip-gamble-sands-5n-2026/"
-   },
-   {
-    "label": "Golfer's Journal retreat 2022",
-    "url": "https://www.golfersjournal.com/event/gamble-sands/"
-   }
-  ]
- },
- "lbf95fb72": {
-  "low": 1281,
-  "high": 1281,
-  "shape": "3 nights, 3 rounds",
-  "year": "2026",
-  "covers": "Sunriver Resort room sharing, Crosswater, Meadows and Woodlands ($427 per person per day)",
-  "sources": [
-   {
-    "label": "Golfzoo package",
-    "url": "https://www.golfzoo.com/-central-oregon-golf-vacation-packages-.htm"
-   }
-  ]
- },
- "ld0a51cc0": {
-  "low": 951,
-  "high": 951,
-  "shape": "3 nights, 3 rounds",
-  "year": "2026",
-  "covers": "Disciples Ridge 2-bedroom villa shared by four golfers, The Alpine, The Monument and Crooked Tree with carts ($317 per person per day)",
-  "sources": [
-   {
-    "label": "Golfzoo package",
-    "url": "https://www.golfzoo.com/-petoskey_boyne_special.htm"
-   }
-  ]
- },
- "l671a42f4": {
-  "low": 975,
-  "high": 1425,
-  "shape": "2 nights, 2 rounds (Cascades and Old Course)",
-  "year": "2025",
-  "covers": "Room (shared or single), one round each on The Cascades and the Old Course, resort fees and parking",
-  "sources": [
-   {
-    "label": "Ski & Sports Club of Washington DC trip Oct 2025",
-    "url": "https://scwdc.wildapricot.org/event-6263319"
-   },
-   {
-    "label": "Omni Homestead green fees",
-    "url": "https://www.omnihotels.com/hotels/homestead-virginia/golf/rates"
-   }
-  ]
- }
+ "bandon-dunes": [
+  {
+   "low": 2650,
+   "high": 3350,
+   "shape": "4 nights, up to 8 rounds",
+   "when": "Oct 2024",
+   "covers": "Lodge or Round Lake room (shared or single), all green fees and replays, taxes; caddies and meals extra",
+   "label": "CDGA member trip",
+   "url": "https://cdga.org/pdf/2024CDGABandonDunesTrip.pdf"
+  },
+  {
+   "low": 4350,
+   "high": 4950,
+   "shape": "5 nights, 6 rounds",
+   "when": "Jun 2027",
+   "covers": "Shared room, six rounds incl. Preserve and Shorty's, airport shuttle, receptions, taxes",
+   "label": "Mass Golf member trip",
+   "url": "https://www.massgolf.org/wp-content/uploads/2026/06/27-bandon-event-breakdown.pdf"
+  },
+  {
+   "low": 4593,
+   "high": 4593,
+   "shape": "5 nights, 5 rounds",
+   "when": "2026",
+   "covers": "Luxury private home shared by 16 golfers, taxes and fees; caddies extra",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/oregon/bandon-dunes/"
+  }
+ ],
+ "sand-valley": [
+  {
+   "low": 2050,
+   "high": 2400,
+   "shape": "2 nights, 4 rounds",
+   "when": "Jun 2026",
+   "covers": "Lodge room (shared or single), all four courses, taxes; caddies ($100 a round) and meals extra",
+   "label": "CDGA member trip",
+   "url": "https://www.cdga.org/pdf/SandValleyItinerary2026.pdf"
+  },
+  {
+   "low": 4100,
+   "high": 5100,
+   "shape": "5 nights, 5 rounds",
+   "when": "Sep 2026",
+   "covers": "Shared or single room, caddies and tips, daily breakfast, two receptions",
+   "label": "FSGA member trip",
+   "url": "https://www.fsga.org/Tournament/Details/0053e1a4-95b5-4e22-aa56-244efb084060"
+  },
+  {
+   "low": 1604,
+   "high": 1604,
+   "shape": "4 nights, 4 rounds",
+   "when": "Summer 2026",
+   "covers": "Private home shared by 8 golfers, Mammoth Dunes, Sand Valley, Sedge Valley, Sandbox",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/wisconsin/sand-valley/"
+  }
+ ],
+ "streamsong": [
+  {
+   "low": 2750,
+   "high": 3600,
+   "shape": "3 nights, 4 rounds",
+   "when": "Nov 2025",
+   "covers": "Lodge room (shared or single), green and cart fees, taxes and resort fees; meals extra",
+   "label": "CDGA member trip",
+   "url": "https://www.cdga.org/pdf/StreamsongItinerary2025.pdf"
+  },
+  {
+   "low": 1445,
+   "high": 1445,
+   "shape": "4 nights, 8 rounds",
+   "when": "Sep 2026",
+   "covers": "Two golfers sharing a room, golf and lodging only; carts $35 a round extra",
+   "label": "Texas Golf Association trip",
+   "url": "https://txga.org/streamsong/"
+  },
+  {
+   "low": 1529,
+   "high": 1529,
+   "shape": "3 nights, 4 rounds",
+   "when": "Off-peak",
+   "covers": "Lodge double room shared, Red, Blue, Black and The Chain, taxes and fees",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/florida/streamsong-resort/"
+  }
+ ],
+ "l4e1c505b": [
+  {
+   "low": 1300,
+   "high": 1650,
+   "shape": "1 night, 2 rounds",
+   "when": "May 2026",
+   "covers": "Lodge room or cottage (shared or single), green fees, walking caddies with tips, taxes",
+   "label": "CDGA member trip",
+   "url": "https://www.cdga.org/pdf/ErinHillsItinerary2026.pdf"
+  }
+ ],
+ "lb0c56640": [
+  {
+   "low": 1100,
+   "high": 1325,
+   "shape": "2 nights, 3 rounds",
+   "when": "May 2025",
+   "covers": "French Lick Springs Hotel, Donald Ross with cart, Pete Dye with forecaddie, one dinner, taxes",
+   "label": "CDGA road trip",
+   "url": "https://cdga.org/pdf/FrenchLickItinerary2025.pdf"
+  }
+ ],
+ "pebble-fairway-escape": [
+  {
+   "low": 3600,
+   "high": 5100,
+   "shape": "3 nights, 3 rounds",
+   "when": "Mar 2026",
+   "covers": "The Lodge at Pebble Beach (shared or single), Spanish Bay, Spyglass and Pebble with carts, taxes",
+   "label": "CDGA member trip",
+   "url": "https://www.cdga.org/pdf/PebbleBeachItinerary2026.pdf"
+  },
+  {
+   "low": 3289,
+   "high": 3289,
+   "shape": "3 nights, 3 rounds",
+   "when": "Winter (off-peak)",
+   "covers": "Inn at Spanish Bay garden-view room shared, Pebble Beach, Spyglass Hill and Del Monte, taxes and fees",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/california/pebble-beach/"
+  }
+ ],
+ "pinehurst-resort": [
+  {
+   "low": 3299,
+   "high": 4099,
+   "shape": "3 nights, 4 rounds incl. No. 2",
+   "when": "Jul 2025",
+   "covers": "Carolina Hotel (shared or single), Cradle, No. 10, No. 8 and No. 2, caddie fees, breakfast, receptions",
+   "label": "FSGA member trip",
+   "url": "https://www.fsga.org/Tournament/Details/b64a8583-be45-47fa-8ca7-77e565fce965"
+  },
+  {
+   "low": 3902,
+   "high": 3902,
+   "shape": "3 nights, 4 rounds",
+   "when": "2026",
+   "covers": "Pinehurst cottage shared by 16 golfers, courses set at booking, taxes and fees",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/north-carolina/pinehurst/"
+  }
+ ],
+ "kohler-to-dye-four": [
+  {
+   "low": 3900,
+   "high": 4700,
+   "shape": "4 nights, 4 rounds",
+   "when": "Jul 2026",
+   "covers": "Inn on Woodlake (shared or single), Straits, Irish, River and The Baths, caddie fees, breakfast",
+   "label": "FSGA member trip",
+   "url": "https://www.fsga.org/Tournament/Details/42fbc86f-46d6-421c-86ce-548936c3d564"
+  },
+  {
+   "low": 3735,
+   "high": 4870,
+   "shape": "5 nights, 4 rounds",
+   "when": "Oct 2026",
+   "covers": "Inn on Woodlake or American Club, Irish, Straits, Meadow Valleys and River, breakfast or meal credit",
+   "label": "SCGA member outing",
+   "url": "https://newfrontier.scga.org/scga-destinations-kohler-wi"
+  },
+  {
+   "low": 2335,
+   "high": 2335,
+   "shape": "5 nights, 4 rounds plus The Baths",
+   "when": "Oct (off-peak)",
+   "covers": "Inn on Woodlake double room shared, Straits, Irish, River and Meadow Valleys, taxes; caddies extra",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/wisconsin/kohler-resort/"
+  }
+ ],
+ "l13bd9f12": [
+  {
+   "low": 1475,
+   "high": 2000,
+   "shape": "2 nights, 3 rounds",
+   "when": "Sep 2026",
+   "covers": "Lodge at Arcadia Bluffs (shared or single), two Bluffs rounds and one South Course, carts, taxes",
+   "label": "CDGA road trip",
+   "url": "https://www.cdga.org/pdf/2026CDGAMemberTripToArcadiaBluffs_Itinerary.pdf"
+  }
+ ],
+ "kiawah-groups": [
+  {
+   "low": 2599,
+   "high": 2699,
+   "shape": "4 nights, 3 rounds incl. the Ocean Course",
+   "when": "Oct 2026",
+   "covers": "Beach villa (own bedroom), Osprey Point, Ocean Course with caddie, Turtle Point, taxes",
+   "label": "BSSC club trip",
+   "url": "https://bssc.com/travel/bssc-golf-trip-experience-legendary-kiawah-island/"
+  },
+  {
+   "low": 1136,
+   "high": 1530,
+   "shape": "4–5 nights, 4–5 rounds",
+   "when": "Low season",
+   "covers": "3-bedroom villa shared by four golfers, Ocean Course plus other Kiawah courses, carts, taxes",
+   "label": "Golf Trip Junkie packages",
+   "url": "https://golftripjunkie.com/kiawah-island-golf-packages"
+  },
+  {
+   "low": 1640,
+   "high": 1640,
+   "shape": "4 nights, 3 rounds incl. the Ocean Course",
+   "when": "Dec (off-peak)",
+   "covers": "Two golfers sharing a room, Ocean Course, Cougar Point and Turtle Point, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/south-carolina/kiawah-island/"
+  }
+ ],
+ "l4ce54de5": [
+  {
+   "low": 2199,
+   "high": 2899,
+   "shape": "4 nights, 4 rounds",
+   "when": "Jun 2026",
+   "covers": "Anglers Lodge room (shared or single), Cliffhangers, Buffalo Ridge, Ozarks National, Payne's Valley, carts",
+   "label": "TripCaddie ready-made trip",
+   "url": "https://tripcaddie.com/ultimatebigcedar/"
+  }
+ ],
+ "big-cedar": [
+  {
+   "low": 2199,
+   "high": 2899,
+   "shape": "4 nights, 4 rounds",
+   "when": "Jun 2026",
+   "covers": "Anglers Lodge room (shared or single), Cliffhangers, Buffalo Ridge, Ozarks National, Payne's Valley, carts",
+   "label": "TripCaddie ready-made trip",
+   "url": "https://tripcaddie.com/ultimatebigcedar/"
+  }
+ ],
+ "lc8349830": [
+  {
+   "low": 3125,
+   "high": 3125,
+   "shape": "5 nights, 3 rounds",
+   "when": "Jul 2026",
+   "covers": "Inn at Gamble Sands, Gamble Sands and Scarecrow plus Coeur d'Alene Resort, carts",
+   "label": "Golf the High Sierra trip",
+   "url": "https://golfthehighsierra.com/trips/washington-golf-trip-gamble-sands-5n-2026/"
+  },
+  {
+   "low": 1175,
+   "high": 1650,
+   "shape": "2 nights, 2+ rounds",
+   "when": "Sep 2022",
+   "covers": "Inn at Gamble Sands (shared or single), tournament rounds, all meals",
+   "label": "Golfer's Journal retreat",
+   "url": "https://www.golfersjournal.com/event/gamble-sands/"
+  }
+ ],
+ "lbf95fb72": [
+  {
+   "low": 1281,
+   "high": 1281,
+   "shape": "3 nights, 3 rounds",
+   "when": "2026",
+   "covers": "Room shared, Crosswater, Meadows and Woodlands ($427 per person a day)",
+   "label": "Golfzoo package",
+   "url": "https://www.golfzoo.com/-central-oregon-golf-vacation-packages-.htm"
+  },
+  {
+   "low": 1398,
+   "high": 1398,
+   "shape": "4 nights, 3 rounds",
+   "when": "Fall (off-peak)",
+   "covers": "Lodge Village room shared, Meadows, Woodlands and Crosswater, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/oregon/sunriver-resort/"
+  }
+ ],
+ "ld0a51cc0": [
+  {
+   "low": 951,
+   "high": 951,
+   "shape": "3 nights, 3 rounds",
+   "when": "2026",
+   "covers": "2-bedroom villa shared by four, The Alpine, The Monument and Crooked Tree, carts",
+   "label": "Golfzoo package",
+   "url": "https://www.golfzoo.com/-petoskey_boyne_special.htm"
+  },
+  {
+   "low": 992,
+   "high": 992,
+   "shape": "3 nights, 2 rounds",
+   "when": "July",
+   "covers": "Room at The Highlands shared, two of The Moor, The Heather and Arthur Hills, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/michigan/boyne-golf/"
+  }
+ ],
+ "l671a42f4": [
+  {
+   "low": 975,
+   "high": 1425,
+   "shape": "2 nights, 2 rounds (Cascades and Old Course)",
+   "when": "Oct 2025",
+   "covers": "Room (shared or single), both rounds, resort fees and parking",
+   "label": "Ski & Sports Club of Washington DC trip",
+   "url": "https://scwdc.wildapricot.org/event-6263319"
+  }
+ ],
+ "l96d473e4": [
+  {
+   "low": 1401,
+   "high": 1401,
+   "shape": "2 nights, 4 rounds",
+   "when": "Oct 2019",
+   "covers": "Unlimited golf package with breakfast; flights, car and other meals extra",
+   "label": "GOLF.com cost breakdown",
+   "url": "https://golf.com/news/4-rounds-2-nights-omni-barton-creek-resort/"
+  }
+ ],
+ "cabot-citrus": [
+  {
+   "low": 3090,
+   "high": 3090,
+   "shape": "2 nights, 3 rounds (Karoo, Roost, The Wedge)",
+   "when": "Oct 2026",
+   "covers": "2-bedroom cottage with private rooms, forecaddies, two group dinners, taxes and fees",
+   "label": "Clubhouse Red group trip",
+   "url": "https://clubhousered.wetravel.com/trips/esplanade-gcc-cabot-citrus-farms-2026-clubhouse-red-1823993812"
+  }
+ ],
+ "ld8733929": [
+  {
+   "low": 1807,
+   "high": 1807,
+   "shape": "2 nights, 2 rounds",
+   "when": "July (peak)",
+   "covers": "Grand Lodge king suite shared, Mystic Rock and Shepherd's Rock, taxes; caddies extra",
+   "label": "Premier Golf package",
+   "url": "https://premiergolf.com/nemacolin"
+  }
+ ],
+ "@Destination Geneva National|WI": [
+  {
+   "low": 1607,
+   "high": 1607,
+   "shape": "3 nights, 6 rounds",
+   "when": "May (shoulder)",
+   "covers": "Cottage or double queen room shared, two rounds each on the Palmer, Player and Trevino courses, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/wisconsin/geneva-national-resort/"
+  }
+ ],
+ "@The Inn at SentryWorld|WI": [
+  {
+   "low": 963,
+   "high": 963,
+   "shape": "2 nights, 2 rounds",
+   "when": "May",
+   "covers": "Golf View king terrace room shared, two rounds at SentryWorld, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/wisconsin/sentry-world/"
+  }
+ ],
+ "@Reynolds Lake Oconee|GA": [
+  {
+   "low": 1842,
+   "high": 1842,
+   "shape": "3 nights, 3 rounds",
+   "when": "Off-peak",
+   "covers": "4-bedroom Landing cottage shared by four, three of Great Waters, The Landing, The Oconee, The National, The Preserve",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/georgia/reynolds-lake-oconee/"
+  }
+ ],
+ "@Sea Island|GA": [
+  {
+   "low": 1429,
+   "high": 1429,
+   "shape": "3 nights, 3 rounds",
+   "when": "Off-peak",
+   "covers": "Lodge at Sea Island room shared, Seaside, Plantation and Retreat, taxes; caddies extra",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/georgia/sea-island/"
+  }
+ ],
+ "@Pronghorn Resort|OR": [
+  {
+   "low": 779,
+   "high": 779,
+   "shape": "3 nights, 1 Fazio round plus unlimited Nicklaus",
+   "when": "Off-peak",
+   "covers": "Double queen room shared at Juniper Preserve (formerly Pronghorn), taxes; carts and caddies extra",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/oregon/juniper-preserve/"
+  }
+ ],
+ "@Silverado Resort|CA": [
+  {
+   "low": 1341,
+   "high": 1341,
+   "shape": "4 nights, 3 rounds",
+   "when": "Off-peak",
+   "covers": "Cottage king room shared, daily breakfast, North and South courses, taxes",
+   "label": "Premier Golf package",
+   "url": "https://www.premiergolf.com/california/silverado-resort/"
+  }
+ ],
+ "@Edgewood Tahoe Resort|NV": [
+  {
+   "low": 465,
+   "high": 1519,
+   "shape": "2–3 nights, 3–4 rounds",
+   "when": "2025–2026",
+   "covers": "Casino-hotel lodging at the lake, Edgewood Tahoe, Old Greenwood and one more Tahoe course",
+   "label": "Golf the High Sierra trips",
+   "url": "https://golfthehighsierra.com/lake-tahoe-golf-packages/"
+  }
+ ],
+ "@Eureka Casino Resort|NV": [
+  {
+   "low": 1275,
+   "high": 1275,
+   "shape": "3–4 nights, 4 rounds",
+   "when": "2025–2026",
+   "covers": "Eureka Casino lodging, Oasis Canyon, Conestoga, Coral Canyon and Coyote Springs",
+   "label": "Golf the High Sierra trip",
+   "url": "https://golfthehighsierra.com/mesquite-golf-packages/"
+  }
+ ],
+ "@Marriott's Shadow Ridge|CA": [
+  {
+   "low": 1505,
+   "high": 1505,
+   "shape": "3 nights, 4 rounds",
+   "when": "Group of 24",
+   "covers": "Courtyard Palm Desert, Shadow Ridge, PGA West Mountain, Classic Club and Mission Hills North",
+   "label": "Golf the High Sierra trip",
+   "url": "https://golfthehighsierra.com/palm-desert-golf-packages/"
+  }
+ ]
 }

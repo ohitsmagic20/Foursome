@@ -136,7 +136,7 @@
   "includes": "Rounds on Karoo and Roost, preferred rates on stays, dining and recreation",
   "url": "https://cabot.com/citrusfarms/packages",
   "source": "cabot.com",
-  "detail": "Prices are given when you inquire."
+  "detail": "2027 resort-guest green fees run $189 (summer) to $389 (peak weekends) on Karoo and Roost. Cottages from $675 a night (2-bed, summer) to $3,519 (4-bed, peak weekends)."
  },
  "kiawah-groups": {
   "shape": "Custom; the Kiawah Ryder Cup Experience is for 12+ golfers",
@@ -195,5 +195,94 @@
   "url": "https://forestdunesgolf.com/accommodation-rates",
   "source": "forestdunesgolf.com",
   "detail": "2027 lodging is $140–$175 per person a night in a shared Lodge room and $230–$400 per person in villas and cottages; green fees are extra."
+ },
+ "lb9a21242": {
+  "price": {
+   "from": 599,
+   "per": "golfer per trip"
+  },
+  "shape": "4 nights, 3 rounds",
+  "includes": "Standard room shared, three rounds on the O'odham and Piipaash courses with shared cart, range balls, taxes",
+  "url": "https://bcgolfguide.com/featured-golf-packages/talking-stick-resort-scottsdale-4-night-golf-package",
+  "source": "bcgolfguide.com",
+  "detail": "$599 per person in low season up to $1,179 in high season, sharing a room."
+ },
+ "l5a3ebbd8": {
+  "price": {
+   "from": 267,
+   "per": "person per night"
+  },
+  "shape": "3 nights, 3 rounds",
+  "includes": "Inn room (shared) or villa (four sharing), Château, Woodlands and Executive courses, rental car",
+  "url": "https://www.troongolfvacations.com/atlanta-golf-packages/chateau-elan-villas-golf-package",
+  "source": "troongolfvacations.com",
+  "detail": "Troon Golf Vacations package; taxes and fees extra."
+ },
+ "l589371ef": {
+  "shape": "1 round per person per night, plus a free arrival round on The Conservatory",
+  "includes": "Up to 25% off rooms, carts; Ocean Course arrival round is a $125 upgrade",
+  "url": "https://www.hammockbeach.com/golf/golf-packages/",
+  "source": "hammockbeach.com",
+  "detail": "\"Just Golf\" package; villa rate based on four sharing a 3-bedroom villa."
+ },
+ "l6e0e65e2": {
+  "shape": "Unlimited same-day golf each night stayed",
+  "includes": "Room, $20 daily breakfast credit, unlimited same-day play on the Gold, Blue and Red courses",
+  "url": "https://www.wigwamarizona.com/golf-packages",
+  "source": "wigwamarizona.com",
+  "detail": "\"Tee It Up\" package, priced by date."
+ },
+ "lad0b1184": {
+  "shape": "2+ nights, 1 round per person per night",
+  "includes": "Resort lodging, green and cart fees on Baytowne or The Links, unlimited range, bikes, tennis, kayaks and pools",
+  "url": "https://www.sandestin.com/offers-packages/resort-classic-golf-package",
+  "source": "sandestin.com",
+  "detail": "Resort Classic package: up to 25% off rooms and golf; priced by date."
+ },
+ "l2836739e": {
+  "price": {
+   "from": 175,
+   "per": "person per night"
+  },
+  "shape": "Unlimited golf from arrival to departure day",
+  "includes": "Hotel room shared, unlimited golf with shared cart, Golf Learning Center",
+  "url": "https://crystalmountain.com/trip-planning/unlimited-golf-package",
+  "source": "crystalmountain.com",
+  "detail": "From $175 per person a night sharing (2024 season); juniors play free with a paying adult."
+ },
+ "l2244b57e": {
+  "shape": "1 night; unlimited golf Mon–Thu, 1 round Fri–Sun",
+  "includes": "Room, golf on The Bear, The Wolverine or Spruce Run, range balls",
+  "url": "https://www.grandtraverseresort.com/packages/one-night-golf-package-summer",
+  "source": "grandtraverseresort.com",
+  "detail": "Summer package, June 5–Sept 13, 2026; priced by date."
+ },
+ "l4276eb54": {
+  "shape": "1 night, 1 round",
+  "includes": "Lakeside room, the floating-green Resort Course with forecaddie and shared cart, lake shuttle, sports massage, bag storage",
+  "url": "https://www.golftennessee.com/stayandplay/28994",
+  "source": "golftennessee.com",
+  "detail": "Hole-In-One package, through 2026; quoted on request."
+ },
+ "leb5cccd6": {
+  "shape": "1 round per guest per day, starting the day after arrival",
+  "includes": "Room, Fields Ranch East or West, $25 golf food-and-drink credit; cart, caddie and $42 resort fee extra",
+  "url": "https://omnihotels.com/hotels/pga-frisco/specials/fields-ranch-experience",
+  "source": "omnihotels.com",
+  "detail": "Fields Ranch East green fees run up to about $331 a round (2024). Priced by date; not for groups."
+ },
+ "l56154373": {
+  "shape": "2 nights, unlimited golf dawn to dusk",
+  "includes": "Lodge room, Canyon Rim cabin or Bunkhouse, carts, breakfast, an evening meal, The Horse short course",
+  "url": "https://www.arizonagolfer.com/stayandplay/28944",
+  "source": "arizonagolfer.com",
+  "detail": "Unlimited Golf & Lodging package through 2026; quoted on request."
+ },
+ "l4a686925": {
+  "shape": "1 round on the Highland Course per person per night",
+  "includes": "Lodge room, Highland Course round, lunch with each 18 (Apr–Nov)",
+  "url": "https://auberge.com/primland/experiences/golf/",
+  "source": "auberge.com",
+  "detail": "Blue Ridge Golf Package. 2026 Highland green fees: $175–$215 in April, $325 peak (May–Aug, Sept–Oct), $275 late summer and November."
  }
 }

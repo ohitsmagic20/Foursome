@@ -572,6 +572,6 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-rep { background: var(--soft); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
 .pkg-rep-head { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .pkg-rep-num { font-size: 15px; font-weight: 700; }
-.pkg-rep-num span { font-weight: 500; color: var(--muted); font-size: 13px; }
-.pkg-rep-src { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
-.pkg-rep-src a { color: var(--muted); }
+.pkg-rep-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.pkg-rep-list li + li { border-top: 1px solid var(--line); padding-top: 8px; }
+.pkg-rep-list a { color: var(--muted); }

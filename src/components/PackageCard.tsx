@@ -1,4 +1,4 @@
-import type { StayPlay } from '@/data/packages';
+import type { Report, StayPlay } from '@/data/packages';
 import { priceLabel, tripEstimate } from '@/data/packages';
 
 /** One stay-and-play package: where, which courses, the shape of the deal, and a link to book. */
@@ -30,16 +30,22 @@ export function PackageCard({ p, miles }: { p: StayPlay; miles?: number }) {
 
 const $ = (n: number) => `$${n.toLocaleString('en-US')}`;
 
-/** What golfers actually paid here: a range per golfer, what it covered, and where the numbers come from. */
-function Reported({ r }: { r: NonNullable<StayPlay['reported']> }) {
+/** What golfers actually paid here: the overall range, then each trip with what it covered and a link. */
+function Reported({ r }: { r: Report[] }) {
+  const low = Math.min(...r.map((x) => x.low)), high = Math.max(...r.map((x) => x.high));
+  const range = (a: number, b: number) => (a === b ? $(a) : `${$(a)}–${$(b).slice(1)}`);
   return (
     <div className="pkg-rep">
       <div className="pkg-rep-head">What golfers paid</div>
-      <div className="pkg-rep-num">{r.low === r.high ? $(r.low) : `${$(r.low)}–${$(r.high).slice(1)}`} per golfer <span>· {r.shape} · {r.year}</span></div>
-      <div className="row-meta">{r.covers}</div>
-      <div className="pkg-rep-src">
-        {r.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a>)}
-      </div>
+      <div className="pkg-rep-num">{range(low, high)} per golfer</div>
+      <ul className="pkg-rep-list">
+        {r.map((x) => (
+          <li key={x.url + x.low}>
+            <b>{range(x.low, x.high)}</b> · {x.shape} · {x.when}
+            <div className="row-meta">{x.covers}. <a href={x.url} target="_blank" rel="noopener noreferrer">{x.label}</a></div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

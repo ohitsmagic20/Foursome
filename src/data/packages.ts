@@ -3,6 +3,9 @@
 // and change by date and availability, so every entry links to where to check and book.
 // Checked November 2026. Sources: each resort's own site, and GolfPass Travel's package listings.
 
+/** One trip a group actually took (or a packager's published trip), per golfer. */
+export interface Report { low: number; high: number; shape: string; when: string; covers: string; label: string; url: string }
+
 export interface StayPlay {
   id: string;
   resort: string;
@@ -17,7 +20,7 @@ export interface StayPlay {
   includes?: string;
   /** Published starting price. Missing means the resort quotes per group. */
   /** What golfers actually paid for a trip here (association trips, packagers, trip reports), per golfer. */
-  reported?: { low: number; high: number; shape: string; year: string; covers: string; sources: { label: string; url: string }[] };
+  reported?: Report[];
   /** More about the deal: season, discounts, what the rate covers. */
   detail?: string;
   price?: { from: number; per: 'person per night' | 'golfer per trip' | 'as listed'; to?: number; note?: string };
