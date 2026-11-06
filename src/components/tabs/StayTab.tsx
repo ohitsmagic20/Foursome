@@ -1,8 +1,9 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Option } from '@/lib/shared';
-import { andList, bedsNeeded, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
+import { andList, bedsNeeded, destAirports, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
 import { firstName } from '@/lib/client';
+import { PackagesNear } from '../Packages';
 import { StaySearch } from '../live';
 import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
@@ -59,6 +60,7 @@ export function StayTab() {
         );
       })}
       {locked && <Rooms stay={locked} />}
+      {!locked && dest && <PackagesNear dest={dest.data.name} airports={destAirports(dest.data)} />}
     </section>
   );
 }

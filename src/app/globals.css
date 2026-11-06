@@ -544,3 +544,14 @@ tr.me .mark.none { border-color: var(--green); }
 .team-a-btn { color: var(--team-a); } .team-b-btn { color: var(--team-b); }
 .row-inline { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; }
 .row-inline .btn { margin-left: 4px; }
+
+/* Stay & play packages */
+.list-cards { display: flex; flex-direction: column; gap: 10px; }
+.pkg { display: flex; flex-direction: column; gap: 6px; }
+.pkg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.pkg-price { flex: none; max-width: 45%; text-align: right; font-weight: 700; font-size: 14px; color: var(--green); line-height: 1.3; }
+.pkg-price.quote { color: var(--muted); font-weight: 600; }
+.pkg-courses { font-size: 14px; line-height: 1.4; }
+.pkg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.state-jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.state-jump .chip-btn { padding: 4px 12px; min-height: 34px; text-decoration: none; }

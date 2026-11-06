@@ -31,6 +31,7 @@ export default async function Ideas() {
         </section>
       )}
       <p className="hint" style={{ marginTop: 20 }}>Prices are per golfer and change by season. Each idea lists where its prices came from and when.</p>
+      <p className="hint">Want lodging and golf booked together? <a href="/packages">See stay & play packages</a>.</p>
     </div>
   );
 }
