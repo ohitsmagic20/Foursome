@@ -1,0 +1,188 @@
+{
+ "pinehurst-resort": {
+  "price": {
+   "from": 490,
+   "per": "person per night"
+  },
+  "shape": "1 round per night stayed, plus The Cradle",
+  "includes": "Room, breakfast daily and cart; classic courses Nos. 1, 3, 5–9",
+  "url": "https://www.pinehurst.com/packages/",
+  "source": "pinehurst.com",
+  "detail": "Hidden Gems package, fall 2026, sharing a room at the Holly Inn or Manor; No. 2 costs extra. Bed, Breakfast & Golf runs about 15% more."
+ },
+ "sand-valley": {
+  "price": {
+   "from": 245,
+   "per": "as listed",
+   "note": "Per room per night."
+  },
+  "shape": "Room rate; golf booked separately",
+  "url": "https://www.sandvalley.com/trip-planner",
+  "source": "sandvalley.com",
+  "detail": "Lodge rooms in spring and fall 2025; summer is higher. Green fees are extra."
+ },
+ "streamsong": {
+  "shape": "Resort-guest green fees $170–$395 a round, plus $35 cart",
+  "url": "https://www.streamsongresort.com/golf/fees",
+  "source": "streamsongresort.com",
+  "detail": "Fees run from $375 (Oct–mid-Dec 2026) and $395 (mid-Jan–Apr 2027) down to $170 in summer 2027. Rooms are extra."
+ },
+ "big-cedar": {
+  "price": {
+   "from": 2300,
+   "per": "golfer per trip"
+  },
+  "shape": "4 nights, 4 rounds",
+  "includes": "Lodging, all meals, Payne's Valley, Mountain Top, Ozarks National and Top of the Rock",
+  "url": "https://bigcedar.com/golf/",
+  "source": "bigcedar.com",
+  "detail": "The Ultimate Big Cedar Golf Experience, set April dates in 2025."
+ },
+ "pebble-fairway-escape": {
+  "price": {
+   "from": 2895,
+   "per": "as listed"
+  },
+  "shape": "3 nights, 3 rounds",
+  "includes": "Inn at Spanish Bay; one round each at Pebble Beach, Spyglass Hill and Spanish Bay; taxes and service charge included",
+  "url": "https://pebblebeach.com/golf-vacation-packages-and-getaways/fairway-escape",
+  "source": "pebblebeach.com",
+  "detail": "Starting price from cagolf.com's listing of the same 3-night, 3-round package. 25% off a 4th night, 50% off a 5th; a second Pebble round needs a 6-night stay."
+ },
+ "lb0c56640": {
+  "shape": "1–3 nights; 18 at Pete Dye plus Donald Ross (and Sultan's Run on the 3-night)",
+  "includes": "Any resort hotel, carts, bag storage and shuttle",
+  "url": "https://frenchlick.com/golf/rates",
+  "source": "frenchlick.com",
+  "detail": "2027 green fees: Pete Dye $500, Donald Ross $185. Call (844) 792-8333 for package rates. Forecaddie at Pete Dye $50 a round plus tip."
+ },
+ "l2375399a": {
+  "shape": "1 night, unlimited golf",
+  "includes": "Room and unlimited golf",
+  "url": "https://frenchlick.com/golf/rates",
+  "source": "frenchlick.com",
+  "detail": "2027 green fees: Pete Dye $500, Donald Ross $185, if you'd rather book rounds one at a time."
+ },
+ "l89e45ef2": {
+  "shape": "Unlimited golf, Sunday–Wednesday nights",
+  "includes": "Room and unlimited golf on the East and West courses",
+  "url": "https://www.broadmoor.com/special-packages/unlimited-golf-getaway",
+  "source": "broadmoor.com",
+  "detail": "Rooms run from about $380 a night in winter and $390 in spring 2027; the golf package is priced when you book."
+ },
+ "l671a42f4": {
+  "shape": "1 night, unlimited golf (Par Infinity)",
+  "includes": "Room and unlimited golf on the Old Course and Cascades; also a 1-night, 1-round \"Your Way\" package",
+  "url": "https://www.golfvirginia.com/stayandplay/28920",
+  "source": "golfvirginia.com",
+  "detail": "Offered through Dec 31, 2026; the resort prices it when you inquire."
+ },
+ "ld617570f": {
+  "price": {
+   "from": 247,
+   "per": "person per night"
+  },
+  "shape": "2 nights, unlimited golf",
+  "includes": "Room and unlimited golf on the River and Plantation courses",
+  "url": "https://www.golfpass.com/travel-advisor/golf-packages/virginia-golf-packages/kingsmill-resort-stay-play-golf-package",
+  "source": "golfpass.com",
+  "detail": "Kingsmill Stay & Play from $247 per person a night on GolfPass."
+ },
+ "ld0a51cc0": {
+  "shape": "5 nights, unlimited golf Mon–Fri (Super 5); also 1-night Unlimited Golf and Stay & Play (a round per night)",
+  "includes": "Lodging, unlimited golf on The Alpine, Monument, Moor, Donald Ross Memorial, Crooked Tree; welcome party on Super 5",
+  "url": "https://boynegolf.com/golf-packages",
+  "source": "boynegolf.com",
+  "detail": "Michigan's Magnificent 11 adds The Heather and Arthur Hills. Call (855) 688-3286 for rates."
+ },
+ "l96d473e4": {
+  "shape": "1 round per golfer per night stayed",
+  "includes": "Room, $100 resort credit per room, range access; Crenshaw Cliffside or Palmer Lakeside",
+  "url": "https://omnihotels.com/hotels/austin-barton-creek/specials/pga-tour-golf-package",
+  "source": "omnihotels.com",
+  "detail": "PGA TOUR Golf Package; priced by the resort's planners at 512-329-4018."
+ },
+ "bandon-dunes": {
+  "shape": "Rooms by the night; golf booked per round",
+  "includes": "Lodge, Inn, Chrome Lake and Grove cottage rooms",
+  "url": "https://bandondunesgolf.com/lodging-rates/",
+  "source": "bandondunesgolf.com",
+  "detail": "2026 rooms run $170 a night in Dec–Jan up to $380 in Jun–Sep (Lodge single), and $1,300–$2,300 for 4-bedroom Grove cottages and suites."
+ },
+ "torrey-pines": {
+  "price": {
+   "from": 465,
+   "per": "person per night"
+  },
+  "shape": "3 nights, 2 rounds",
+  "includes": "The Lodge at Torrey Pines, one round each on the South and North courses",
+  "url": "https://www.cagolf.com/stayandplay/29011",
+  "source": "cagolf.com",
+  "detail": "Torrey Pines package from $465 per person a night on cagolf.com."
+ },
+ "la-quinta": {
+  "price": {
+   "from": 519,
+   "per": "as listed"
+  },
+  "shape": "3 nights, 3 rounds",
+  "includes": "La Quinta Resort, PGA West Stadium plus La Quinta Mountain and Dunes",
+  "url": "https://www.cagolf.com/stayandplay/28683",
+  "source": "cagolf.com",
+  "detail": "Starting price from cagolf.com's 3-night, 3-round listing."
+ },
+ "cabot-citrus": {
+  "shape": "25 prepaid rounds with preferred room rates (Apr 20–Oct 29, 2026); Florida-resident Escape package in Dec 2026",
+  "includes": "Rounds on Karoo and Roost, preferred rates on stays, dining and recreation",
+  "url": "https://cabot.com/citrusfarms/packages",
+  "source": "cabot.com",
+  "detail": "Prices are given when you inquire."
+ },
+ "kiawah-groups": {
+  "shape": "Custom; the Kiawah Ryder Cup Experience is for 12+ golfers",
+  "includes": "Rooms or villas, rounds on the Ocean Course, Turtle Point, Osprey Point, Cougar Point and Oak Point",
+  "url": "https://kiawahresort.com/packages/",
+  "source": "kiawahresort.com",
+  "detail": "Priced by the resort's group team; the Villas and Sanctuary packages above have posted rates."
+ },
+ "shanty-creek": {
+  "price": {
+   "from": 90,
+   "per": "golfer per trip",
+   "note": "Golf only; lodging is priced separately."
+  },
+  "shape": "3 nights, 5 rounds (\"90 holes for $90\")",
+  "includes": "Golf on The Legend, Cedar River, Schuss Mountain, Summit and Hawk's Eye",
+  "url": "https://www.golfmichigan.com/stayandplay/27814",
+  "source": "golfmichigan.com",
+  "detail": "$90 covers the golf; lodging is priced separately."
+ },
+ "lbf95fb72": {
+  "shape": "2 nights; unlimited golf plus a Crosswater round per night",
+  "includes": "Lodge Village room, unlimited golf on Meadows, Woodlands and Caldera Links, a Crosswater round per night, carts and range balls",
+  "url": "https://www.indianagolf.com/stayandplay/29204",
+  "source": "indianagolf.com",
+  "detail": "Up to 30% off; priced on request through Dec 31, 2026."
+ },
+ "l8384d797": {
+  "shape": "1 night, 2 rounds per room",
+  "includes": "Room at the day's best rate with two free rounds on The Brute or The Highlands, cart and range",
+  "url": "https://www.illinoisgolf.com/stayandplay/27800",
+  "source": "illinoisgolf.com",
+  "detail": "\"Stay and Golf Free\": spring (Apr 1–May 21) and fall (Oct 1–Nov 8) 2026; tee times before 10am or after 1pm."
+ },
+ "l31edd3b0": {
+  "shape": "2 nights, 3+ rounds",
+  "includes": "Hotel, Tower or Lodge room; Atunyote, Shenendoah and Kaluhyat; free golf at Sandstone Hollow; same-day replays",
+  "url": "https://scgolf.com/stayandplay/27242",
+  "source": "scgolf.com",
+  "detail": "Champions Package, May–October, booked in 2-night blocks. Atunyote replays $125."
+ },
+ "ld8733929": {
+  "shape": "3 nights, 2 rounds",
+  "includes": "Lodging and rounds on Mystic Rock and Shepherd's Rock",
+  "url": "https://www.illinoisgolf.com/stayandplay/28518",
+  "source": "illinoisgolf.com",
+  "detail": "10% off 3 nights, 20% off 4, 30% off 5 or more. Priced on request through 2026."
+ }
+}

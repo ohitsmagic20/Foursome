@@ -24,3 +24,10 @@ golfmichigan.com, scgolf.com, floridagolfer.com and the rest) and GolfPass:
 To rebuild `src/data/listings.json`:
 
     node build-packages.js data-sources/packages src/data/listings.json
+
+## Rates
+
+`rates.txt` holds rates and details looked up on each resort's own site, keyed
+by package id: starting price and basis, nights and rounds, what's included,
+season and discounts. They override what a listing says. Rebuild with
+`node data-sources/build-rates.js`.

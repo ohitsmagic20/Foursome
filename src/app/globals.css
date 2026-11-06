@@ -554,6 +554,7 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-courses { font-size: 14px; line-height: 1.4; }
 .pkg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
 .pkg-foot .btn { flex-shrink: 0; white-space: nowrap; }
+.pkg-est { font-size: 14px; font-weight: 600; color: var(--ink); }
 .state-jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
 .state-jump .chip-btn { padding: 4px 12px; min-height: 34px; text-decoration: none; }
 .resort-list { margin-top: 8px; }

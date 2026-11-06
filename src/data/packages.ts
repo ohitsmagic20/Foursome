@@ -16,6 +16,8 @@ export interface StayPlay {
   shape?: string;
   includes?: string;
   /** Published starting price. Missing means the resort quotes per group. */
+  /** More about the deal: season, discounts, what the rate covers. */
+  detail?: string;
   price?: { from: number; per: 'person per night' | 'golfer per trip' | 'as listed'; to?: number; note?: string };
   /** Where to see current rates and book. */
   url: string;
@@ -205,6 +207,15 @@ export function packagesFor(dest: { name: string; airports?: string[] }): StayPl
   const [city = '', st = ''] = dest.name.split(',').map((x) => x.trim().toLowerCase());
   return PACKAGES.filter((p) => (p.airports || []).some((a) => ports.has(a)) || (p.city.toLowerCase() === city && p.state.toLowerCase() === st.slice(0, 2)))
     .sort((a, b) => (a.price?.from ?? 1e9) - (b.price?.from ?? 1e9));
+}
+
+/** For a per-night price and a fixed number of nights, roughly what one golfer pays for the trip. */
+export function tripEstimate(p: StayPlay): string | null {
+  if (p.price?.per !== 'person per night') return null;
+  const m = /^(\d+) nights?\b/i.exec(p.shape || '');
+  if (!m || Number(m[1]) < 2) return null;
+  const n = Number(m[1]);
+  return `About $${(p.price.from * n).toLocaleString('en-US')} per golfer for ${n} nights, before taxes`;
 }
 
 export function priceLabel(p: StayPlay): string {

@@ -14,7 +14,10 @@ for (const f of fs.readdirSync(dir).filter((f) => /^[A-Z]{2}\.txt$/.test(f))) {
   for (const line of fs.readFileSync(path.join(dir, f), 'utf8').split('\n').filter((l) => l.includes('|'))) {
     const p = line.split('|').map((s) => s.trim());
     if (p.length !== 9) { console.error('bad line', f, p.length, line); continue; }
-    const [resort, name, city, st, courses, shape, price, basis, url] = p;
+    const [resort, name, city, st, courses, shape0, price, basis, url] = p;
+    // No shape given: read it from a title like "2 Nights, 3 Rounds" or "3 Day / 2 Night".
+    const m = /(\d+)\s*nights?(?:\D{0,12}(\d+)\s*rounds?)?/i.exec(name);
+    const shape = shape0 || (m ? `${m[1]} night${m[1] === '1' ? '' : 's'}${m[2] ? `, ${m[2]} round${m[2] === '1' ? '' : 's'}` : ''}` : '');
     if (seen.has(url)) continue; seen.add(url);
     const a = alias[`${st}|${city}`];
     const [acity, ast] = a ? a.split('|') : [city, st];
