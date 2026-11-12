@@ -309,10 +309,14 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
         </div>
       )}
       {done && m.result !== 'half' && !m.margin && (
-        <select className="mini-select" aria-label="By how much" value="" onChange={(e) => set(m.result!, e.target.value)}>
-          <option value="">Add the margin (optional)</option>
-          {CUP_MARGINS.filter((x) => m.holes === 18 || Number(x.split(/[& ]/)[0]) <= 5).map((x) => <option key={x} value={x}>{x}</option>)}
-        </select>
+        // A small link; the native picker opens over it when tapped.
+        <label className="margin-add">
+          + Add the margin
+          <select aria-label="By how much" value="" onChange={(e) => set(m.result!, e.target.value)}>
+            <option value="">By how much?</option>
+            {CUP_MARGINS.filter((x) => m.holes === 18 || Number(x.split(/[& ]/)[0]) <= 5).map((x) => <option key={x} value={x}>{x}</option>)}
+          </select>
+        </label>
       )}
     </div>
   );

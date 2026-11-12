@@ -142,8 +142,10 @@ export function Tally({ option }: { option: Option }) {
   const { state } = useTrip();
   const vs = votesFor(state, option.id);
   const names = (val: VoteValue) => state.members.filter((m) => vs[m.id] === val).map((m) => firstName(m.name));
-  const waiting = state.members.filter((m) => !vs[m.id]).map((m) => firstName(m.name));
+  // Once it's locked, nobody is being waited on; show only the votes that were cast, if any.
+  const waiting = option.locked ? [] : state.members.filter((m) => !vs[m.id]).map((m) => firstName(m.name));
   const voted: [string, string[]][] = ([['In', names('yes')], ['Maybe', names('maybe')], ['Out', names('no')]] as [string, string[]][]).filter(([, n]) => n.length);
+  if (option.locked && !voted.length) return null;
   return (
     <div className="voters">
       <div>{voted.length ? voted.map(([k, n], i) => <span key={k}>{i ? ' · ' : ''}<b>{k}</b> {n.join(', ')}</span>) : <span>No votes yet</span>}</div>

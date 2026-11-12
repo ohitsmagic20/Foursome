@@ -623,3 +623,5 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .plan-not-booked { margin-left: 6px; vertical-align: 1px; }
 
 .cup-link { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid var(--line); font: inherit; color: inherit; cursor: pointer; }
+.margin-add { position: relative; align-self: flex-start; display: inline-block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: -4px; }
+.margin-add select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
