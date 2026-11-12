@@ -12,6 +12,7 @@ export const Icon = {
   vote: <svg viewBox="0 0 24 24" {...sv}><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" /><circle cx="12" cy="10" r="2.4" /></svg>,
   stay: <svg viewBox="0 0 24 24" {...sv}><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h14V10" /><path d="M9.5 20v-5h5v5" /></svg>,
   golf: <svg viewBox="0 0 24 24" {...sv}><circle cx="12" cy="9" r="6" /><circle cx="10" cy="7.5" r=".6" fill="currentColor" /><circle cx="13.5" cy="8" r=".6" fill="currentColor" /><circle cx="11.5" cy="10.5" r=".6" fill="currentColor" /><path d="M10 15h4l-1 6h-2Z" /></svg>,
+  cup: <svg viewBox="0 0 24 24" {...sv}><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" /><path d="M7 6H4.5a2.5 2.5 0 0 0 2.6 4.4M17 6h2.5a2.5 2.5 0 0 1-2.6 4.4" /><path d="M12 14v3.5M8.5 20.5h7l-1-3h-5Z" /></svg>,
   flights: <svg viewBox="0 0 24 24" {...sv}><path d="M10.5 13.5 4 12l-1.5 1.5 5 2.5 2.5 5L11.5 19 10 12.5l4.5-4.5c1.4-1.4 3.6-2.6 4.5-1.7.9.9-.3 3.1-1.7 4.5L12.8 15.3" /><path d="M14 8 6.5 5.5 5 7l6 3.5" /></svg>,
   edit: <svg viewBox="0 0 24 24" {...sv} strokeWidth={2}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>,
   clock: <svg width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>,
@@ -39,7 +40,7 @@ export interface TripCtx {
   sheet: (s: SheetSpec | null) => void;
   go: (tab: TabId) => void;
 }
-export type TabId = 'trip' | 'vote' | 'stay' | 'golf' | 'flights';
+export type TabId = 'trip' | 'vote' | 'stay' | 'golf' | 'cup' | 'flights';
 export interface SheetSpec { title: string; body: ReactNode }
 export const Ctx = createContext<TripCtx | null>(null);
 export function useTrip(): TripCtx {

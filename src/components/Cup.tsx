@@ -5,11 +5,66 @@ import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } f
 import { CUP_FORMATS, CUP_MARGINS, andList, cupPlayerPoints, cupScore, dayLabel, draftTurn, pickOf, plannedRounds, pts, teeMinutes } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
-import { useTrip, type TripCtx } from './ui';
+import { Icon, useTrip, type TripCtx } from './ui';
 
 const TEAM_CLASS = ['team-a', 'team-b'] as const;
 
 /** Team match play for the trip, Internet Invitational style: captains, a draft, a point a match. */
+/** Whether the trip shows a Cup tab: once there's a cup, or a group big enough for one (4+). */
+export function hasCupTab(state: TripCtx['state']): boolean {
+  return !!state.trip.cup || state.members.length >= 4;
+}
+
+/** The Cup tab: set-up for the organizer, the draft, then the scoreboard and matches. */
+export function CupTab() {
+  const { state, me } = useTrip();
+  if (!('cup' in state.trip)) {
+    return (
+      <section className="section">
+        <div className="section-head"><h2>The Cup</h2></div>
+        <div className="card empty">{me?.is_organizer
+          ? 'The Cup needs a one-time database update before it can save teams and results. Run supabase/008_cup.sql in the Supabase SQL Editor, then come back.'
+          : 'The Cup isn’t switched on for this trip yet.'}</div>
+      </section>
+    );
+  }
+  if (!state.trip.cup && !me?.is_organizer) {
+    return (
+      <section className="section">
+        <div className="section-head"><h2>The Cup</h2></div>
+        <div className="card cup-pitch">
+          <div className="eyebrow">Coming soon, maybe</div>
+          <div className="row-title">No cup yet</div>
+          <p className="sub">When the organizer sets one up, you’ll see the teams, the draft and the pairings for each round here, and you can enter who won your match.</p>
+        </div>
+      </section>
+    );
+  }
+  return (
+    <>
+      {!state.trip.cup && <div className="section-head"><h2>The Cup</h2></div>}
+      <CupSection />
+    </>
+  );
+}
+
+/** On the Golf tab: a one-line score that opens the Cup tab. */
+export function CupLink() {
+  const { state, go } = useTrip();
+  const cup = state.trip.cup;
+  if (!cup) return null;
+  const score = cupScore(cup);
+  return (
+    <button className="card cup-link" onClick={() => go('cup')}>
+      <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
+        <span className="eyebrow" style={{ display: 'block' }}>{cup.name}</span>
+        <span className="row-title">{cup.drafting ? 'The draft is on' : `${cup.teams[0].name} ${pts(score.a)} · ${pts(score.b)} ${cup.teams[1].name}`}</span>
+      </span>
+      {Icon.chev}
+    </button>
+  );
+}
+
 export function CupSection() {
   const ctx = useTrip();
   const { state, me } = ctx;
@@ -116,9 +171,11 @@ function Board({ cup }: { cup: CupT }) {
   const score = cupScore(cup);
   const name = (id: string) => (id === me?.id ? 'You' : firstName(state.members.find((m) => m.id === id)?.name || '?'));
   const myTeam = cup.teams.findIndex((t) => t.members.includes(me?.id || ''));
-  const winner: 0 | 1 | null = score.total && score.a >= score.toWin ? 0 : score.total && score.b >= score.toWin ? 1 : null;
   const rounds = plannedRounds(state).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
   const start = pickOf<DateData>(state, 'date').option?.data.start;
+  // Only call a winner once every round has its matches; until then the total isn't known.
+  const unpaired = rounds.filter((r) => !cup.matches.some((m) => m.round === r.id)).length;
+  const winner: 0 | 1 | null = unpaired ? null : score.total && score.a >= score.toWin ? 0 : score.total && score.b >= score.toWin ? 1 : null;
   const unassigned = state.members.filter((m) => !cup.teams.some((t) => t.members.includes(m.id)));
   const players = cupPlayerPoints(cup);
   const leaders = [...players.entries()].sort((a, b) => b[1].pts - a[1].pts || a[1].played - b[1].played).slice(0, 5);
@@ -138,9 +195,9 @@ function Board({ cup }: { cup: CupT }) {
         </div>
         {score.total > 0 && (
           <>
-            <div className="cup-bar" aria-hidden="true"><span className="team-a" style={{ width: `${pctA}%` }} /><span className="team-b" style={{ width: `${pctB}%` }} /><i style={{ left: `${(score.toWin / score.total) * 100}%` }} /></div>
+            <div className="cup-bar" aria-hidden="true"><span className="team-a" style={{ width: `${pctA}%` }} /><span className="team-b" style={{ width: `${pctB}%` }} />{!unpaired && <i style={{ left: `${(score.toWin / score.total) * 100}%` }} />}</div>
             <div className="row-meta cup-status">
-              {winner !== null ? `${cup.teams[winner].name} wins the cup.` : `${pts(score.toWin)} to win · ${score.left} match${score.left === 1 ? '' : 'es'} left`}
+              {winner !== null ? `${cup.teams[winner].name} wins the cup.` : unpaired ? [score.left ? `${score.left} match${score.left === 1 ? '' : 'es'} waiting on a result` : '', `${unpaired} round${unpaired === 1 ? '' : 's'} still to pair`].filter(Boolean).join(' · ') : `${pts(score.toWin)} to win · ${score.left} match${score.left === 1 ? '' : 'es'} left`}
             </div>
           </>
         )}

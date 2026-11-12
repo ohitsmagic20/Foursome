@@ -157,7 +157,7 @@ tr.me .mark.none { border-color: var(--green); }
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: color-mix(in srgb, var(--card) 88%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); border-top: 1px solid var(--line);
   padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
-.tabs .in { max-width: 480px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabs .in { max-width: 480px; margin: 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .tab { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 50px; justify-content: center; color: var(--muted); font-size: 11px; font-weight: 600; position: relative; }
 .tab svg { width: 24px; height: 24px; }
 .tab[aria-current="page"] { color: var(--green); }
@@ -621,3 +621,5 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .plan .btn-row > * { width: 100%; justify-content: center; text-align: center; }
 .plan .btn-row > :only-child, .plan .btn-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 .plan-not-booked { margin-left: 6px; vertical-align: 1px; }
+
+.cup-link { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid var(--line); font: inherit; color: inherit; cursor: pointer; }

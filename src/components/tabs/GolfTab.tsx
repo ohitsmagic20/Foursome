@@ -7,7 +7,7 @@ import { dayLabel, groupNames, teeAfter, money, optionsOf, pickOf, plannedRounds
 import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
-import { CupSection } from '../Cup';
+import { CupLink } from '../Cup';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
@@ -36,7 +36,7 @@ export function GolfTab() {
   return (
     <>
       <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
-      <CupSection />
+      <CupLink />
       {destOpt && rounds.length > 0 && !all.failed && (
         <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))} />
       )}
