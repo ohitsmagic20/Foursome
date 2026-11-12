@@ -1,6 +1,7 @@
 import { db, handle, HttpError, str } from '@/lib/server';
 import type { CoursePrices, PriceRange } from '@/lib/shared';
 import { isWeekendDay } from '@/lib/shared';
+import { TEMPLATES } from '@/data/templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,8 @@ async function fromRealTrips(rows: Row[]): Promise<Row[]> {
   const size = new Map<string, number>();
   for (const m of data || []) size.set(m.trip_id, (size.get(m.trip_id) || 0) + 1);
   // Trip-idea estimates aren't real prices until someone enters one (which sets checkedAt).
-  return rows.filter((r) => (size.get(r.trip_id || '') || 0) >= 2 && !((r.data as { fromTemplate?: string }).fromTemplate && !r.data.checkedAt));
+  // Estimates (no price typed) don't count either, so a guess never becomes a "report".
+  return rows.filter((r) => (size.get(r.trip_id || '') || 0) >= 2 && !(r.data as { estimate?: boolean }).estimate && !((r.data as { fromTemplate?: string }).fromTemplate && !r.data.checkedAt));
 }
 
 function range(fees: number[]): PriceRange | null {
@@ -56,6 +58,20 @@ function summarize(course: string, rows: Row[]): CoursePrices | null {
   };
 }
 
+// Typical fees from our trip ideas, by course name: the fallback when no group has entered a price yet.
+const IDEA_FEES = new Map<string, { low: number; high: number; asOf: string }>();
+for (const t of TEMPLATES) for (const r of t.rounds) {
+  const k = r.course.toLowerCase().trim();
+  if (!IDEA_FEES.has(k) && r.fee.low > 0) IDEA_FEES.set(k, { low: r.fee.low, high: r.fee.high, asOf: r.fee.asOf || '' });
+}
+function fromIdea(course: string): CoursePrices | null {
+  const f = IDEA_FEES.get(course.toLowerCase().trim());
+  if (!f) return null;
+  const all = { low: f.low, high: f.high, median: Math.round((f.low + f.high) / 2), count: 0 };
+  return { course, weekday: null, weekend: null, all, latest: f.asOf, source: 'idea' };
+}
+const withSource = (p: CoursePrices | null): CoursePrices | null => (p ? { ...p, source: 'groups' } : null);
+
 export function GET(req: Request) {
   return handle(async () => {
     const q = new URL(req.url).searchParams;
@@ -66,7 +82,7 @@ export function GET(req: Request) {
     if (one) {
       const { data, error } = await db().from('options').select('trip_id,data').eq('kind', 'round').ilike('data->>course', one.replace(/[%_]/g, '\\$&')).limit(300);
       if (error) throw error;
-      return Response.json({ prices: summarize(one, await fromRealTrips((data || []) as Row[])) }, { headers: { 'Cache-Control': 'public, max-age=300' } });
+      return Response.json({ prices: withSource(summarize(one, await fromRealTrips((data || []) as Row[]))) || fromIdea(one) }, { headers: { 'Cache-Control': 'public, max-age=300' } });
     }
 
     const { data, error } = await db().from('options').select('trip_id,data').eq('kind', 'round').in('data->>course', many).limit(2000);
@@ -78,7 +94,7 @@ export function GET(req: Request) {
     }
     const out: Record<string, CoursePrices> = {};
     for (const name of many) {
-      const s = summarize(name, by.get(name) || []);
+      const s = withSource(summarize(name, by.get(name) || [])) || fromIdea(name);
       if (s) out[name] = s;
     }
     return Response.json({ prices: out }, { headers: { 'Cache-Control': 'public, max-age=300' } });

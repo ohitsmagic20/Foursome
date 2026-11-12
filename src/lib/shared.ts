@@ -49,6 +49,8 @@ export interface RoundData {
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
   groups?: string[][];
+  /** No price was entered: the fee is an estimate (what other groups paid), or 0 for "price TBD". */
+  estimate?: boolean;
   /** Added from a trip idea; the fee is an estimate until someone enters a real price. */
   fromTemplate?: string;
   /** Who on the trip is booking this tee time (member id). */
@@ -371,7 +373,15 @@ export const formatTee = (h: number, m: number, ap: string) => `${h}:${String(m)
 export const isWeekendDay = (weekday: number) => weekday === 0 || weekday === 5 || weekday === 6;
 
 export interface PriceRange { low: number; high: number; median: number; count: number }
-export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string }
+export interface CoursePrices { course: string; weekday: PriceRange | null; weekend: PriceRange | null; all: PriceRange | null; latest: string; /** 'groups': what Foresome groups paid; 'idea': the typical fee from a trip idea. */ source?: 'groups' | 'idea' }
+
+/** How pricey a round is: $ up to $70, $$ up to $120, $$$ above. Null when there's no price. */
+export function priceTier(fee: number | null | undefined): '$' | '$$' | '$$$' | null {
+  const f = Number(fee) || 0;
+  if (f <= 0) return null;
+  return f <= 70 ? '$' : f <= 120 ? '$$' : '$$$';
+}
+export const TIER_HINT: Record<string, string> = { $: 'About $20–70 a round', $$: 'About $70–120 a round', $$$: 'Over $120 a round' };
 
 /* ---------- accounts ---------- */
 export interface Profile { id: string; email: string; name: string; phone: string; home_city: string; airport: string; budget: number; bed: Bed; email_updates?: boolean; venmo?: string; cashapp?: string }

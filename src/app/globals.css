@@ -692,3 +692,8 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .place-amt { font-weight: 700; font-variant-numeric: tabular-nums; }
 .place-total { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 4px; font-weight: 600; }
 .place-total b { font-family: var(--font-display), sans-serif; font-size: 22px; }
+
+/* Greens fee tier: $ up to $70, $$ up to $120, $$$ above */
+.tier { display: block; font-family: var(--font-body), sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--line); margin-bottom: 3px; }
+.tier b { color: var(--good); font-weight: 800; }
+.fee.tbd { color: var(--muted); font-size: 18px; }

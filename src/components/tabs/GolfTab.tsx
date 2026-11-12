@@ -1,7 +1,8 @@
 'use client';
 
-import type { DateData, DestinationData, Option, RoundData, TripState } from '@/lib/shared';
-import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
+import { useEffect, useState } from 'react';
+import type { CoursePrices, DateData, DestinationData, Option, RoundData, TripState } from '@/lib/shared';
+import { ACCESS_LABEL, TIER_HINT, priceTier, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { PlaceSwitcher, usePlaces } from '../Places';
@@ -29,6 +30,7 @@ export function GolfTab() {
   const where = destOpt ? destOpt.data.name.split(',')[0] : '';
   const wx = useWeather(destOpt?.data.name, date?.data.start, tripNights(state));
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
+  const unpriced = (plan.length ? plan : rounds).filter((r) => !Number(r.data.fee)).length;
   // Every round's course, looked up once for the map and the cards.
   const stopOf = (r: Option<RoundData>, label: string): Stop => ({
     name: r.data.course, label, courseId: r.data.courseId,
@@ -38,11 +40,12 @@ export function GolfTab() {
   const airport = destOpt ? destAirports(destOpt.data)[0] : undefined;
   const all = useTripCourses(destOpt?.data.name, airport, rounds.slice().sort(byTime).map((r) => stopOf(r, '')));
   const infoFor = (r: Option<RoundData>) => all.data?.courses.find((c) => c.name === r.data.course);
+  const known = useKnownPrices(rounds);
 
   return (
     <>
       <PlaceSwitcher kind="round" />
-      <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
+      <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far{unpriced ? ` · ${unpriced} round${unpriced === 1 ? '' : 's'} without a price yet` : ''}</Callout>
       {!choosing && <CupLink />}
       {destOpt && rounds.length > 0 && !all.failed && (
         <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))} />
@@ -58,7 +61,7 @@ export function GolfTab() {
             <div className="day-label">Day {d}{date ? ` · ${dayLabel(date.data.start, d)}` : ''}{planned >= 2 && <Chip kind="plain">36 holes</Chip>}{wx.data && <DayWeather day={wx.data.days[d - 1]} mode={wx.data.mode} />}</div>
             {rs.length === 0
               ? <button className="card empty dashed" onClick={() => roundSheet(ctx, undefined, d)}>{d === 1 ? 'Arrival day' : d === days ? 'Travel home day' : 'Open day'}: suggest a round</button>
-              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} info={infoFor(r)} />)}
+              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} info={infoFor(r)} known={known[r.data.course]} />)}
           </section>
         );
       })}
@@ -66,7 +69,7 @@ export function GolfTab() {
         <section className="section">
           <div className="day-label">Outside the current dates</div>
           <Callout kind="warn">These fall after the trip ends. Move or remove them.</Callout>
-          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} info={infoFor(r)} />)}
+          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} info={infoFor(r)} known={known[r.data.course]} />)}
         </section>
       )}
       {wx.data && <WeatherCredit />}
@@ -108,7 +111,7 @@ function IdeaRounds() {
   );
 }
 
-function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; info?: MapCourse }) {
+function RoundCard({ r, first, info, known }: { r: Option<RoundData>; first: boolean; info?: MapCourse; known?: CoursePrices }) {
   const ctx = useTrip();
   const { state, me } = ctx;
   const dest = viewedPlace(state, ctx.place);
@@ -134,7 +137,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
           )}
 
         </div>
-        <div className="fee">{money(r.data.fee)}<small>{r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player'}</small></div>
+        <RoundFee r={r} known={known} />
       </div>
       {info?.tees?.length ? <TeeStats tees={info.tees} /> : null}
       {r.locked
@@ -152,6 +155,38 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
       </div>
     </div>
   );
+}
+
+/** The greens fee with its $/$$/$$$ tier. With no price entered: what other groups paid, if known, or "Price TBD". */
+function RoundFee({ r, known }: { r: Option<RoundData>; known?: CoursePrices }) {
+  const entered = Number(r.data.fee) || 0;
+  const guess = !entered && known?.all ? known.all.median : 0;
+  const fee = entered || guess;
+  const tier = priceTier(fee);
+  if (!fee) return <div className="fee tbd">TBD<small>price</small></div>;
+  const note = guess ? (known?.source === 'idea' ? 'typical' : 'groups paid')
+    : r.data.estimate ? (r.data.checked === 'trip idea' ? 'typical' : 'est., groups paid')
+    : r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player';
+  return (
+    <div className="fee">
+      {tier && <span className="tier" title={TIER_HINT[tier]} aria-label={TIER_HINT[tier]}><b>{tier}</b>{'$$$'.slice(tier.length)}</span>}
+      {guess || r.data.estimate ? '~' : ''}{money(fee)}<small>{note}</small>
+    </div>
+  );
+}
+
+/** Typical prices for rounds that don't have one yet, so even "TBD" rounds show roughly what they cost. */
+function useKnownPrices(rounds: Option<RoundData>[]) {
+  const names = [...new Set(rounds.filter((r) => !Number(r.data.fee)).map((r) => r.data.course))].sort();
+  const key = names.join('|');
+  const [map, setMap] = useState<Record<string, CoursePrices>>({});
+  useEffect(() => {
+    if (!key) return;
+    let live = true;
+    fetch(`/api/course-prices?courses=${encodeURIComponent(key)}`).then((x) => (x.ok ? x.json() : null)).then((j) => live && j && setMap(j.prices || {})).catch(() => {});
+    return () => { live = false; };
+  }, [key]);
+  return map;
 }
 
 /** Who plays with whom in a planned round. */

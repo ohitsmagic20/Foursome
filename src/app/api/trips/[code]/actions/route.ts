@@ -82,6 +82,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
         url: url(d.url),
         ...(Array.isArray(d.groups) ? { groups: cleanGroups(d.groups) } : {}),
         ...(typeof d.fromTemplate === 'string' && d.fromTemplate ? { fromTemplate: str(d.fromTemplate, 60) } : {}),
+        ...(d.estimate === true ? { estimate: true } : {}),
         // Picked from the course database.
         ...(/^[0-9a-f-]{36}$/i.test(str(d.courseId, 40)) ? {
           courseId: str(d.courseId, 40),

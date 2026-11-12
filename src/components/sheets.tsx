@@ -326,12 +326,17 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   return (
     <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
       onSubmit={(fd) => {
-        const priceChanged = !d || Number(fd.fee) !== Number(d.fee);
+        // No price typed: use what other groups paid (or a trip idea's typical fee), marked as an estimate.
+        const typed = String(fd.fee || '').trim() !== '';
+        const est = !typed && range ? range.median : 0;
+        const feeNow = typed ? num(fd.fee) : est;
+        const priceChanged = typed && (!d || feeNow !== Number(d.fee) || !!d.estimate);
         const data = {
           ...placeFor(ctx, fd, opt),
-          course: course.trim(), url, day, time: fd.time, fee: num(fd.fee), booked: d?.booked || false, weekday,
-          checked: priceChanged ? todayLabel() : d?.checked || todayLabel(),
-          checkedAt: priceChanged ? new Date().toISOString() : d?.checkedAt || '',
+          course: course.trim(), url, day, time: fd.time, fee: feeNow, booked: d?.booked || false, weekday,
+          ...(!typed ? { estimate: true } : {}),
+          checked: priceChanged ? todayLabel() : typed ? d?.checked || todayLabel() : est ? (prices?.source === 'idea' ? 'trip idea' : 'groups paid') : '',
+          checkedAt: priceChanged ? new Date().toISOString() : typed ? d?.checkedAt || '' : '',
           // A trip-idea estimate stays marked as one until someone enters a real price.
           ...(!priceChanged && d?.fromTemplate ? { fromTemplate: d.fromTemplate } : {}),
           ...(picked && picked.name === course.trim() ? {
@@ -379,13 +384,16 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
       <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `${Math.ceil(state.members.length / 4)} tee times in a row` : undefined} />
       <div className="field">
         <label htmlFor="f-fee">Greens fee per player ($)</label>
-        <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" required value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? String(range.median) : '150'} />
+        <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? `Leave blank to use ~$${range.median}` : 'Optional: add it once you know'} />
       </div>
+      {!range && course.trim().length > 3 && (
+        <p className="hint">No price on file for this course yet. Leave it blank and the round shows “Price TBD” until someone adds it. <a href={`https://www.google.com/search?q=${encodeURIComponent(`${course.trim()} ${dest?.data.name || ''} green fee`)}`} target="_blank" rel="noopener noreferrer">Look up the green fee</a></p>
+      )}
       {range && (
         <div className="price-hint">
           <div>
             <div className="row-title">${range.low === range.high ? range.low : `${range.low}–${range.high}`}{rangeLabel}</div>
-            <div className="row-meta">What Foresome groups paid · {range.count} {range.count === 1 ? 'report' : 'reports'}{prices?.latest ? ` · latest ${prices.latest}` : ''}</div>
+            <div className="row-meta">{prices?.source === 'idea' ? `Typical fee from our trip ideas${prices.latest ? ` · ${prices.latest}` : ''}` : `What Foresome groups paid · ${range.count} ${range.count === 1 ? 'report' : 'reports'}${prices?.latest ? ` · latest ${prices.latest}` : ''}`}</div>
           </div>
           <button type="button" className="btn small" onClick={() => setFee(String(range.median))}>Use ${range.median}</button>
         </div>
