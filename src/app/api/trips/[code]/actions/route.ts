@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { autoRooms, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { autoRooms, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
@@ -300,6 +300,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         let cup = (trip.cup || null) as Cup | null;
         if (cup) cup = { ...cup, teams: cup.teams.map((t) => ({ ...t, members: t.members.filter((id) => ids.has(id)) })) as Cup['teams'] };
         const onTeam = (id: string) => (cup ? cup.teams.findIndex((t) => t.members.includes(id)) : -1);
+        let saved = false;
         if (op === 'setup') {
           mustOrganize(me);
           const caps = (Array.isArray(b.captains) ? b.captains : []).map(String);
@@ -312,7 +313,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             rest.forEach((id, i) => teams[([0, 1, 1, 0] as const)[i % 4]].members.push(id));
           }
           cup = { name: str(b.name, 40) || `${trip.name} Cup`, teams, drafting: !random, matches: [], sitting: {} };
-          pings.push(['others', { title: trip.name, body: random ? `The teams are set for the ${cup.name}. See whose side you’re on.` : `${cup.name}: ${nameOf(caps[0])} and ${nameOf(caps[1])} are captains. The draft is on.`, url: url('golf'), tag: 'cup' }, 0]);
+          pings.push(['others', { title: trip.name, body: random ? `The teams are set for the ${cup.name}. See whose side you’re on.` : `${cup.name}: ${nameOf(caps[0])} and ${nameOf(caps[1])} are captains. The draft is on.`, url: url('cup'), tag: 'cup' }, 0]);
         } else {
           if (!cup) throw new HttpError(400, 'Set up the cup first.');
           if (op === 'pick') {
@@ -323,7 +324,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             if (!ids.has(who) || onTeam(who) >= 0) throw new HttpError(400, 'That player is already on a team.');
             cup.teams[turn].members.push(who);
             if ([...ids].every((id) => onTeam(id) >= 0)) cup.drafting = false;
-            pings.push(['others', { title: cup.name, body: `${cup.teams[turn].name} drafted ${nameOf(who)}.`, url: url('golf'), tag: 'cup-draft' }, 0]);
+            pings.push(['others', { title: cup.name, body: `${cup.teams[turn].name} drafted ${nameOf(who)}.`, url: url('cup'), tag: 'cup-draft' }, 0]);
           } else if (op === 'move') {
             mustOrganize(me);
             const who = str(b.member, 40), to = int(b.team, 0, 1, 0);
@@ -346,32 +347,66 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             cup.sitting = { ...(cup.sitting || {}), [roundId]: built.sitting };
             // The matches are the tee-time groups.
             await db().from('options').update({ data: { ...(round.data as object), groups: groupsFromMatches(built.matches, built.sitting) } }).eq('id', roundId);
-            pings.push(['others', { title: cup.name, body: `Matches are set for ${String((round.data as { course?: string }).course)}: ${CUP_FORMATS[format].label.toLowerCase()}, ${holes} holes.`, url: url('golf'), tag: 'cup' }, 0]);
+            pings.push(['others', { title: cup.name, body: `Matches are set for ${String((round.data as { course?: string }).course)}: ${CUP_FORMATS[format].label.toLowerCase()}, ${holes} holes.`, url: url('cup'), tag: 'cup' }, 0]);
           } else if (op === 'clear_round') {
             mustOrganize(me);
             const roundId = str(b.round, 40);
             cup.matches = cup.matches.filter((m) => m.round !== roundId);
             if (cup.sitting) delete cup.sitting[roundId];
-          } else if (op === 'result') {
-            const m = cup.matches.find((x) => x.id === str(b.match, 60));
-            if (!m) throw new HttpError(404, 'That match isn’t in the cup anymore.');
-            const r = b.result === 'a' || b.result === 'b' || b.result === 'half' ? b.result : null;
-            const before = cupScore(cup);
-            m.result = r;
-            m.margin = r && r !== 'half' && CUP_MARGINS.includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
-            const after = cupScore(cup);
-            if (r) {
-              const side = (x: string[]) => x.map(nameOf).join(' & ');
-              const text = r === 'half' ? `${side(m.a)} and ${side(m.b)} halved their match.` : `${side(r === 'a' ? m.a : m.b)} beat ${side(r === 'a' ? m.b : m.a)}${m.margin ? `, ${m.margin}` : ''}.`;
-              const won = [after.a, after.b].findIndex((x, i) => x >= after.toWin && [before.a, before.b][i] < before.toWin);
-              pings.push(['others', { title: cup.name, body: won >= 0 ? `${cup.teams[won].name} wins the ${cup.name}! ${pts(after.a)}–${pts(after.b)}.` : `${text} ${cup.teams[0].name} ${pts(after.a)}, ${cup.teams[1].name} ${pts(after.b)}.`, url: url('golf'), tag: 'cup-result' }, 0]);
+          } else if (op === 'result' || op === 'hole') {
+            // Scores come in from several phones at once. Save only if nobody changed the cup since we read it;
+            // otherwise read it again and re-apply this score (a few tries).
+            let fresh: Cup = cup;
+            for (let attempt = 0; ; attempt++) {
+              const v = fresh.v || 0;
+              const m = fresh.matches.find((x) => x.id === str(b.match, 60));
+              if (!m) throw new HttpError(404, 'That match isn’t in the cup anymore.');
+              const before = cupScore(fresh);
+              const wasDone = m.result || null;
+              if (op === 'hole') {
+                const i = int(b.hole, 1, m.holes, 0) - 1;
+                if (i < 0) throw new HttpError(400, 'Which hole?');
+                const w: HoleWin = b.winner === 'a' || b.winner === 'b' || b.winner === 'half' ? b.winner : null;
+                m.play = Array.from({ length: m.holes }, (_, k) => (k === i ? w : m.play?.[k] ?? null));
+                const st = matchStatus(m);
+                if (st.decided) { m.result = st.result; m.margin = st.margin; m.auto = true; }
+                else if (m.auto) { m.result = null; m.margin = undefined; m.auto = false; }
+              } else {
+                const r = b.result === 'a' || b.result === 'b' || b.result === 'half' ? b.result : null;
+                m.result = r;
+                m.margin = r && r !== 'half' && CUP_MARGINS.includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
+                m.auto = false;
+              }
+              fresh.v = v + 1;
+              const base = db().from('trips').update({ cup: fresh }).eq('id', trip.id);
+              const { data: saved, error: saveErr } = await (v ? base.eq('cup->>v', String(v)) : base.is('cup->v', null)).select('id');
+              if (saveErr) {
+                if (/cup/.test(saveErr.message)) throw new HttpError(503, 'The cup needs a quick database update. The app owner has been told.');
+                throw saveErr;
+              }
+              if (saved && saved.length) {
+                const after = cupScore(fresh);
+                if (m.result && m.result !== wasDone) {
+                  const side = (x: string[]) => x.map(nameOf).join(' & ');
+                  const text = m.result === 'half' ? `${side(m.a)} and ${side(m.b)} halved their match.` : `${side(m.result === 'a' ? m.a : m.b)} beat ${side(m.result === 'a' ? m.b : m.a)}${m.margin ? `, ${m.margin}` : ''}.`;
+                  const won = [after.a, after.b].findIndex((x, i) => x >= after.toWin && [before.a, before.b][i] < before.toWin);
+                  pings.push(['others', { title: fresh.name, body: won >= 0 ? `${fresh.teams[won].name} wins the ${fresh.name}! ${pts(after.a)}–${pts(after.b)}.` : `${text} ${fresh.teams[0].name} ${pts(after.a)}, ${fresh.teams[1].name} ${pts(after.b)}.`, url: url('cup'), tag: 'cup-result' }, 0]);
+                }
+                break;
+              }
+              if (attempt >= 4) throw new HttpError(409, 'Lots of scores coming in at once. Tap that hole again.');
+              const { data: row } = await db().from('trips').select('cup').eq('id', trip.id).single();
+              if (!row?.cup) throw new HttpError(400, 'The cup was deleted.');
+              fresh = row.cup as Cup;
             }
+            saved = true;
           } else if (op === 'delete') {
             mustOrganize(me);
             cup = null;
           } else throw new HttpError(400, 'Unknown cup change.');
         }
-        const r = await db().from('trips').update({ cup }).eq('id', trip.id);
+        if (cup) cup.v = (cup.v || 0) + 1;
+        const r = saved ? { error: null } : await db().from('trips').update({ cup }).eq('id', trip.id);
         if (r.error) {
           if (/cup/.test(r.error.message)) {
             await logError('server', 'Run supabase/008_cup.sql: trips.cup is missing', `/t/${trip.code}`);

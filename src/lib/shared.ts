@@ -446,8 +446,60 @@ export const CUP_FORMATS: Record<CupFormat, { label: string; per: number; blurb:
 export const CUP_MARGINS = ['1 up', '2 up', '2&1', '3&1', '3&2', '4&2', '4&3', '5&3', '5&4', '6&4', '6&5', '7&5', '7&6', '8&6', '8&7', '9&8', '10&8'];
 export interface CupTeam { name: string; captain: string; members: string[] }
 export type CupResult = 'a' | 'b' | 'half';
-export interface CupMatch { id: string; round: string; format: CupFormat; holes: 9 | 18; a: string[]; b: string[]; result?: CupResult | null; margin?: string; twice?: string[] }
-export interface Cup { name: string; teams: [CupTeam, CupTeam]; drafting: boolean; matches: CupMatch[]; sitting?: Record<string, string[]> }
+/** Who won one hole of a match: side a, side b, or halved. null = not entered yet. */
+export type HoleWin = CupResult | null;
+export interface CupMatch {
+  id: string; round: string; format: CupFormat; holes: 9 | 18; a: string[]; b: string[]; result?: CupResult | null; margin?: string; twice?: string[];
+  /** Hole-by-hole: index 0 is hole 1. */
+  play?: HoleWin[];
+  /** True when the result came from the hole-by-hole scorecard (so editing a hole can reopen the match). */
+  auto?: boolean;
+}
+/** `v` counts changes, so two phones saving at once can't overwrite each other. */
+export interface Cup { name: string; teams: [CupTeam, CupTeam]; drafting: boolean; matches: CupMatch[]; sitting?: Record<string, string[]>; v?: number }
+
+/** Where a match stands from its hole-by-hole card: holes up (positive = side a), holes entered, and whether it's over. */
+export function matchStatus(m: CupMatch) {
+  // Walk the holes in order and stop the moment it's decided (a 10&8 rout doesn't keep counting).
+  let lead = 0, thru = 0, last = 0, decided = false;
+  for (let i = 0; i < m.holes; i++) {
+    const h = m.play?.[i];
+    if (!h) continue;
+    thru++; last = i + 1;
+    if (h === 'a') lead++; else if (h === 'b') lead--;
+    const left = m.holes - thru;
+    if (Math.abs(lead) > left || left === 0) { decided = true; break; }
+  }
+  const remaining = m.holes - thru;
+  const result: CupResult | null = decided ? (lead > 0 ? 'a' : lead < 0 ? 'b' : 'half') : null;
+  const margin = decided && lead !== 0 ? (remaining === 0 ? `${Math.abs(lead)} up` : `${Math.abs(lead)}&${remaining}`) : undefined;
+  const dormie = !decided && lead !== 0 && Math.abs(lead) === remaining;
+  return { lead, thru, last, remaining, decided, result, margin, dormie, started: thru > 0 };
+}
+
+/** "2 UP thru 7", "All square thru 3", "Dormie (3 UP, 3 to play)", for side names given. */
+export function statusLabel(m: CupMatch, sideA: string, sideB: string): string {
+  const s = matchStatus(m);
+  if (!s.started) return 'Not started';
+  if (s.decided) return s.result === 'half' ? 'Halved' : `${s.result === 'a' ? sideA : sideB} won, ${s.margin}`;
+  if (s.lead === 0) return `All square thru ${s.thru}`;
+  const who = s.lead > 0 ? sideA : sideB;
+  return s.dormie ? `${who} dormie, ${Math.abs(s.lead)} UP with ${s.remaining} to play` : `${who} ${Math.abs(s.lead)} UP thru ${s.thru}`;
+}
+
+/** Points if every match in progress ended now: the leader takes the point, all square splits it. */
+export function cupLive(cup: Cup) {
+  const done = cupScore(cup);
+  let a = done.a, b = done.b, live = 0;
+  for (const m of cup.matches) {
+    if (m.result) continue;
+    const s = matchStatus(m);
+    if (!s.started) continue;
+    live++;
+    if (s.lead > 0) a++; else if (s.lead < 0) b++; else { a += 0.5; b += 0.5; }
+  }
+  return { a, b, live };
+}
 
 /** Team points so far (1 a win, ½ a half), points on the table, and what clinches it. */
 export function cupScore(cup: Cup) {
