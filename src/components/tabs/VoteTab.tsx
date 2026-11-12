@@ -8,6 +8,7 @@ import { Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '..
 import { dateSheet, destSheet } from '../sheets';
 import { Deadline } from '../Deadline';
 import { CompareDestinations } from '../Compare';
+import { PlacePackage } from '../Places';
 
 const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };
 const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
@@ -95,6 +96,7 @@ function Where() {
     <section className="section">
       <div className="section-head"><h2>Where</h2><button className="btn small" onClick={() => destSheet(ctx)}>{Icon.plus} Place</button></div>
       <Deadline kind="destination" />
+      {dests.length > 1 && !locked && <p className="sub">Each place has its own stays and rounds. Plan them all, then vote on the whole trip: place, stay and golf together.</p>}
       <CompareDestinations />
       {dests.length === 0 && <button className="card empty dashed" onClick={() => destSheet(ctx)}>Suggest a destination, like Myrtle Beach, Scottsdale or Pinehurst.</button>}
       {shown.map((d) => (
@@ -106,6 +108,7 @@ function Where() {
             </div>
             {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && tally(state, d.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
           </div>
+          {dests.length > 1 && !locked && <PlacePackage d={d} />}
           {wxDate && <WeatherStrip place={d.data.name} start={wxDate} nights={tripNights(state)} />}
           {!locked && <VoteControl option={d} />}
           <Tally option={d} />

@@ -5,7 +5,7 @@ import type { DestinationData, LodgingData, Option, RoundData, TripCtx } from '.
 import type { CourseHit, CourseInfo, CoursePrices, DateData, NearbyAirport, NearbyCourse } from '@/lib/shared';
 import { ACCESS_LABEL } from '@/lib/shared';
 import { TeeStats } from './TeeTable';
-import { addDays, autoGroups, bedsNeeded, dayLabel, destAirports, isWeekendDay, parseDay, pickOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { addDays, autoGroups, bedsNeeded, dayLabel, destAirports, isWeekendDay, optionsOf, parseDay, pickOf, placeOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
 import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
 
@@ -202,7 +202,7 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
   return (
     <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
       onSubmit={(fd) => {
-        const data = { name: fd.name, url: fd.url, image, total: num(fd.total), bedrooms: num(fd.bedrooms), beds: num(fd.beds) };
+        const data = { ...placeFor(ctx, fd, opt), name: fd.name, url: fd.url, image, total: num(fd.total), bedrooms: num(fd.bedrooms), beds: num(fd.beds) };
         return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'lodging', data }, 'Added to the vote');
       }}
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
@@ -215,6 +215,7 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
       {looking && <p className="hint" role="status"><span className="spinner" style={{ display: 'inline-block', width: 12, height: 12, marginRight: 6 }} />Reading the listing…</p>}
       {!looking && found && <p className="hint" role="status">{found}</p>}
       {image && <img className="opt-img" src={image} alt="" />}
+      <PlaceField ctx={ctx} opt={opt} />
       <div className="field">
         <label htmlFor="f-name">Name</label>
         <input id="f-name" name="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="6-bedroom beach house" />
@@ -238,12 +239,31 @@ export function lodgingSheet(ctx: TripCtx, opt?: Option<LodgingData>) {
   ctx.sheet({ title: opt ? 'Edit place' : 'Suggest a place to stay', body: <LodgingForm ctx={ctx} opt={opt} /> });
 }
 
+/** While the group is still choosing a place, which destination a stay or round is for. */
+function PlaceField({ ctx, opt }: { ctx: TripCtx; opt?: Option }) {
+  const ds = optionsOf<DestinationData>(ctx.state, 'destination');
+  if (ds.length < 2 || ds.some((d) => d.locked)) return null;
+  const cur = opt ? placeOf(ctx.state, opt) || '' : ctx.place || '';
+  return (
+    <div className="field">
+      <label htmlFor="f-dest">For which place?</label>
+      <select id="f-dest" name="dest" defaultValue={cur}>
+        {ds.map((d) => <option key={d.id} value={d.id}>{d.data.name}</option>)}
+        <option value="">Any of them</option>
+      </select>
+    </div>
+  );
+}
+/** The place a new stay or round goes with: the chosen one, else the one being viewed. */
+const placeFor = (ctx: TripCtx, fd: Record<string, string>, opt?: Option) => ('dest' in fd ? { dest: fd.dest } : opt ? {} : ctx.place ? { dest: ctx.place } : {});
+
 function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx: TripCtx; opt?: Option<RoundData>; day: number; prefillCourse?: string; prefillUrl?: string }) {
   const { state } = ctx;
   const days = tripNights(state) + 1;
   const d = opt?.data;
   const date = pickOf<DateData>(state, 'date').option;
-  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const placeId = (opt && placeOf(state, opt)) || ctx.place;
+  const dest = optionsOf<DestinationData>(state, 'destination').find((x) => x.id === placeId) || pickOf<DestinationData>(state, 'destination').option;
   const [course, setCourse] = useState(d?.course ?? prefillCourse ?? '');
   const [url, setUrl] = useState(d?.url ?? prefillUrl ?? '');
   const [day, setDay] = useState(Math.min(d?.day || startDay, days));
@@ -308,6 +328,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
       onSubmit={(fd) => {
         const priceChanged = !d || Number(fd.fee) !== Number(d.fee);
         const data = {
+          ...placeFor(ctx, fd, opt),
           course: course.trim(), url, day, time: fd.time, fee: num(fd.fee), booked: d?.booked || false, weekday,
           checked: priceChanged ? todayLabel() : d?.checked || todayLabel(),
           checkedAt: priceChanged ? new Date().toISOString() : d?.checkedAt || '',
@@ -321,6 +342,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
       }}
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
+      <PlaceField ctx={ctx} opt={opt} />
       <div className="field">
         <label htmlFor="f-course">Course</label>
         <input id="f-course" name="course" value={course} autoComplete="off" required placeholder="Start typing a course name"

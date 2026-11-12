@@ -39,6 +39,9 @@ export interface TripCtx {
   toast: (msg: string) => void;
   sheet: (s: SheetSpec | null) => void;
   go: (tab: TabId) => void;
+  /** The destination the Stay and Golf tabs are showing (its option id), and a way to switch to another. */
+  place: string | null;
+  view: (place: string, tab?: TabId) => void;
 }
 export type TabId = 'trip' | 'vote' | 'stay' | 'golf' | 'cup' | 'flights';
 export interface SheetSpec { title: string; body: ReactNode }

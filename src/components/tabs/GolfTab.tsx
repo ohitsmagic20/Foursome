@@ -1,9 +1,10 @@
 'use client';
 
-import type { DateData, DestinationData, Option, RoundData } from '@/lib/shared';
+import type { DateData, DestinationData, Option, RoundData, TripState } from '@/lib/shared';
 import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
-import { dayLabel, groupNames, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { PlaceSwitcher, usePlaces } from '../Places';
 import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
@@ -12,15 +13,20 @@ import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 
+/** The destination being planned on this tab (the locked one, or the one picked in the switcher). */
+const viewedPlace = (state: TripState, id: string | null) => (optionsOf<DestinationData>(state, 'destination').find((d) => d.id === id) || null) as Option<DestinationData> | null;
+
 export function GolfTab() {
   const ctx = useTrip();
   const { state } = ctx;
   const n = state.members.length;
   const days = tripNights(state) + 1;
   const date = pickOf<DateData>(state, 'date').option;
-  const rounds = optionsOf<RoundData>(state, 'round');
-  const plan = plannedRounds(state);
-  const destOpt = pickOf<DestinationData>(state, 'destination').option;
+  const rounds = inPlace<RoundData>(state, 'round', ctx.place);
+  const plan = plannedRounds(state, ctx.place);
+  const destOpt = viewedPlace(state, ctx.place);
+  const choosing = usePlaces().length > 1;
+  const where = destOpt ? destOpt.data.name.split(',')[0] : '';
   const wx = useWeather(destOpt?.data.name, date?.data.start, tripNights(state));
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
   // Every round's course, looked up once for the map and the cards.
@@ -35,12 +41,13 @@ export function GolfTab() {
 
   return (
     <>
-      <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
-      <CupLink />
+      <PlaceSwitcher kind="round" />
+      <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far</Callout>
+      {!choosing && <CupLink />}
       {destOpt && rounds.length > 0 && !all.failed && (
         <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))} />
       )}
-      <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
+      <div className="section-head"><h2>{choosing && where ? `Rounds in ${where}` : 'Rounds'}</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
       <IdeaRounds />
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
@@ -74,12 +81,12 @@ export function GolfTab() {
 function IdeaRounds() {
   const ctx = useTrip();
   const { state, act, toast } = ctx;
-  const dest = pickOf<DestinationData>(state, 'destination');
-  if (!dest.locked || !dest.option) return null;
-  const key = dest.option.data.name.toLowerCase().split(',')[0].trim();
+  const place = viewedPlace(state, ctx.place);
+  if (!place) return null;
+  const key = place.data.name.toLowerCase().split(',')[0].trim();
   const idea = TEMPLATES.find((t) => t.destination.toLowerCase().split(',')[0].trim() === key);
   if (!idea) return null;
-  const have = new Set(optionsOf<RoundData>(state, 'round').map((r) => r.data.course.toLowerCase()));
+  const have = new Set(inPlace<RoundData>(state, 'round', place.id).map((r) => r.data.course.toLowerCase()));
   const missing = idea.rounds.filter((r) => !have.has(r.course.toLowerCase()));
   if (missing.length < 2) return null;
   return (
@@ -94,7 +101,7 @@ function IdeaRounds() {
         ))}
       </div>
       <div className="btn-row">
-        <button className="btn primary" onClick={async () => { if (await act('add_idea_rounds', { slug: idea.slug })) toast(`Added ${missing.length} rounds to the vote`); }}>Add all {missing.length} to the vote</button>
+        <button className="btn primary" onClick={async () => { if (await act('add_idea_rounds', { slug: idea.slug, dest: place.id })) toast(`Added ${missing.length} rounds to the vote`); }}>Add all {missing.length} to the vote</button>
         <a className="btn" href={`/ideas/${idea.slug}`} target="_blank" rel="noopener noreferrer">See the trip idea</a>
       </div>
     </div>
@@ -104,7 +111,8 @@ function IdeaRounds() {
 function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; info?: MapCourse }) {
   const ctx = useTrip();
   const { state, me } = ctx;
-  const dest = pickOf<DestinationData>(state, 'destination').option;
+  const dest = viewedPlace(state, ctx.place);
+  const plans = usePlaces().length > 1 && dest ? `${dest.data.name.split(',')[0]} plan` : 'plan';
   const t = tally(state, r.id);
   const ap = (r.data.time.match(/AM|PM/i) || [''])[0].toUpperCase();
   const early = first && teeMinutes(r.data.time) < 13 * 60;
@@ -130,7 +138,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
       </div>
       {info?.tees?.length ? <TeeStats tees={info.tees} /> : null}
       {r.locked
-        ? <div className="opt-status"><span className="good">In the plan</span></div>
+        ? <div className="opt-status"><span className="good">In the {plans}</span></div>
         : t.yes > state.members.length / 2 ? <div className="opt-status"><span className="flag">Most are in</span></div> : null}
       {r.locked && <Pairings r={r} />}
       {r.locked && <BookingRow option={r} />}
@@ -139,7 +147,7 @@ function RoundCard({ r, first, info }: { r: Option<RoundData>; first: boolean; i
       <Tally option={r} />
       <div className="opt-foot">
         <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
-        <LockButton option={r} lockLabel="Add to plan" unlockLabel="Remove from plan" />
+        <LockButton option={r} lockLabel={`Add to ${plans}`} unlockLabel="Remove from plan" />
         {canEdit(me, r) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => roundSheet(ctx, r)}>Edit</button>}
       </div>
     </div>

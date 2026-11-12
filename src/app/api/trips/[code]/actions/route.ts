@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { autoRooms, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
@@ -22,6 +22,9 @@ function label(kind: Kind, d: Record<string, unknown>, trip: Trip): string {
 }
 const first = (n: string) => n.split(/\s+/)[0];
 const MAX_OPTIONS = 60;
+
+/** A destination option id that a stay or round belongs to. */
+const placeId = (v: unknown) => { const x = str(v, 40); return /^[0-9a-f-]{36}$/i.test(x) ? x : ''; };
 
 function url(v: unknown): string {
   const s = str(v, 500);
@@ -49,6 +52,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
       const name = str(d.name, 100);
       if (!name && !url(d.url)) throw new HttpError(400, 'Enter a name or paste a listing link.');
       return {
+        ...(placeId(d.dest) ? { dest: placeId(d.dest) } : {}),
         name: name || 'Listing',
         url: url(d.url),
         image: url(d.image),
@@ -63,6 +67,7 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
       const course = str(d.course, 100);
       if (!course) throw new HttpError(400, 'Enter the course name.');
       return {
+        ...(placeId(d.dest) ? { dest: placeId(d.dest) } : {}),
         course,
         day: int(d.day, 1, 15, 1),
         time: str(d.time, 12) || 'TBD',
@@ -150,7 +155,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const tpl = await ideaBySlug(str(b.slug, 60));
         if (!tpl) throw new HttpError(404, 'That trip idea isn’t available.');
         const { data: existing } = await db().from('options').select('data').eq('trip_id', trip.id).eq('kind', 'round');
-        const have = new Set((existing || []).map((o) => String((o.data as { course?: string }).course || '').toLowerCase()));
+        const forPlace = placeId(b.dest);
+        const have = new Set((existing || []).filter((o) => { const p = (o.data as { dest?: string }).dest; return !forPlace || !p || p === forPlace; }).map((o) => String((o.data as { course?: string }).course || '').toLowerCase()));
         const days = nightsOf(trip) + 1;
         const fresh = tpl.rounds.filter((r) => !have.has(r.course.toLowerCase())).slice(0, Math.max(0, MAX_OPTIONS - (existing?.length || 0)));
         if (!fresh.length) throw new HttpError(400, 'Those courses are already on the list.');
@@ -159,7 +165,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           data: {
             course: r.course, day: Math.min(r.day, days), time: r.time, fee: typicalFee(r.fee), booked: false,
             checked: r.fee.verified ? `${r.fee.asOf} (trip idea)` : 'estimate (trip idea)', checkedAt: '', weekday: -1,
-            url: r.url || '', fromTemplate: tpl.slug, ...(r.courseId ? { courseId: r.courseId } : {}),
+            url: r.url || '', fromTemplate: tpl.slug, ...(placeId(b.dest) ? { dest: placeId(b.dest) } : {}), ...(r.courseId ? { courseId: r.courseId } : {}),
           },
         }));
         const { data: added, error } = await db().from('options').insert(rows).select('id');
@@ -175,7 +181,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Editing a round's course or time keeps its pairings, and editing a place keeps who's booking it.
         if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
         const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
-        for (const k of ['owner', 'booked', 'confirmation', 'rooms'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
+        for (const k of ['owner', 'booked', 'confirmation', 'rooms', 'dest'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
+        if ('dest' in raw && !data.dest) delete data.dest;
         const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;
@@ -185,6 +192,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (opt.created_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who added this or the organizer can remove it.');
         const r = await db().from('options').delete().eq('id', opt.id);
         if (r.error) throw r.error;
+        // A place's own stays and rounds go with it.
+        if (opt.kind === 'destination') await db().from('options').delete().eq('trip_id', trip.id).in('kind', ['lodging', 'round']).eq('data->>dest', opt.id).eq('locked', false);
         break;
       }
       case 'lock':
@@ -192,7 +201,13 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         mustOrganize(me);
         const opt = await optionFor(trip.id, b.optionId);
         const lock = b.type === 'lock';
-        if (lock && SINGLE_WINNER.includes(opt.kind)) {
+        if (lock && opt.kind === 'lodging') {
+          // One stay per place: each destination keeps its own pick until the group chooses the place.
+          const dest = placeId(opt.data.dest);
+          const q = db().from('options').update({ locked: false }).eq('trip_id', trip.id).eq('kind', 'lodging');
+          const r = await (dest ? q.eq('data->>dest', dest) : q.is('data->>dest', null));
+          if (r.error) throw r.error;
+        } else if (lock && SINGLE_WINNER.includes(opt.kind)) {
           const r = await db().from('options').update({ locked: false }).eq('trip_id', trip.id).eq('kind', opt.kind);
           if (r.error) throw r.error;
         }
@@ -418,7 +433,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       }
       case 'rooms': {
         // Who sleeps where in the locked stay. Anyone can move themselves; the organizer can auto-assign or clear.
-        const { data: stay } = await db().from('options').select('id,data').eq('trip_id', trip.id).eq('kind', 'lodging').eq('locked', true).maybeSingle();
+        const roomState = await loadState(trip, null);
+        const stay = lockedOf<LodgingData>(roomState, 'lodging');
         if (!stay) throw new HttpError(400, 'Lock in a place to stay first.');
         const d = stay.data as LodgingData;
         const n = Math.min(20, Math.max(1, d.bedrooms || 1));

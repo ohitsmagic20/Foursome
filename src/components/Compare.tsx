@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { DestinationData } from '@/lib/shared';
-import { lockedOf, optionsOf, tally } from '@/lib/shared';
+import { lockedOf, money, optionsOf, placePlan, tally } from '@/lib/shared';
 import { api } from '@/lib/client';
 import { useTrip } from './ui';
 
@@ -32,13 +32,15 @@ export function CompareDestinations() {
   if (dests.length < 2 || locked || !rows) return null;
   const n = state.members.length;
   const sorted = rows.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
-  const anyCost = rows.some((r) => r.golf || r.stayPerNight);
+  const plans = new Map(rows.map((r) => [r.id, placePlan(state, r.id)]));
+  const anyPlan = [...plans.values()].some((p) => p.each > 0);
+  const anyCost = !anyPlan && rows.some((r) => r.golf || r.stayPerNight);
   return (
     <div className="card compare">
       <div className="row-title">Side by side</div>
       <div className="scroll">
         <table className="sc compare-table">
-          <thead><tr><th className="name">Place</th><th className="num">In</th><th className="num">Flight</th>{anyCost && <th className="num">Golf</th>}</tr></thead>
+          <thead><tr><th className="name">Place</th><th className="num">In</th><th className="num">Flight</th>{anyPlan && <th className="num">Stay + golf</th>}{anyCost && <th className="num">Golf</th>}</tr></thead>
           <tbody>
             {sorted.map((r) => (
               <tr key={r.id}>
@@ -48,13 +50,14 @@ export function CompareDestinations() {
                 </td>
                 <td className="num">{tally(state, r.id).yes}/{n}</td>
                 <td className="num">{r.avgHours !== null ? hrs(r.avgHours) : '—'}</td>
+                {anyPlan && <td className="num">{plans.get(r.id)!.each ? money(plans.get(r.id)!.each) : <span className="row-meta">—</span>}</td>}
                 {anyCost && <td className="num">{r.golf ? range(r.golf.low, r.golf.high) : <span className="row-meta">—</span>}</td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="hint">Flight is the average time in the air from everyone’s home airport, estimated from distance; connections add more.{anyCost ? ' Golf is the usual price per round at courses from our trip ideas.' : ''}</p>
+      <p className="hint">Flight is the average time in the air from everyone’s home airport, estimated from distance; connections add more.{anyPlan ? ' Stay + golf is each person’s share of that place’s leading stay and rounds.' : anyCost ? ' Golf is the usual price per round at courses from our trip ideas.' : ''}</p>
     </div>
   );
 }

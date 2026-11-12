@@ -42,8 +42,10 @@ export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
-export interface LodgingData { name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string; rooms?: string[][] }
+export interface LodgingData { /** The destination option this stay is for (empty: any place). */ dest?: string; name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string; rooms?: string[][] }
 export interface RoundData {
+  /** The destination option this round is for (empty: any place). */
+  dest?: string;
   course: string; day: number; time: string; fee: number; booked?: boolean; checked?: string; checkedAt?: string; weekday?: number; url?: string;
   /** Pairings: member ids per tee time, in order. Group 1 tees off at `time`, each next group 10 minutes later. */
   groups?: string[][];
@@ -159,18 +161,43 @@ export function tally(state: TripState, optionId: string) {
 export function optionsOf<T>(state: TripState, kind: Kind): Option<T>[] {
   return state.options.filter((o) => o.kind === kind) as Option<T>[];
 }
-export function lockedOf<T>(state: TripState, kind: Kind): Option<T> | null {
-  return (optionsOf<T>(state, kind).find((o) => o.locked) as Option<T>) || null;
+
+/* ---------- places: stays and rounds belong to one destination ---------- */
+const PLACED: Kind[] = ['lodging', 'round'];
+/** The destination the trip's plan follows: the locked one, else the one leading the vote. */
+export function tripPlace(state: TripState): string | null {
+  const ds = optionsOf<DestinationData>(state, 'destination');
+  const l = ds.find((d) => d.locked);
+  if (l) return l.id;
+  if (!ds.length) return null;
+  return ds.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score)[0].id;
 }
-export function leaderOf<T>(state: TripState, kind: Kind): Option<T> | null {
-  const opts = optionsOf<T>(state, kind);
+/** Which destination an option is for, or null when it isn't tied to one (or its place was removed). */
+export function placeOf(state: TripState, o: Option): string | null {
+  const d = (o.data as { dest?: string })?.dest;
+  return d && state.options.some((x) => x.id === d && x.kind === 'destination') ? d : null;
+}
+/** Stays or rounds for one destination (plus any not tied to a place). `place` null means all. */
+export function inPlace<T>(state: TripState, kind: Kind, place: string | null): Option<T>[] {
+  const all = optionsOf<T>(state, kind);
+  if (!place || !PLACED.includes(kind)) return all;
+  return all.filter((o) => { const p = placeOf(state, o); return !p || p === place; });
+}
+const scoped = <T,>(state: TripState, kind: Kind) => inPlace<T>(state, kind, PLACED.includes(kind) ? tripPlace(state) : null);
+
+export function lockedOf<T>(state: TripState, kind: Kind, place?: string | null): Option<T> | null {
+  const opts = place !== undefined ? inPlace<T>(state, kind, place) : scoped<T>(state, kind);
+  return (opts.find((o) => o.locked) as Option<T>) || null;
+}
+export function leaderOf<T>(state: TripState, kind: Kind, place?: string | null): Option<T> | null {
+  const opts = place !== undefined ? inPlace<T>(state, kind, place) : scoped<T>(state, kind);
   if (!opts.length) return null;
   return opts.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score)[0];
 }
-/** The locked option if there is one, otherwise the current leader. */
-export function pickOf<T>(state: TripState, kind: Kind): { option: Option<T> | null; locked: boolean } {
-  const l = lockedOf<T>(state, kind);
-  return l ? { option: l, locked: true } : { option: leaderOf<T>(state, kind), locked: false };
+/** The locked option if there is one, otherwise the current leader. Stays follow the trip's place. */
+export function pickOf<T>(state: TripState, kind: Kind, place?: string | null): { option: Option<T> | null; locked: boolean } {
+  const l = lockedOf<T>(state, kind, place);
+  return l ? { option: l, locked: true } : { option: leaderOf<T>(state, kind, place), locked: false };
 }
 
 /** Nights for one date option. */
@@ -192,8 +219,24 @@ export function lodgingShare(members: Member[], total: number, m: Member): numbe
   const sum = members.reduce((s, x) => s + BED_WEIGHT[x.bed], 0) || 1;
   return (total * BED_WEIGHT[m.bed]) / sum;
 }
-export function plannedRounds(state: TripState): Option<RoundData>[] {
-  return optionsOf<RoundData>(state, 'round').filter((o) => o.locked);
+export function plannedRounds(state: TripState, place?: string | null): Option<RoundData>[] {
+  return (place !== undefined ? inPlace<RoundData>(state, 'round', place) : scoped<RoundData>(state, 'round')).filter((o) => o.locked);
+}
+
+/** One destination's whole trip, for comparing places before the group picks one. */
+export function placePlan(state: TripState, place: string) {
+  const stays = inPlace<LodgingData>(state, 'lodging', place);
+  const rounds = inPlace<RoundData>(state, 'round', place);
+  const stay = pickOf<LodgingData>(state, 'lodging', place);
+  const planned = rounds.filter((r) => r.locked);
+  // Without a set plan yet, count the best-liked round per day.
+  const best = new Map<number, Option<RoundData>>();
+  for (const r of rounds.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score)) if (!best.has(r.data.day)) best.set(r.data.day, r);
+  const golfRounds = planned.length ? planned : [...best.values()];
+  const n = Math.max(1, state.members.length);
+  const stayEach = stay.option ? (Number(stay.option.data.total) || 0) / n : 0;
+  const golfEach = golfRounds.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
+  return { stays, rounds, stay: stay.option, stayLocked: stay.locked, golfRounds, golfPlanned: planned.length > 0, stayEach, golfEach, each: stayEach + golfEach };
 }
 export function costOf(state: TripState, m: Member) {
   const lodging = pickOf<LodgingData>(state, 'lodging').option;
@@ -301,9 +344,13 @@ export function lodgingSearchLinks(dest: string, checkIn: string, nights: number
 export function openVotes(state: TripState): Record<Kind, number> {
   const out: Record<Kind, number> = { date: 0, destination: 0, lodging: 0, round: 0 };
   if (!state.meId) return out;
-  const settled = new Set(state.options.filter((o) => o.locked && o.kind !== 'round').map((o) => o.kind));
+  const dest = state.options.find((o) => o.kind === 'destination' && o.locked);
+  // A kind is settled once something's locked: dates and places trip-wide, a stay per place.
+  const settled = (o: Option) => state.options.some((x) => x.locked && x.kind === o.kind && x.kind !== 'round' && (o.kind !== 'lodging' || (placeOf(state, x) || '') === (placeOf(state, o) || '')));
   for (const o of state.options) {
-    if (o.locked || settled.has(o.kind)) continue;
+    if (o.locked || settled(o)) continue;
+    // Once the place is picked, other places' stays and rounds are off the table.
+    if (dest && PLACED.includes(o.kind)) { const p = placeOf(state, o); if (p && p !== dest.id) continue; }
     if (!state.votes.some((v) => v.option_id === o.id && v.member_id === state.meId)) out[o.kind]++;
   }
   return out;

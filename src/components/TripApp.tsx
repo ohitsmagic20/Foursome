@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
-import { openVotes, pickOf, rangeLabel, nightsOf } from '@/lib/shared';
+import { openVotes, pickOf, rangeLabel, nightsOf, tripPlace } from '@/lib/shared';
 import { api, rememberTrip, setToken, initials } from '@/lib/client';
 import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
@@ -105,8 +105,18 @@ export default function TripApp({ code }: { code: string }) {
     window.scrollTo({ top: 0 });
   }, []);
 
+  // Which destination the Stay and Golf tabs are showing. Once the place is locked, it's that one.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const place = useMemo(() => {
+    if (!state) return null;
+    const ds = state.options.filter((o) => o.kind === 'destination');
+    const locked = ds.find((d) => d.locked);
+    if (locked) return locked.id;
+    return chosen && ds.some((d) => d.id === chosen) ? chosen : tripPlace(state);
+  }, [state, chosen]);
+  const view = useCallback((id: string, t?: TabId) => { setChosen(id); if (t) go(t); }, [go]);
   const me = useMemo(() => state?.members.find((m) => m.id === state.meId) || null, [state]);
-  const ctx: TripCtx | null = useMemo(() => state ? { state, me, act, vote, toast, sheet: setSheet, go } : null, [state, me, act, vote, toast, go]);
+  const ctx: TripCtx | null = useMemo(() => state ? { state, me, act, vote, toast, sheet: setSheet, go, place, view } : null, [state, me, act, vote, toast, go, place, view]);
 
   if (error && !state) {
     return <div className="app no-tabs"><div className="hero"><h1>Trip not found</h1><p>{error}</p><a className="btn primary" href="/">Go to Foresome</a></div></div>;
