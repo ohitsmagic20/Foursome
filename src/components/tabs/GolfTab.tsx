@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { CoursePrices, DateData, DestinationData, Option, RoundData, TripState } from '@/lib/shared';
+import type { CoursePrices, DateData, DestinationData, LodgingData, Option, RoundData, TripState } from '@/lib/shared';
 import { ACCESS_LABEL, TIER_HINT, priceTier, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
@@ -41,6 +41,8 @@ export function GolfTab() {
   const all = useTripCourses(destOpt?.data.name, airport, rounds.slice().sort(byTime).map((r) => stopOf(r, '')));
   const infoFor = (r: Option<RoundData>) => all.data?.courses.find((c) => c.name === r.data.course);
   const known = useKnownPrices(rounds);
+  // Where the group sleeps, as a house pin on the course map.
+  const stay = pickOf<LodgingData>(state, 'lodging', ctx.place).option;
 
   return (
     <>
@@ -48,7 +50,8 @@ export function GolfTab() {
       <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far{unpriced ? ` · ${unpriced} round${unpriced === 1 ? '' : 's'} without a price yet` : ''}</Callout>
       {!choosing && <CupLink />}
       {destOpt && rounds.length > 0 && !all.failed && (
-        <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))} />
+        <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))}
+          homes={stay?.data.lat && stay.data.lon ? [{ label: '', name: stay.data.name, lat: stay.data.lat, lon: stay.data.lon }] : []} />
       )}
       <div className="section-head"><h2>{choosing && where ? `Rounds in ${where}` : 'Rounds'}</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>

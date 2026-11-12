@@ -42,7 +42,11 @@ export interface DateData { start: string; nights?: number }
 export interface DestinationData { name: string; airport: string; airports?: string[] }
 export const destAirports = (d: DestinationData) => (d.airports?.length ? d.airports : d.airport ? [d.airport] : []);
 export interface NearbyAirport { code: string; name: string; city: string; miles: number; major: boolean; suggested: boolean }
-export interface LodgingData { /** The destination option this stay is for (empty: any place). */ dest?: string; name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string; rooms?: string[][] }
+export interface LodgingData {
+  /** The destination option this stay is for (empty: any place). */ dest?: string;
+  /** Address or neighborhood someone typed, and where it is on the map: from the listing, the address, or the hotel's name. */
+  where?: string; lat?: number; lon?: number; pin?: 'listing' | 'address' | 'name';
+  name: string; url?: string; image?: string; total: number; bedrooms: number; beds: number; booked?: boolean; owner?: string; confirmation?: string; rooms?: string[][] }
 export interface RoundData {
   /** The destination option this round is for (empty: any place). */
   dest?: string;

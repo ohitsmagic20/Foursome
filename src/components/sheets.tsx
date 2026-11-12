@@ -177,6 +177,9 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
   const [image, setImage] = useState(opt?.data.image || '');
   const [bedrooms, setBedrooms] = useState(opt?.data.bedrooms ? String(opt.data.bedrooms) : '');
   const [beds, setBeds] = useState(opt?.data.beds ? String(opt.data.beds) : '');
+  const [where, setWhere] = useState(opt?.data.where || '');
+  // The listing's own map location, when its page shares one.
+  const [spot, setSpot] = useState<{ lat: number; lon: number } | null>(opt?.data.pin === 'listing' && opt.data.lat && opt.data.lon ? { lat: opt.data.lat, lon: opt.data.lon } : null);
   const [looking, setLooking] = useState(false);
   const [found, setFound] = useState<string | null>(null);
   const last = useRef('');
@@ -187,8 +190,10 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
     setLooking(true);
     setFound(null);
     try {
-      const r = await api<{ title: string; name: string; image: string; bedrooms: number; beds: number; sleeps: number; rating: number }>('/api/preview', { body: { url: u } });
+      const r = await api<{ title: string; name: string; image: string; bedrooms: number; beds: number; sleeps: number; rating: number; lat?: number; lon?: number; area?: string }>('/api/preview', { body: { url: u } });
       const got: string[] = [];
+      if (r.lat && r.lon) { setSpot({ lat: r.lat, lon: r.lon }); got.push('map location'); } else setSpot(null);
+      if (r.area && !where) setWhere(r.area);
       if ((r.name || r.title) && !name) { setName(r.name || r.title); got.push('name'); }
       if (r.image) { setImage(r.image); got.push('photo'); }
       if (r.bedrooms && !bedrooms) { setBedrooms(String(r.bedrooms)); got.push(`${r.bedrooms} bedrooms`); }
@@ -202,7 +207,10 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
   return (
     <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
       onSubmit={(fd) => {
-        const data = { ...placeFor(ctx, fd, opt), name: fd.name, url: fd.url, image, total: num(fd.total), bedrooms: num(fd.bedrooms), beds: num(fd.beds) };
+        const data = {
+          ...placeFor(ctx, fd, opt), name: fd.name, url: fd.url, image, total: num(fd.total), bedrooms: num(fd.bedrooms), beds: num(fd.beds),
+          where: where.trim(), ...(spot ? { lat: spot.lat, lon: spot.lon, pin: 'listing' } : {}),
+        };
         return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'lodging', data }, 'Added to the vote');
       }}
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
@@ -219,6 +227,10 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
       <div className="field">
         <label htmlFor="f-name">Name</label>
         <input id="f-name" name="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="6-bedroom beach house" />
+      </div>
+      <div className="field">
+        <label htmlFor="f-where">Address or area (for the map)</label>
+        <input id="f-where" name="where" value={where} onChange={(e) => setWhere(e.target.value)} placeholder={spot ? 'Found on the listing' : 'Street address, neighborhood or hotel'} autoComplete="off" />
       </div>
       <Field name="total" label={`Total for ${tripNights(ctx.state)} nights, with fees ($)`} type="number" defaultValue={opt?.data.total || ''} required />
       <div className="grid2">

@@ -8,6 +8,7 @@ import { PackagesNear } from '../Packages';
 import { StaySearch } from '../live';
 import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
+import { StayMap, useStayDistances } from '../StayMap';
 import { Deadline } from '../Deadline';
 
 export function StayTab() {
@@ -25,6 +26,7 @@ export function StayTab() {
   const where = dest ? dest.data.name.split(',')[0] : '';
   const date = pickOf<DateData>(state, 'date').option;
   const shown = locked ? [locked, ...opts.filter((o) => o.id !== locked.id)] : opts.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
+  const dist = useStayDistances(dest, shown);
 
   return (
     <section className="section">
@@ -35,15 +37,17 @@ export function StayTab() {
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
         : <p className="hint">Pick dates and a destination to search rentals.</p>}
+      {dest && opts.length > 0 && <StayMap dest={dest} stays={shown} />}
       {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>{choosing && where ? `Suggest the first place to stay in ${where}.` : 'Suggest the first place to stay.'}</button>}
       {shown.map((o) => {
         const fits = !o.data.beds || o.data.beds >= need;
+        const far = dist.get(o.id);
         return (
           <div key={o.id} className={`card opt ${o.locked ? 'locked' : ''}`} style={locked && !o.locked ? { opacity: .6 } : undefined}>
             {o.data.image && <img className="opt-img" src={o.data.image} alt="" loading="lazy" />}
             <div className="opt-head">
               <div style={{ minWidth: 0 }}>
-                <div className="row-title" style={{ fontSize: 17 }}>{o.data.name}</div>
+                <div className="row-title" style={{ fontSize: 17 }}>{far?.letter && <span className="pin pin-home stay-letter">{far.letter}</span>}{o.data.name}</div>
                 <div className="row-meta">{o.data.bedrooms ? `${o.data.bedrooms} bedrooms` : 'Bedrooms not listed'} · {o.data.beds ? `${o.data.beds} beds` : 'beds not listed'}</div>
               </div>
               <div className="fee">{money(o.data.total)}<small>total</small></div>
@@ -53,6 +57,9 @@ export function StayTab() {
               {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
               <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
             </div>
+            {far && (far.avg !== null
+              ? <div className="row-meta">~{far.avg} mi to the courses on average{far.max !== null && far.max > far.avg + 3 ? `, farthest ${far.max} mi` : ''}{far.airport !== null ? ` · ${far.airport} mi from ${far.airportCode}` : ''}</div>
+              : !far.letter ? <div className="row-meta">Not on the map yet. {canEdit(me, o) ? <button className="link-btn" onClick={() => lodgingSheet(ctx, o)}>Add an address</button> : 'Add an address to see it.'}</div> : null)}
             <BookingRow option={o} />
             {!locked && <VoteControl option={o} />}
             <Tally option={o} />

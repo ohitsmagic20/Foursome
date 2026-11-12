@@ -7,6 +7,8 @@ import type { CourseInfo } from '@/lib/shared';
 
 /** `search` is a different name to look up on the map; `courseId` is a course picked from the database. */
 export interface Stop { name: string; label: string; search?: string; courseId?: string }
+/** A place to stay, drawn as a house pin (not joined to the route). */
+export interface Home { label: string; name: string; lat: number; lon: number }
 export type MapCourse = Partial<Omit<CourseInfo, 'name' | 'lat' | 'lon'>> & { name: string; lat: number; lon: number };
 interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: MapCourse[] }
 
@@ -17,7 +19,7 @@ function mapUrl(place: string, airport: string | undefined, stops: Stop[]) {
   if (airport) q.set('airport', airport);
   const names = [...new Set(stops.map((s) => (s.courseId ? `${s.name}::id:${s.courseId}` : s.search ? `${s.name}::${s.search}` : s.name)))];
   names.forEach((n) => q.append('course', n));
-  return names.length ? `/api/map?${q}` : '';
+  return `/api/map?${q}`;
 }
 /** Course locations and details (type, rating, slope) for a trip's rounds. */
 export function useTripCourses(place: string | undefined, airport: string | undefined, stops: Stop[]) {
@@ -45,10 +47,10 @@ function miles(a: { lat: number; lon: number }, b: { lat: number; lon: number })
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 /** Straight-line distance stretched to a rough road distance. */
-const roadMiles = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.max(1, Math.round(miles(a, b) * 1.25));
+export const roadMiles = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.max(1, Math.round(miles(a, b) * 1.25));
 
 /** A small map of the trip: the arrival airport and each course in playing order, joined by dashed lines. */
-export function TripMap({ place, airport, stops, data: given }: { place: string; airport?: string; stops: Stop[]; data?: MapData | null }) {
+export function TripMap({ place, airport, stops, data: given, homes = [], legs: showLegs = true }: { place: string; airport?: string; stops: Stop[]; data?: MapData | null; homes?: Home[]; legs?: boolean }) {
   const el = useRef<HTMLDivElement>(null);
   const own = useTripCourses(given === undefined ? place : undefined, airport, stops);
   const data = given === undefined ? own.data : given;
@@ -59,16 +61,17 @@ export function TripMap({ place, airport, stops, data: given }: { place: string;
   const path = [...(data?.airport ? [{ label: data.airport.code, at: data.airport }] : []), ...placed.filter((p) => p.at).map((p) => ({ label: p.label, at: p.at! }))];
 
   useEffect(() => {
-    if (!data || !el.current || !path.length) return;
+    if (!data || !el.current || !(path.length || homes.length)) return;
     let map: import('leaflet').Map | null = null;
     let cancelled = false;
     import('leaflet').then((L) => {
       if (cancelled || !el.current) return;
-      map = L.map(el.current, { zoomControl: false, attributionControl: true, scrollWheelZoom: false, dragging: true, tap: false } as L.MapOptions);
+      map = L.map(el.current, { zoomSnap: 0.25, zoomControl: false, attributionControl: true, scrollWheelZoom: false, dragging: true, tap: false } as L.MapOptions);
       map.attributionControl.setPrefix(false);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 16, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' }).addTo(map);
-      const pts = path.map((p) => L.latLng(p.at.lat, p.at.lon));
-      if (pts.length > 1) L.polyline(pts, { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 }).addTo(map);
+      const route = path.map((p) => L.latLng(p.at.lat, p.at.lon));
+      const pts = [...route, ...homes.map((h) => L.latLng(h.lat, h.lon))];
+      if (route.length > 1) L.polyline(route, { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 }).addTo(map);
       // Stops within about half a mile (the same course, or courses at one resort) share one pin with every number on it.
       const pins: { at: { lat: number; lon: number }; labels: string[]; airport: boolean }[] = [];
       path.forEach((p, i) => {
@@ -81,12 +84,20 @@ export function TripMap({ place, airport, stops, data: given }: { place: string;
         const html = `<span class="pin${e.airport ? ' pin-airport' : ''}">${e.labels.join(' ')}</span>`;
         L.marker([e.at.lat, e.at.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false }).addTo(map);
       }
-      map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 13 });
+      // Stays: a house pin each, on top of the course pins.
+      for (const h of homes) {
+        const html = `<span class="pin pin-home" title="${h.name.replace(/[<>"&]/g, '')}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>${h.label}</span>`;
+        L.marker([h.lat, h.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false, zIndexOffset: 500 }).addTo(map);
+      }
+      map.invalidateSize();
+      // Fit tightly (quarter zoom steps), leaving room around the edges for the pins.
+      if (pts.length === 1) map.setView(pts[0], 12);
+      else map.fitBounds(L.latLngBounds(pts), { maxZoom: 13, padding: [28, 28] });
     });
     return () => { cancelled = true; map?.remove(); };
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, homes.map((h) => `${h.label}${h.lat},${h.lon}`).join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!stops.length || failed) return null;
+  if ((!stops.length && !homes.length) || failed) return null;
   const legs: { label: string; name: string; from?: number }[] = [];
   let prev = data?.airport ? { lat: data.airport.lat, lon: data.airport.lon } : null;
   for (const p of placed) {
@@ -98,7 +109,7 @@ export function TripMap({ place, airport, stops, data: given }: { place: string;
       <div ref={el} className="trip-map-canvas" aria-label={`Map of ${place} with the courses in order`}>
         {!data && <span className="trip-map-loading">Loading map…</span>}
       </div>
-      {data && (
+      {data && showLegs && (
         <ol className="trip-map-legs">
           {data.airport && <li><span className="pin pin-airport">{data.airport.code}</span><span className="grow">Arrive</span></li>}
           {legs.map((l, i) => (

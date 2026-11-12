@@ -5,7 +5,7 @@ import { parseListing } from '@/lib/listing';
 
 export const runtime = 'nodejs';
 
-const EMPTY = { title: '', image: '', name: '', bedrooms: 0, beds: 0, sleeps: 0, rating: 0 };
+const EMPTY = { title: '', image: '', name: '', bedrooms: 0, beds: 0, sleeps: 0, rating: 0, lat: 0, lon: 0, area: '' };
 
 /** True for addresses that aren't on the public internet (loopback, private, link-local, cloud metadata, etc.). */
 function privateAddress(ip: string): boolean {
@@ -71,7 +71,17 @@ export function POST(req: Request) {
       const title = decode(meta('og:title') || (html.match(/<title>([^<]+)<\/title>/i) || [])[1] || '').trim().slice(0, 100);
       const image = decode(meta('og:image'));
       const facts = parseListing(title, decode(meta('og:description') || meta('description')), decode(meta('og:site_name')));
-      return Response.json({ title, image: /^https:\/\//.test(image) ? image : '', ...facts });
+      // Map location, when the page shares one (Airbnb's is approximate on purpose, which is fine for a map).
+      const n = (x: string) => (x && Number.isFinite(Number(x)) ? Number(x) : 0);
+      let lat = n(meta('place:location:latitude') || meta('og:latitude')), lon = n(meta('place:location:longitude') || meta('og:longitude'));
+      if (!lat || !lon) {
+        const m = html.match(/"lat(?:itude)?"\s*:\s*(-?\d{1,2}\.\d{3,})\s*,\s*"(?:lng|lon|longitude)"\s*:\s*(-?\d{1,3}\.\d{3,})/);
+        if (m) { lat = Number(m[1]); lon = Number(m[2]); }
+      }
+      if (Math.abs(lat) > 90 || Math.abs(lon) > 180) { lat = 0; lon = 0; }
+      // Airbnb titles start "Home in Scottsdale · …": the area is a good map fallback.
+      const area = (title.match(/^[^·]{0,40}\bin\s+([^·]{2,50}?)\s*·/) || [])[1] || '';
+      return Response.json({ title, image: /^https:\/\//.test(image) ? image : '', ...facts, lat, lon, area: area.trim() });
     } catch {
       return Response.json(EMPTY);
     } finally {

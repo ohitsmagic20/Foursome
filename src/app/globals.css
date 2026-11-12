@@ -697,3 +697,15 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .tier { display: block; font-family: var(--font-body), sans-serif; font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--line); margin-bottom: 3px; }
 .tier b { color: var(--good); font-weight: 800; }
 .fee.tbd { color: var(--muted); font-size: 18px; }
+
+/* Stays on the map */
+.pin-home { display: inline-flex; gap: 3px; align-items: center; background: var(--team-b); color: #fff; border-radius: 7px; padding: 0 6px 0 5px; }
+.pin-home svg { flex: none; }
+.stay-map-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.stay-map-list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.stay-map-list li:first-child { border-top: 0; }
+.stay-map-list .pin { transform: none; border: 0; box-shadow: none; flex: none; }
+.stay-map-list .best { color: var(--good); font-weight: 700; }
+.stay-letter { display: inline-flex; vertical-align: 2px; margin-right: 6px; transform: none !important; border: 0 !important; box-shadow: none !important; height: 20px; font-size: 12px; }
+/* On the map, a stay's pin sits just above its spot so it doesn't hide a course number there. */
+.trip-map-canvas .pin-home { transform: translate(-50%, -125%); }

@@ -3,6 +3,7 @@ import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shar
 import type { DateData } from '@/lib/shared';
 import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
+import { findStay, geocode } from '@/lib/geo';
 import { notify, type PushMessage } from '@/lib/push';
 import { DEADLINE_KINDS, DECISION, type DeadlineKind } from '@/lib/deadlines';
 import { ideaBySlug } from '@/lib/ideas';
@@ -22,6 +23,32 @@ function label(kind: Kind, d: Record<string, unknown>, trip: Trip): string {
 }
 const first = (n: string) => n.split(/\s+/)[0];
 const MAX_OPTIONS = 60;
+
+const coord = (v: unknown, max: number) => { const n = Number(v); return Number.isFinite(n) && n !== 0 && Math.abs(n) <= max ? Math.round(n * 1e5) / 1e5 : 0; };
+
+/** Put a stay on the map: keep a listing's own location, else look up the address, else the hotel's name. */
+async function locateStay(data: Record<string, unknown>, old: Record<string, unknown> | null, tripId: string) {
+  if (data.pin === 'listing') return;
+  // Same address and name as before: keep where it was found.
+  if (old && old.lat && (old.where || '') === (data.where || '') && old.name === data.name) {
+    for (const k of ['lat', 'lon', 'pin']) if (old[k] !== undefined) data[k] = old[k];
+    return;
+  }
+  const { data: dests } = await db().from('options').select('id,data,locked').eq('trip_id', tripId).eq('kind', 'destination');
+  const dest = (dests || []).find((x) => x.id === data.dest) || (dests || []).find((x) => x.locked) || (dests || [])[0];
+  const name = String((dest?.data as { name?: string } | undefined)?.name || '');
+  if (!name) return;
+  const center = await geocode(name);
+  if (!center) return;
+  const town = name.split(',')[0];
+  const where = String(data.where || '');
+  // Nominatim asks for one search a second; at most three here.
+  const pause = () => new Promise((r) => setTimeout(r, 1000));
+  let at = where ? await findStay(where, center) : null;
+  if (!at && where) { await pause(); at = await findStay(`${where}, ${town}`, center); }
+  if (!at) { if (where) await pause(); at = await findStay(String(data.name || ''), center, true); }
+  if (at) Object.assign(data, { lat: at.lat, lon: at.lon, pin: data.where ? 'address' : 'name' });
+}
 
 /** A destination option id that a stay or round belongs to. */
 const placeId = (v: unknown) => { const x = str(v, 40); return /^[0-9a-f-]{36}$/i.test(x) ? x : ''; };
@@ -53,6 +80,9 @@ function cleanData(kind: Kind, raw: unknown, trip: Trip): Record<string, unknown
       if (!name && !url(d.url)) throw new HttpError(400, 'Enter a name or paste a listing link.');
       return {
         ...(placeId(d.dest) ? { dest: placeId(d.dest) } : {}),
+        ...(str(d.where, 120) ? { where: str(d.where, 120) } : {}),
+        // Coordinates only come from a pasted listing; the server looks up the rest.
+        ...(d.pin === 'listing' && coord(d.lat, 90) && coord(d.lon, 180) ? { lat: coord(d.lat, 90), lon: coord(d.lon, 180), pin: 'listing' } : {}),
         name: name || 'Listing',
         url: url(d.url),
         image: url(d.image),
@@ -144,6 +174,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const { count } = await db().from('options').select('id', { count: 'exact', head: true }).eq('trip_id', trip.id).eq('kind', kind);
         if ((count || 0) >= MAX_OPTIONS) throw new HttpError(400, 'This list is full. Remove an option first.');
         const data = cleanData(kind, b.data, trip);
+        if (kind === 'lodging') await locateStay(data, null, trip.id);
         const { data: row, error } = await db().from('options').insert({ trip_id: trip.id, kind, data, created_by: me.id }).select('id').single();
         if (error) throw error;
         // Adding something counts as a yes from the person who suggested it.
@@ -184,6 +215,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
         for (const k of ['owner', 'booked', 'confirmation', 'rooms', 'dest'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
         if ('dest' in raw && !data.dest) delete data.dest;
+        if (opt.kind === 'lodging') await locateStay(data, opt.data, trip.id);
         const r = await db().from('options').update({ data }).eq('id', opt.id);
         if (r.error) throw r.error;
         break;

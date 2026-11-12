@@ -144,3 +144,28 @@ export async function findCourse(name: string, near: { lat: number; lon: number 
   }
   return fallback ? { lat: Number(fallback.lat), lon: Number(fallback.lon) } : null;
 }
+
+/**
+ * Where a rental or hotel is: an address, neighborhood or hotel name searched near the destination
+ * (OpenStreetMap, within `maxMiles`). With `lodgingOnly`, only hotels, resorts and the like count,
+ * so a made-up name like "6-bedroom beach house" doesn't land on some random street.
+ */
+export async function findStay(q: string, near: { lat: number; lon: number }, lodgingOnly = false, maxMiles = 45): Promise<{ lat: number; lon: number } | null> {
+  const text = q.replace(/\s+/g, ' ').trim();
+  if (text.length < 3) return null;
+  const pad = 0.9;
+  const box = [near.lon - pad, near.lat + pad, near.lon + pad, near.lat - pad].map((x) => x.toFixed(3)).join(',');
+  type Hit = { lat: string; lon: string; category?: string; type?: string };
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=jsonv2&limit=8&bounded=1&viewbox=${box}&countrycodes=us,ca,mx,gb,ie`, {
+      headers: { 'User-Agent': UA, Accept: 'application/json' }, next: { revalidate: 60 * 60 * 24 * 30 },
+    });
+    if (!res.ok) return null;
+    const LODGING = /^(hotel|motel|resort|guest_house|apartment|chalet|hostel|camp_site)$/;
+    const hits = ((await res.json()) as Hit[])
+      .filter((h) => !lodgingOnly || h.category === 'tourism' && LODGING.test(h.type || '') || h.type === 'resort')
+      .map((h) => ({ lat: Number(h.lat), lon: Number(h.lon) }))
+      .filter((h) => miles(near.lat, near.lon, h.lat, h.lon) <= maxMiles);
+    return hits[0] || null;
+  } catch { return null; }
+}
