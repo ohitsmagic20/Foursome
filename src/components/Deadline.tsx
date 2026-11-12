@@ -1,9 +1,10 @@
 'use client';
 
+
 import { useState } from 'react';
 import type { Kind } from '@/lib/shared';
 import { isoDay, addDays, lockedOf, optionsOf } from '@/lib/shared';
-import { useTrip, type TripCtx } from './ui';
+import { Icon, useTrip, type TripCtx } from './ui';
 
 type DKind = 'date' | 'destination' | 'lodging';
 const CLOSE_HOUR = 21; // voting closes at 9 PM on the chosen day, in the organizer's time
@@ -26,7 +27,7 @@ export function Deadline({ kind }: { kind: DKind }) {
   const at = state.trip.deadlines?.[kind];
   const soon = at ? Date.parse(at) - Date.now() < 36 * 3600000 : false;
   if (!at && !me?.is_organizer) return null;
-  if (!at) return <button type="button" className="link-btn deadline-set" onClick={() => deadlineSheet(ctx, kind)}>Set a voting deadline</button>;
+  if (!at) return <button type="button" className="link-btn deadline-set" onClick={() => deadlineSheet(ctx, kind)}>{Icon.clock} Set a voting deadline</button>;
   return (
     <div className={`deadline${soon ? ' soon' : ''}`}>
       <span>{closesLabel(at)}. The leader locks in then.</span>

@@ -276,7 +276,7 @@ tr.me .mark.none { border-color: var(--green); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* trip ideas */
-.idea-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; }
+.idea-strip { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; }
 .idea-strip::-webkit-scrollbar { display: none; }
 .idea-strip .idea-card { flex: 0 0 78%; max-width: 300px; scroll-snap-align: start; }
 .idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
@@ -299,11 +299,12 @@ tr.me .mark.none { border-color: var(--green); }
 
 .opt { gap: 12px; padding: 16px; }
 .opt.locked { border: 0; box-shadow: inset 3px 0 0 var(--good), 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
-.opt-status { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.opt-status .good { color: var(--good); }
-.opt-status .warn { color: var(--warn); }
-.opt-status .bad { color: var(--bad); }
-.opt-status .flag { color: var(--warn); }
+.opt-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.opt-status .good, .opt-status .warn, .opt-status .bad, .opt-status .flag { font-size: 12px; padding: 3px 9px; border-radius: 999px; }
+.opt-status .good { color: var(--good); background: var(--good-soft); }
+.opt-status .warn { color: var(--warn); background: var(--warn-soft); }
+.opt-status .bad { color: var(--bad); background: var(--bad-soft); }
+.opt-status .flag { color: var(--ink); background: var(--flag-soft); }
 .voters { font-size: 13px; color: var(--muted); line-height: 1.5; }
 .voters b { font-weight: 600; color: var(--ink); }
 .opt-foot { border-top: 0; padding-top: 0; gap: 4px; margin-left: -10px; }
@@ -328,6 +329,10 @@ tr.me .mark.none { border-color: var(--green); }
 /* Status inside lists reads as colored text, matching the option cards. */
 .list .chip { background: transparent; padding: 0; font-size: 13px; }
 .list .chip.flag { color: var(--warn); }
+.list .row-title .chip { padding: 2px 8px; font-size: 11px; vertical-align: 2px; margin-left: 2px; }
+.list .row-title .chip.plain { background: var(--soft); color: var(--muted); }
+.list .row-title .chip.flag { background: var(--flag-soft); color: var(--ink); }
+.list .row-title .chip.good { background: var(--good-soft); }
 .pairings .link-btn { font-size: 14px; color: var(--green); }
 /* Votes: who's in on the left, who we're waiting on on the right. */
 .voters { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; }
@@ -431,7 +436,7 @@ tr.me .mark.none { border-color: var(--green); }
 .my-cost-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
 .my-cost-parts > div { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
 .subsection { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-.subsection h3 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 18px; font-weight: 700; letter-spacing: .01em; }
+.subsection h3 { margin: 0; font-family: var(--font-body), sans-serif; font-size: 16px; font-weight: 700; }
 
 /* Voting deadlines */
 .deadline { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; padding: 10px 12px; border-radius: 12px; background: var(--soft); }
@@ -468,7 +473,7 @@ tr.me .mark.none { border-color: var(--green); }
 .todo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
 .before-text { font-weight: 500; font-size: 15px; line-height: 1.35; }
 .ride { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--good-soft); }
-.deadline-set { align-self: flex-start; font-size: 14px; }
+.deadline-set { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; padding: 5px 12px; border: 1px dashed var(--line); border-radius: 999px; }
 .card.waiting { display: flex; flex-direction: column; align-items: stretch; gap: 12px; text-align: left; background: var(--card); }
 .waiting .btn-row { display: flex; gap: 8px; }
 .waiting .btn-row .grow { flex: 1; }
@@ -593,6 +598,26 @@ tr.me .mark.none { border-color: var(--green); }
 .trip-tile.none { background: var(--soft); color: var(--muted); }
 .trip-past summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--muted); padding: 4px 2px 8px; list-style: none; }
 .trip-past summary::-webkit-details-marker { display: none; }
-.trip-past summary::after { content: " ›"; }
-.trip-past[open] summary::after { content: " ⌄"; }
 .trip-past .trip-tile { background: var(--soft); color: var(--muted); }
+
+/* ---------- one look for every fold-out ---------- */
+summary { list-style: none; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+details:not(.resort-state) > summary::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 9px 2px 2px; vertical-align: middle;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; opacity: .7;
+}
+details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); margin-bottom: 5px; }
+.resort-state summary::after { content: ""; width: 7px; height: 7px; margin-left: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; flex: none; }
+.resort-state[open] summary::after { transform: rotate(-135deg); }
+.resort-state summary > span:last-child { margin-left: auto; }
+
+/* ---------- headings sit close to their helper text ---------- */
+.stack > .section-head + .sub, .stack > .section-head + .deadline-set { margin-top: -18px; }
+.section > .section-head + .deadline-set, .section > .sub + .deadline-set { margin-top: -2px; }
+
+/* ---------- the plan card's buttons in a tidy grid ---------- */
+.plan .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.plan .btn-row > * { width: 100%; justify-content: center; text-align: center; }
+.plan .btn-row > :only-child, .plan .btn-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+.plan-not-booked { margin-left: 6px; vertical-align: 1px; }

@@ -38,7 +38,7 @@ export function CompareDestinations() {
       <div className="row-title">Side by side</div>
       <div className="scroll">
         <table className="sc compare-table">
-          <thead><tr><th className="name">Place</th><th className="num">In</th><th className="num">Flight</th>{anyCost && <th className="num">Golf / round</th>}</tr></thead>
+          <thead><tr><th className="name">Place</th><th className="num">In</th><th className="num">Flight</th>{anyCost && <th className="num">Golf</th>}</tr></thead>
           <tbody>
             {sorted.map((r) => (
               <tr key={r.id}>
@@ -54,7 +54,7 @@ export function CompareDestinations() {
           </tbody>
         </table>
       </div>
-      <p className="hint">Flight is the average time in the air from everyone’s home airport, estimated from distance; connections add more.{anyCost ? ' Golf is the usual range at courses from our trip ideas.' : ''}</p>
+      <p className="hint">Flight is the average time in the air from everyone’s home airport, estimated from distance; connections add more.{anyCost ? ' Golf is the usual price per round at courses from our trip ideas.' : ''}</p>
     </div>
   );
 }

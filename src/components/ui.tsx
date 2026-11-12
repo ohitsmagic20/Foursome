@@ -14,6 +14,7 @@ export const Icon = {
   golf: <svg viewBox="0 0 24 24" {...sv}><circle cx="12" cy="9" r="6" /><circle cx="10" cy="7.5" r=".6" fill="currentColor" /><circle cx="13.5" cy="8" r=".6" fill="currentColor" /><circle cx="11.5" cy="10.5" r=".6" fill="currentColor" /><path d="M10 15h4l-1 6h-2Z" /></svg>,
   flights: <svg viewBox="0 0 24 24" {...sv}><path d="M10.5 13.5 4 12l-1.5 1.5 5 2.5 2.5 5L11.5 19 10 12.5l4.5-4.5c1.4-1.4 3.6-2.6 4.5-1.7.9.9-.3 3.1-1.7 4.5L12.8 15.3" /><path d="M14 8 6.5 5.5 5 7l6 3.5" /></svg>,
   edit: <svg viewBox="0 0 24 24" {...sv} strokeWidth={2}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>,
+  clock: <svg width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>,
   info: <svg viewBox="0 0 24 24" {...sv} strokeWidth={2}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>,
   plus: <svg width="16" height="16" viewBox="0 0 24 24" {...sv} strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>,
   down: <svg className="down" width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.4}><path d="m6 9 6 6 6-6" /></svg>,

@@ -45,7 +45,7 @@ export function TripTab() {
   return (
     <>
       <div className="summary">
-        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : 'Still voting'}</span></div>
+        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)).split(/[–-]/)[0].trim() + '?' : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : date.option ? 'Leading' : 'Still voting'}</span></div>
         <div className="stat"><span className="k">Crew</span><span className="v">{n}</span><span className="n">{teeTimesNeeded(n)} foursome{teeTimesNeeded(n) > 1 ? 's' : ''}</span></div>
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
@@ -114,7 +114,7 @@ function TripPlan() {
           return (
             <div className="plan-row" key={d}>
               <span className="k">{dayLabel(start, d)}</span>
-              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="row-meta"> · not booked</span>}{groupNames(state, r.data.groups).map((g, i) => <span key={i} className="row-meta" style={{ display: 'block' }}>{teeAfter(r.data.time, i)}: {g}</span>)}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === tripNights(state) + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
+              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="chip warn plan-not-booked">Not booked</span>}{groupNames(state, r.data.groups).map((g, i) => <span key={i} className="row-meta" style={{ display: 'block' }}>{teeAfter(r.data.time, i)}: {g}</span>)}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === tripNights(state) + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
             </div>
           );
         })}
