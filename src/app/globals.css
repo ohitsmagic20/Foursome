@@ -709,3 +709,6 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .stay-letter { display: inline-flex; vertical-align: 2px; margin-right: 6px; transform: none !important; border: 0 !important; box-shadow: none !important; height: 20px; font-size: 12px; }
 /* On the map, a stay's pin sits just above its spot so it doesn't hide a course number there. */
 .trip-map-canvas .pin-home { transform: translate(-50%, -125%); }
+.tier.inline { display: inline-block; margin: 0 6px 0 0; font-size: 12px; vertical-align: 1px; }
+.row-title .tier.inline { margin: 0 0 0 4px; }
+.course-hits .tier.inline { flex: none; }

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { CourseAccess, CoursePrices, CourseTee, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
 import { ACCESS_LABEL } from '@/lib/shared';
 import { bedsNeeded, lodgingSearchLinks, rangeLabel, tripNights } from '@/lib/shared';
-import { Chip, useTrip } from './ui';
+import { Chip, Tier, useTrip } from './ui';
 import { roundSheet } from './sheets';
 import { TeeStats } from './TeeTable';
 
@@ -167,7 +167,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
               <div className="row" key={c.name} style={{ alignItems: 'flex-start' }}>
                 <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div>
-                    <div className="row-title">{c.name}</div>
+                    <div className="row-title">{c.name}{priced[c.name]?.all && <> <Tier fee={priced[c.name].all!.median} inline /></>}</div>
                     <div className="row-meta">
                       {(() => { const g = ratingOf(c); return g ? <a className="g-rating" href={g.url} target="_blank" rel="noopener noreferrer" aria-label={`${g.rating} out of 5 on Google Maps, ${g.count} reviews`}>★ {g.rating.toFixed(1)} <span>({g.count.toLocaleString('en-US')})</span></a> : null; })()}
                       {(() => {
@@ -177,7 +177,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
                       {c.miles} mi away{c.holes ? ` · ${c.holes} holes` : ''}
                     </div>
                     {db[c.name]?.tees?.length ? <TeeStats tees={db[c.name].tees} /> : null}
-                    {priced[c.name]?.all && <div className="price-tag">Groups paid ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
+                    {priced[c.name]?.all && <div className="price-tag">{priced[c.name].source === 'idea' ? 'Typical' : 'Groups paid'} ${priced[c.name].all!.low === priced[c.name].all!.high ? priced[c.name].all!.low : `${priced[c.name].all!.low}–${priced[c.name].all!.high}`}</div>}
                   </div>
                   <div className="btn-row">
                     {c.website && <a className="btn small ghost" href={c.website} target="_blank" rel="noopener noreferrer">Website</a>}

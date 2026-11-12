@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import type { CoursePrices, DateData, DestinationData, LodgingData, Option, RoundData, TripState } from '@/lib/shared';
-import { ACCESS_LABEL, TIER_HINT, priceTier, type CourseAccess } from '@/lib/shared';
+import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { PlaceSwitcher, usePlaces } from '../Places';
-import { BookingRow, Callout, Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
+import { BookingRow, Callout, Chip, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { CupLink } from '../Cup';
@@ -102,7 +102,7 @@ function IdeaRounds() {
         {missing.map((r) => (
           <div className="row" key={r.course}>
             <div className="grow"><div className="row-title">{r.course}</div><div className="row-meta">Day {r.day} · {r.time}</div></div>
-            <span className="row-meta">{r.fee.low === r.fee.high ? money(r.fee.low) : `${money(r.fee.low)}–${r.fee.high}`}</span>
+            <span className="row-meta"><Tier fee={(r.fee.low + r.fee.high) / 2} inline />{r.fee.low === r.fee.high ? money(r.fee.low) : `${money(r.fee.low)}–${r.fee.high}`}</span>
           </div>
         ))}
       </div>
@@ -165,14 +165,13 @@ function RoundFee({ r, known }: { r: Option<RoundData>; known?: CoursePrices }) 
   const entered = Number(r.data.fee) || 0;
   const guess = !entered && known?.all ? known.all.median : 0;
   const fee = entered || guess;
-  const tier = priceTier(fee);
   if (!fee) return <div className="fee tbd">TBD<small>price</small></div>;
   const note = guess ? (known?.source === 'idea' ? 'typical' : 'groups paid')
     : r.data.estimate ? (r.data.checked === 'trip idea' ? 'typical' : 'est., groups paid')
     : r.data.fromTemplate ? 'typical' : r.data.checked ? `as of ${r.data.checked.replace(/,\s*\d{4}$/, '')}` : 'per player';
   return (
     <div className="fee">
-      {tier && <span className="tier" title={TIER_HINT[tier]} aria-label={TIER_HINT[tier]}><b>{tier}</b>{'$$$'.slice(tier.length)}</span>}
+      <Tier fee={fee} />
       {guess || r.data.estimate ? '~' : ''}{money(fee)}<small>{note}</small>
     </div>
   );

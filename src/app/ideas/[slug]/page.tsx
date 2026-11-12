@@ -6,6 +6,7 @@ import { ideaBySlug } from '@/lib/ideas';
 export const revalidate = 600;
 import { moneyRange } from '@/components/IdeaCards';
 import { TripMap } from '@/components/TripMap';
+import { Tier } from '@/components/ui';
 
 export function generateStaticParams() {
   return TEMPLATES.map((t) => ({ slug: t.slug }));
@@ -63,7 +64,7 @@ export default async function Idea({ params }: { params: Promise<{ slug: string 
                     {rs.map((r) => (
                       <div key={r.course}>
                         <div className="row-title">{r.time} · {r.course}</div>
-                        <div className="row-meta">{r.fee.verified ? '' : '~'}{moneyRange([r.fee.low, r.fee.high])}</div>
+                        <div className="row-meta"><Tier fee={(r.fee.low + r.fee.high) / 2} inline />{r.fee.verified ? '' : '~'}{moneyRange([r.fee.low, r.fee.high])}</div>
                         {r.access && <div className="row-meta">{r.access}</div>}
                       </div>
                     ))}

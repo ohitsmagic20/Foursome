@@ -7,7 +7,7 @@ import { ACCESS_LABEL } from '@/lib/shared';
 import { TeeStats } from './TeeTable';
 import { addDays, autoGroups, bedsNeeded, dayLabel, destAirports, isWeekendDay, optionsOf, parseDay, pickOf, placeOf, teeAfter, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { api, clearToken, getSession, todayLabel } from '@/lib/client';
-import { Chip, ConfirmButton, Field, Select, SheetForm, TimeField } from './ui';
+import { Chip, ConfirmButton, Field, Select, SheetForm, Tier, TimeField } from './ui';
 
 async function save(ctx: TripCtx, type: string, payload: Record<string, unknown>, msg: string) {
   if (await ctx.act(type, payload)) {
@@ -284,6 +284,15 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   // The course picked from the database (keeps its id, location and type). Typing a new name clears it.
   const [picked, setPicked] = useState<CourseHit | null>(d?.courseId ? { id: d.courseId, name: d.course, city: '', state: '', access: d.access || '', lat: d.lat || 0, lon: d.lon || 0, website: d.url || '' } : null);
   const [hits, setHits] = useState<CourseHit[]>([]);
+  // What a round usually costs at each suggested course, for its $ / $$ / $$$.
+  const [hitPrices, setHitPrices] = useState<Record<string, CoursePrices>>({});
+  useEffect(() => {
+    const names = hits.slice(0, 12).map((h) => h.name).join('|');
+    if (!names) return;
+    let live = true;
+    api<{ prices: Record<string, CoursePrices> }>(`/api/course-prices?courses=${encodeURIComponent(names)}`).then((r) => live && setHitPrices(r.prices || {})).catch(() => {});
+    return () => { live = false; };
+  }, [hits]);
   const [open, setOpen] = useState(false);
   const [about, setAbout] = useState<CourseInfo | null>(null);
   useEffect(() => {
@@ -372,6 +381,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
               <li key={h.id} role="option" aria-selected={false}>
                 <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pick(h)}>
                   <span className="grow"><span className="row-title">{h.name}</span><span className="row-meta"> · {h.city}, {h.state}{h.miles !== undefined ? ` · ${h.miles} mi` : ''}</span></span>
+                  <Tier fee={hitPrices[h.name]?.all?.median} inline />
                   {h.access && <span className={`access ${h.access}`}>{ACCESS_LABEL[h.access]}</span>}
                 </button>
               </li>
@@ -404,7 +414,7 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
       {range && (
         <div className="price-hint">
           <div>
-            <div className="row-title">${range.low === range.high ? range.low : `${range.low}–${range.high}`}{rangeLabel}</div>
+            <div className="row-title"><Tier fee={range.median} inline />${range.low === range.high ? range.low : `${range.low}–${range.high}`}{rangeLabel}</div>
             <div className="row-meta">{prices?.source === 'idea' ? `Typical fee from our trip ideas${prices.latest ? ` · ${prices.latest}` : ''}` : `What Foresome groups paid · ${range.count} ${range.count === 1 ? 'report' : 'reports'}${prices?.latest ? ` · latest ${prices.latest}` : ''}`}</div>
           </div>
           <button type="button" className="btn small" onClick={() => setFee(String(range.median))}>Use ${range.median}</button>

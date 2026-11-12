@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Member, Option, TripState, VoteValue } from '@/lib/shared';
-import { andList, formatTee, parseTee, votesFor } from '@/lib/shared';
+import { andList, formatTee, parseTee, votesFor , TIER_HINT, priceTier } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 
 /* ---------- icons ---------- */
@@ -23,6 +23,12 @@ export const Icon = {
   lock: <svg width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>,
 };
 
+/** How pricey a round is: $ up to $70, $$ up to $120, $$$ above. Nothing when there's no price. */
+export function Tier({ fee, inline = false }: { fee: number | null | undefined; inline?: boolean }) {
+  const t = priceTier(fee);
+  if (!t) return null;
+  return <span className={`tier${inline ? ' inline' : ''}`} title={TIER_HINT[t]} aria-label={TIER_HINT[t]}><b>{t}</b>{'$$$'.slice(t.length)}</span>;
+}
 export function Chip({ kind, children }: { kind: 'good' | 'warn' | 'bad' | 'flag' | 'plain'; children: ReactNode }) {
   return <span className={`chip ${kind}`}>{children}</span>;
 }
