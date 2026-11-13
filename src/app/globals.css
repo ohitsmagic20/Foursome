@@ -712,3 +712,22 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .tier.inline { display: inline-block; margin: 0 6px 0 0; font-size: 12px; vertical-align: 1px; }
 .row-title .tier.inline { margin: 0 0 0 4px; }
 .course-hits .tier.inline { flex: none; }
+
+/* The Cup, folded into the Golf tab */
+.cup-drop { padding: 0; border-color: var(--flag); }
+.cup-drop > summary { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.cup-drop > summary::before { display: none !important; }
+.cup-drop > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; flex: none; margin-right: 4px; }
+.cup-drop[open] > summary::after { transform: rotate(-135deg); }
+.cup-drop-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--flag-soft); color: var(--ink); flex: none; }
+.cup-drop-icon svg { width: 22px; height: 22px; }
+.cup-drop-body { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+.cup-drop-body .section { margin: 0; }
+.cup-preview { display: flex; flex-direction: column; gap: 10px; }
+.cup-preview .sub { margin: 0; }
+.cup-preview .cup-rosters { margin-top: 0; }
+.open-spot { font-style: italic; opacity: .7; }
+.cup-preview-rounds .row { padding: 10px 0; border-top: 1px solid var(--line); }
+.cup-preview-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); font-weight: 600; }
+.cup-preview-total b { font-family: var(--font-display), sans-serif; font-size: 18px; }
+.cup-preview .btn.primary { align-self: flex-start; }

@@ -67,6 +67,92 @@ export function CupLink() {
   );
 }
 
+/**
+ * On the Golf tab: the cup folded into one line, opening to the whole thing in place.
+ * With no cup yet, it opens to a preview built from whoever has joined so far, with open spots for the rest.
+ */
+export function CupDropdown() {
+  const ctx = useTrip();
+  const { state, go } = ctx;
+  if (!('cup' in state.trip)) return null;
+  const cup = state.trip.cup;
+  const score = cup ? cupScore(cup) : null;
+  const live = cup ? cupLive(cup) : null;
+  const line = !cup ? 'Not set up yet · see a preview'
+    : cup.drafting ? 'The draft is on'
+    : `${cup.teams[0].name} ${pts(score!.a)} · ${pts(score!.b)} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`;
+  return (
+    <details className="card cup-drop">
+      <summary>
+        <span className="cup-drop-icon" aria-hidden="true">{Icon.cup}</span>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="eyebrow" style={{ display: 'block' }}>{cup ? cup.name : 'The Cup'}</span>
+          <span className="row-title">{line}</span>
+        </span>
+      </summary>
+      <div className="cup-drop-body">
+        {cup ? <CupSection /> : <CupPreview />}
+        {hasCupTab(state) && <button className="btn block" onClick={() => go('cup')}>Open the Cup tab</button>}
+      </div>
+    </details>
+  );
+}
+
+/** What the cup would look like with the people on the trip now: two even teams, open spots, a match count per round. */
+function CupPreview() {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  const n = state.members.length;
+  // Fill out to foursomes: an even number of players, in groups of four.
+  const seats = Math.max(4, Math.ceil(n / 4) * 4);
+  const perTeam = seats / 2;
+  const open = seats - n;
+  const name = (id: string) => (id === me?.id ? 'You' : firstName(state.members.find((m) => m.id === id)?.name || ''));
+  // Alternate players onto two sides just for the picture; the real teams come from the draft.
+  const sides: (string | null)[][] = [[], []];
+  state.members.forEach((m, i) => sides[i % 2].push(m.id));
+  for (const s of sides) while (s.length < perTeam) s.push(null);
+  // The place being looked at on the Golf tab (so the preview matches the rounds on screen).
+  const rounds = plannedRounds(state, ctx.place).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
+  const date = pickOf<DateData>(state, 'date').option?.data.start;
+  const fmts: CupFormat[] = ['scramble', 'bestball', 'alt', 'singles'];
+  const plan = rounds.map((r, i) => {
+    const f = rounds.length > 1 && i === rounds.length - 1 ? 'singles' : fmts[i % 3];
+    return { r, f, matches: Math.floor(perTeam / CUP_FORMATS[f].per) };
+  });
+  const total = plan.reduce((t, p) => t + p.matches, 0);
+  return (
+    <div className="cup-preview">
+      <p className="sub">A preview with the {n} {n === 1 ? 'person' : 'people'} on the trip{open ? ` and ${open} open spot${open === 1 ? '' : 's'} to fill out ${seats / 4} foursome${seats > 4 ? 's' : ''}` : ''}. Teams here are just a sketch: the captains draft the real ones.</p>
+      <div className="cup-rosters">
+        {sides.map((t, i) => (
+          <div key={i} className={`cup-roster ${TEAM_CLASS[i]}`}>
+            <div className="cup-team-name">Team {i + 1}</div>
+            {t.map((id, k) => <div key={k} className={`row-meta${id ? '' : ' open-spot'}`}>{id ? name(id) : 'Open spot'}</div>)}
+          </div>
+        ))}
+      </div>
+      {plan.length > 0 ? (
+        <div className="cup-preview-rounds">
+          {plan.map(({ r, f, matches }) => (
+            <div className="row" key={r.id}>
+              <div className="grow">
+                <div className="row-title">{date ? dayLabel(date, r.data.day) : `Day ${r.data.day}`} · {r.data.course}</div>
+                <div className="row-meta">{CUP_FORMATS[f].label} · {matches} match{matches === 1 ? '' : 'es'} ({CUP_FORMATS[f].per === 1 ? '1 v 1' : '2 v 2'})</div>
+              </div>
+              <span className="chip plain">{matches} pt{matches === 1 ? '' : 's'}</span>
+            </div>
+          ))}
+          <div className="cup-preview-total"><span>{total} points to play</span><b>{pts(total / 2 + 0.5)} to win</b></div>
+        </div>
+      ) : <p className="hint">Add rounds to the plan and each one shows up here with its matches.</p>}
+      <p className="hint">Formats are a suggestion; the organizer picks one per round. Each match is a point, and a halved match is half a point each.</p>
+      {me?.is_organizer && n >= 4 && <button className="btn primary" onClick={() => setupSheet(ctx)}>Set up the cup</button>}
+      {me?.is_organizer && n < 4 && <p className="hint">You can set it up once at least 4 people have joined.</p>}
+    </div>
+  );
+}
+
 export function CupSection() {
   const ctx = useTrip();
   const { state, me } = ctx;
