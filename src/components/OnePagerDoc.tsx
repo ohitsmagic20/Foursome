@@ -24,6 +24,9 @@ const C = { green: '#1e5a3b', ink: '#16241c', muted: '#5b6a61', line: '#dce2d8',
 const DOT: Record<Status, string> = { done: C.good, voting: C.flag, todo: '#c9d0c6' };
 const WORD: Record<Status, string> = { done: 'Done', voting: 'In progress', todo: 'To do' };
 
+// The left column's width: the page (612) less margins (2 × 34), split 1.55 : 1 with a 16pt gap.
+export const LEFT_W = Math.floor(((612 - 68 - 16) * 1.55) / 2.55);
+
 const s = StyleSheet.create({
   page: { fontFamily: 'Instrument', fontSize: 9, color: C.ink, backgroundColor: '#ffffff', paddingBottom: 50 },
   band: { backgroundColor: C.green, color: '#ffffff', paddingTop: 22, paddingBottom: 18, paddingHorizontal: 34, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
@@ -118,20 +121,20 @@ export function OnePagerDoc({ d, url, qr, map }: { d: OnePager; url: string; qr:
             </View>
           )}
 
-          {map && (
-            <View style={s.mapBox}>
-              <Image src={map.src} style={{ width: 544, height: (544 * map.h) / map.w, borderRadius: 8 }} />
-              <View style={s.mapKey}>
-                <View style={[s.keyMark, { backgroundColor: '#b0412c', borderRadius: 2 }]} /><Text style={s.keyText}>Where we stay</Text>
-                <View style={[s.keyMark, { backgroundColor: C.green, borderRadius: 4 }]} /><Text style={s.keyText}>Rounds, numbered in order</Text>
-                <View style={[s.keyLine, { backgroundColor: C.green }]} /><Text style={s.keyText}>Each day’s drive: from the stay, then course to course</Text>
-                <View style={[s.keyLine, { backgroundColor: '#5b6a61', height: 1.2 }]} /><Text style={s.keyText}>From the airport</Text>
-              </View>
-            </View>
-          )}
-
           <View style={s.cols}>
             <View style={s.left}>
+              {map && (
+                <View style={s.mapBox}>
+                  <Text style={s.h}>The map</Text>
+                  <Image src={map.src} style={{ width: LEFT_W, height: (LEFT_W * map.h) / map.w, borderRadius: 8 }} />
+                  <View style={s.mapKey}>
+                    <View style={[s.keyMark, { backgroundColor: '#b0412c', borderRadius: 2 }]} /><Text style={s.keyText}>Stay</Text>
+                    <View style={[s.keyMark, { backgroundColor: C.green, borderRadius: 4 }]} /><Text style={s.keyText}>Rounds in order</Text>
+                    <View style={[s.keyLine, { backgroundColor: C.green }]} /><Text style={s.keyText}>Each day’s drive</Text>
+                    <View style={[s.keyLine, { backgroundColor: '#5b6a61', height: 1.2 }]} /><Text style={s.keyText}>From the airport</Text>
+                  </View>
+                </View>
+              )}
               {d.places && (
                 <>
                   <Text style={s.h}>Places on the table</Text>
@@ -187,16 +190,10 @@ export function OnePagerDoc({ d, url, qr, map }: { d: OnePager; url: string; qr:
                 ) : <Text style={s.meta}>No houses or hotels suggested yet.</Text>}
               </View>
 
-              {d.cup && map && (
-                <View style={[s.card, { backgroundColor: C.flagSoft, borderColor: C.flag, flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }]}>
-                  <Text style={[s.factK, { color: C.warn, marginRight: 8 }]}>{d.cup.title}</Text>
-                  <Text style={{ fontFamily: 'Barlow', fontWeight: 700, fontSize: 11, flex: 1 }}>{d.cup.line}</Text>
-                </View>
-              )}
             </View>
 
             <View style={s.right}>
-{!map && (
+{(
 <>
               <Text style={s.h}>Where things stand</Text>
               <View style={s.card}>
@@ -240,6 +237,12 @@ export function OnePagerDoc({ d, url, qr, map }: { d: OnePager; url: string; qr:
                     </Text>
                   </View>
                 </>
+              )}
+              {d.cup && map && (
+                <View style={[s.card, { backgroundColor: C.flagSoft, borderColor: C.flag, flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }]}>
+                  <Text style={[s.factK, { color: C.warn, marginRight: 8 }]}>{d.cup.title}</Text>
+                  <Text style={{ fontFamily: 'Barlow', fontWeight: 700, fontSize: 11, flex: 1 }}>{d.cup.line}</Text>
+                </View>
               )}
               {d.cup && !map && (
                 <View style={[s.card, { backgroundColor: C.flagSoft, borderColor: C.flag }]}>

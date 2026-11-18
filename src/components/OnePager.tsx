@@ -22,7 +22,7 @@ export function OnePagerButton() {
     // The trip map (airport, stay, courses and the drives between them), drawn here as a picture.
     // A shorter map while places are still being compared (that table needs the room).
     const open = !state.options.some((o) => o.kind === 'destination' && o.locked) && state.options.filter((o) => o.kind === 'destination').length > 1;
-    const map = await tripMapImage(state, 1088, open ? 270 : 360).catch(() => null);
+    const map = await tripMapImage(state, 960, open ? 520 : 620, 1.45).catch(() => null); // left column, about 320 × 175–205 pt
     registerFonts(origin);
     const qr = await QR.toDataURL(url, { margin: 0, width: 240, color: { dark: '#1e5a3b', light: '#ffffff' } }).catch(() => '');
     const blob = await pdf(<OnePagerDoc d={buildOnePager(state, new Date(), !!map)} url={url} qr={qr} map={map} />).toBlob();

@@ -35,7 +35,8 @@ function mapRounds(state: TripState, place: string | null) {
  * Draw the trip map. Returns a PNG data URL and its pixel size, or null when there's nothing to show
  * (no destination, or no stay and no courses found).
  */
-export async function tripMapImage(state: TripState, w = 1088, h = 360): Promise<{ src: string; w: number; h: number } | null> {
+/** `k` scales pins, labels and lines (for a map shown smaller on the page). */
+export async function tripMapImage(state: TripState, w = 1088, h = 360, k = 1): Promise<{ src: string; w: number; h: number } | null> {
   const dest = pickOf<DestinationData>(state, 'destination').option;
   if (!dest) return null;
   const stay = pickOf<LodgingData>(state, 'lodging').option;
@@ -72,7 +73,7 @@ export async function tripMapImage(state: TripState, w = 1088, h = 360): Promise
   // Fit everything, including the road paths, with room around the edges for the pins.
   const all: Pt[] = [...pts, ...roads.flatMap((r) => (r || []).map(([lat, lon]) => ({ lat, lon })))];
   // Any zoom, not just whole steps: the tiles are scaled, so the trip fills the frame.
-  const pad = 44;
+  const pad = 44 * k;
   const span = (zz: number) => {
     const xs = all.map((p) => lon2x(p.lon, zz)), ys = all.map((p) => lat2y(p.lat, zz));
     return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
@@ -90,7 +91,7 @@ export async function tripMapImage(state: TripState, w = 1088, h = 360): Promise
   g.fillStyle = '#e8ece4'; g.fillRect(0, 0, w, h);
   // Tiles (OpenStreetMap). If they can't load, the map still has its routes and pins.
   const zt = Math.ceil(z - 0.15); // tiles one step sharper, drawn a little smaller
-  const k = 2 ** (z - zt), size = TILE * k;
+  const tileScale = 2 ** (z - zt), size = TILE * tileScale;
   const tx0 = Math.floor(ox / size), ty0 = Math.floor(oy / size), tx1 = Math.floor((ox + w) / size), ty1 = Math.floor((oy + h) / size);
   const n = 2 ** zt;
   const jobs: Promise<void>[] = [];
@@ -108,9 +109,9 @@ export async function tripMapImage(state: TripState, w = 1088, h = 360): Promise
     const path = roads[i] && roads[i]!.length > 1 ? roads[i]!.map(([lat, lon]) => ({ lat, lon })) : [l.a, l.b];
     const trace = () => { g.beginPath(); path.forEach((p, k) => (k ? g.lineTo(X(p), Y(p)) : g.moveTo(X(p), Y(p)))); };
     g.lineJoin = 'round'; g.lineCap = 'round';
-    g.setLineDash([]); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = l.airport ? 7 : 9; trace(); g.stroke();
-    g.setLineDash(l.airport ? [7, 8] : roads[i] ? [] : [10, 9]);
-    g.strokeStyle = l.airport ? '#5b6a61' : '#1e5a3b'; g.lineWidth = l.airport ? 3.5 : 5; trace(); g.stroke();
+    g.setLineDash([]); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = (l.airport ? 7 : 9) * k; trace(); g.stroke();
+    g.setLineDash(l.airport ? [7 * k, 8 * k] : roads[i] ? [] : [10 * k, 9 * k]);
+    g.strokeStyle = l.airport ? '#5b6a61' : '#1e5a3b'; g.lineWidth = (l.airport ? 3.5 : 5) * k; trace(); g.stroke();
   });
   g.setLineDash([]);
 
@@ -124,33 +125,33 @@ export async function tripMapImage(state: TripState, w = 1088, h = 360): Promise
     if (same) { if (!same.text.split(' ').includes(c.s.label)) same.text += ` ${c.s.label}`; } else pins.push({ x: X(c.at), y: Y(c.at), kind: 'course', text: c.s.label });
   }
   const placed: { x: number; y: number }[] = [];
-  const steps = [[0, 0], [40, 0], [-40, 0], [0, 36], [0, -36], [40, 36], [-40, 36], [40, -36], [-40, -36]];
+  const steps = [[0, 0], [40, 0], [-40, 0], [0, 36], [0, -36], [40, 36], [-40, 36], [40, -36], [-40, -36]].map(([a, b]) => [a * k, b * k]);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   for (const p of pins) {
-    const [dx, dy] = steps.find(([sx, sy]) => !placed.some((q) => Math.abs(q.x - (p.x + sx)) < 42 && Math.abs(q.y - (p.y + sy)) < 34)) || [0, 0];
+    const [dx, dy] = steps.find(([sx, sy]) => !placed.some((q) => Math.abs(q.x - (p.x + sx)) < 42 * k && Math.abs(q.y - (p.y + sy)) < 34 * k)) || [0, 0];
     const x = p.x + dx, y = p.y + dy;
     placed.push({ x, y });
-    g.font = '700 22px "Barlow Condensed", "Arial Narrow", sans-serif';
-    const tw = p.kind === 'home' ? 30 : Math.max(30, g.measureText(p.text).width + 18);
-    const bw = p.kind === 'course' && p.text.length <= 2 ? 34 : tw + (p.kind === 'home' ? 0 : 4), bh = 34;
+    g.font = `700 ${22 * k}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+    const tw = p.kind === 'home' ? 30 * k : Math.max(30 * k, g.measureText(p.text).width + 18 * k);
+    const bw = p.kind === 'course' && p.text.length <= 2 ? 34 * k : tw + (p.kind === 'home' ? 0 : 4 * k), bh = 34 * k;
     g.shadowColor = 'rgba(0,0,0,.28)'; g.shadowBlur = 6; g.shadowOffsetY = 2;
     g.fillStyle = p.kind === 'home' ? '#b0412c' : p.kind === 'airport' ? '#16241c' : '#1e5a3b';
-    g.beginPath(); g.roundRect(x - bw / 2, y - bh / 2, bw, bh, p.kind === 'course' && p.text.length <= 2 ? bh / 2 : 9); g.fill();
+    g.beginPath(); g.roundRect(x - bw / 2, y - bh / 2, bw, bh, p.kind === 'course' && p.text.length <= 2 ? bh / 2 : 9 * k); g.fill();
     g.shadowColor = 'transparent';
-    g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.stroke();
+    g.lineWidth = 3 * k; g.strokeStyle = '#ffffff'; g.stroke();
     g.fillStyle = '#ffffff';
     if (p.kind === 'home') {
       // A little house.
-      g.lineWidth = 3; g.strokeStyle = '#fff'; g.lineJoin = 'round';
-      g.beginPath(); g.moveTo(x - 9, y + 1); g.lineTo(x, y - 8); g.lineTo(x + 9, y + 1); g.stroke();
-      g.beginPath(); g.moveTo(x - 6, y - 1); g.lineTo(x - 6, y + 8); g.lineTo(x + 6, y + 8); g.lineTo(x + 6, y - 1); g.stroke();
+      g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(x - 9 * k, y + k); g.lineTo(x, y - 8 * k); g.lineTo(x + 9 * k, y + k); g.stroke();
+      g.beginPath(); g.moveTo(x - 6 * k, y - k); g.lineTo(x - 6 * k, y + 8 * k); g.lineTo(x + 6 * k, y + 8 * k); g.lineTo(x + 6 * k, y - k); g.stroke();
     } else g.fillText(p.text, x, y + 1);
   }
   // Attribution, as OpenStreetMap asks.
-  g.font = '500 15px "Instrument Sans", Arial, sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom';
+  g.font = `500 ${15 * k}px "Instrument Sans", Arial, sans-serif`; g.textAlign = 'right'; g.textBaseline = 'bottom';
   const att = '© OpenStreetMap contributors';
   const aw = g.measureText(att).width + 12;
-  g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(w - aw, h - 22, aw, 22);
+  g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(w - aw, h - 22 * k, aw, 22 * k);
   g.fillStyle = '#16241c'; g.fillText(att, w - 6, h - 4);
   try { return { src: canvas.toDataURL('image/png'), w, h }; } catch { return null; } // a tainted canvas (tiles without CORS)
 }
