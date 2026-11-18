@@ -84,13 +84,34 @@ export function TripMap({ place, airport, stops, data: given, homes = [], legs: 
       // Lines: with one stay, spokes from the stay to each course (and a lighter one to the airport),
       // matching the "from the stay" list. Several stays (the Stay tab): no lines. No stay: the route in order.
       const line = { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 };
-      if (homes.length === 1) {
-        const h = L.latLng(homes[0].lat, homes[0].lon);
-        path.forEach((p, i) => {
-          const isAirport = !!data.airport && i === 0;
-          L.polyline([h, L.latLng(p.at.lat, p.at.lon)], isAirport ? { ...line, color: '#5b6a61', opacity: 0.6, dashArray: '2 6' } : line).addTo(map!);
-        });
-      } else if (!homes.length && route.length > 1) L.polyline(route, line).addTo(map);
+      type Leg = { a: [number, number]; b: [number, number]; airport: boolean };
+      const legsToDraw: Leg[] = [];
+      const seen = new Set<string>();
+      const addLeg = (a: { lat: number; lon: number }, b: { lat: number; lon: number }, airport: boolean) => {
+        const k = `${a.lat.toFixed(4)},${a.lon.toFixed(4)}>${b.lat.toFixed(4)},${b.lon.toFixed(4)}`;
+        if (seen.has(k) || (Math.abs(a.lat - b.lat) < 1e-4 && Math.abs(a.lon - b.lon) < 1e-4)) return; // a course played twice: one line
+        seen.add(k); legsToDraw.push({ a: [a.lat, a.lon], b: [b.lat, b.lon], airport });
+      };
+      if (homes.length === 1) path.forEach((p, i) => addLeg(homes[0], p.at, !!data.airport && i === 0));
+      else if (!homes.length) for (let i = 1; i < path.length; i++) addLeg(path[i - 1].at, path[i].at, false);
+      // Straight dashed lines right away; swapped for the real roads once the routes come back.
+      const style = (l: Leg) => (l.airport ? { ...line, color: '#5b6a61', opacity: 0.6, dashArray: '2 6' } : line);
+      const straight = legsToDraw.map((l) => L.polyline([l.a, l.b], style(l)).addTo(map!));
+      if (legsToDraw.length) {
+        const q = legsToDraw.map((l) => `${l.a[0].toFixed(5)},${l.a[1].toFixed(5)};${l.b[0].toFixed(5)},${l.b[1].toFixed(5)}`).join('|');
+        fetch(`/api/route?legs=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : null)).then((j: { legs: ([number, number][] | null)[] } | null) => {
+          const mm = map;
+          if (cancelled || !mm || !j) return;
+          j.legs.forEach((coords, i) => {
+            if (!coords || !straight[i]) return;
+            straight[i].remove();
+            const l = legsToDraw[i];
+            // Roads: a white casing under a solid line, so it reads on top of the map's own roads.
+            L.polyline(coords, { color: '#ffffff', weight: l.airport ? 5 : 6, opacity: 0.85 }).addTo(mm);
+            L.polyline(coords, { color: l.airport ? '#5b6a61' : '#1e5a3b', weight: l.airport ? 2.5 : 3.5, opacity: l.airport ? 0.7 : 0.95, dashArray: l.airport ? '4 6' : undefined }).addTo(mm);
+          });
+        }).catch(() => {});
+      }
       // Stops within about half a mile (the same course, or courses at one resort) share one pin with every number on it.
       const pins: { at: { lat: number; lon: number }; labels: string[]; airport: boolean }[] = [];
       const markers: L.Marker[] = [];
