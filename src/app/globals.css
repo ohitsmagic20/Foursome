@@ -806,3 +806,14 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .fold-body .btn-row { margin-top: 10px; }
 .thirtysix { display: flex; flex-direction: column; gap: 10px; border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
 .thirtysix.on { border-style: solid; background: var(--soft); }
+
+/* Drive times from each stay */
+.stay-drives { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.drive-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 4px 9px; border-radius: 999px; background: var(--good-soft, var(--soft)); color: var(--ink); }
+.drive-chip::before { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; opacity: .7;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 17h14l-1.5-6.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5Z'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3Ccircle cx='16' cy='17' r='2'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 17h14l-1.5-6.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5Z'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3Ccircle cx='16' cy='17' r='2'/%3E%3C/svg%3E") center / contain no-repeat; }
+.drive-chip.quiet { background: var(--soft); color: var(--muted); }
+.drive-chip.quiet::before { display: none; }
+.stay-drive b { font-weight: 700; color: var(--ink); }
+.stay-drive.best b, .stay-drive.best { color: var(--good); }

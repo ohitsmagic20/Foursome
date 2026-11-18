@@ -8,7 +8,7 @@ import { PackagesNear } from '../Packages';
 import { StaySearch } from '../live';
 import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
-import { StayMap, useStayDistances } from '../StayMap';
+import { StayMap, driveLabel, useStayDistances } from '../StayMap';
 import { Deadline } from '../Deadline';
 
 export function StayTab() {
@@ -57,8 +57,15 @@ export function StayTab() {
               {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
               <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
             </div>
-            {far && (far.avg !== null
-              ? <div className="row-meta">~{far.avg} mi to the courses on average{far.max !== null && far.max > far.avg + 3 ? `, farthest ${far.max} mi` : ''}{far.airport !== null ? ` · ${far.airport} mi from ${far.airportCode}` : ''}</div>
+            {far && (far.avgMin !== null
+              ? (
+                <div className="stay-drives">
+                  <span className="drive-chip"><b>{driveLabel(far.avgMin)}</b> avg to the courses{far.avgMi ? ` · ${far.avgMi} mi` : ''}</span>
+                  {far.maxMin !== null && far.maxMin > far.avgMin + 4 && <span className="drive-chip quiet">Longest {driveLabel(far.maxMin)}</span>}
+                  {far.airportMin !== null && <span className="drive-chip quiet">{driveLabel(far.airportMin)} from {far.airportCode}</span>}
+                </div>
+              )
+              : far.letter && far.airportMin !== null ? <div className="row-meta">{driveLabel(far.airportMin)} from {far.airportCode}. Add rounds on the Golf tab to see drives to the courses.</div>
               : !far.letter ? <div className="row-meta">Not on the map yet. {canEdit(me, o) ? <button className="link-btn" onClick={() => lodgingSheet(ctx, o)}>Add an address</button> : 'Add an address to see it.'}</div> : null)}
             <BookingRow option={o} />
             {!locked && <VoteControl option={o} />}
