@@ -207,7 +207,6 @@ export function ConfirmButton({ label, confirmLabel = 'Tap again to confirm', on
 /* ---------- tee time picker ---------- */
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
-const QUICK = ['7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:30 PM', '1:30 PM'];
 
 /** Hour, minute and AM/PM as separate pieces, so changing one never means retyping the rest.
  *  Submits as a single "11:14 AM" string under `name`. */
@@ -232,13 +231,6 @@ export function TimeField({ name, label, defaultValue, hint }: { name: string; l
         <div className="seg ampm" role="group" aria-label="AM or PM">
           {(['AM', 'PM'] as const).map((x) => <button key={x} type="button" aria-pressed={ap === x} onClick={() => setAp(x)}>{x}</button>)}
         </div>
-      </div>
-      <div className="quick-times" aria-label="Common tee times">
-        {QUICK.map((t) => (
-          <button key={t} type="button" className={t === value ? 'on' : ''} onClick={() => { const p = parseTee(t); setH(p.h); setM(p.m); setAp(p.ap); }}>
-            {t.replace(':00', '').replace(' ', '')}
-          </button>
-        ))}
       </div>
       {hint && <p className="hint">{hint}</p>}
     </div>

@@ -218,10 +218,6 @@ tr.me .mark.none { border-color: var(--green); }
 .time-picker .colon { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 24px; color: var(--muted); }
 .time-picker .ampm { margin-left: 6px; flex: 1; min-height: 50px; }
 .time-picker .ampm button { min-height: 44px; font-size: 15px; }
-.quick-times { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; scrollbar-width: none; }
-.quick-times::-webkit-scrollbar { display: none; }
-.quick-times button { flex: none; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; color: var(--muted); }
-.quick-times button.on { background: var(--green); border-color: var(--green); color: var(--green-ink); }
 .tab { white-space: nowrap; }
 .price-hint { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft); }
 .price-tag { font-size: 12px; font-weight: 600; color: var(--good); }
@@ -396,7 +392,6 @@ tr.me .mark.none { border-color: var(--green); }
 .time-picker select { min-height: 44px; font-size: 21px; }
 .time-picker .ampm { min-height: 44px; }
 .time-picker .ampm button { min-height: 38px; }
-.quick-times button { min-height: 30px; }
 
 /* course rating and slope by tee */
 .tee-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
