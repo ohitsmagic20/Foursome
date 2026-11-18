@@ -3,7 +3,8 @@
 import type { DestinationData, LodgingData, Option, RoundData } from '@/lib/shared';
 import { destAirports, inPlace, teeMinutes } from '@/lib/shared';
 import { TripMap, roadMiles, useTripCourses, type Home, type Stop } from './TripMap';
-import { useEffect, useState } from 'react';
+import { driveLabel, estMinutes, useDriveTable, type Pt } from './drive';
+export { driveLabel };
 import { useTrip } from './ui';
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -30,26 +31,6 @@ export interface StayDistance {
   estimated: boolean;
 }
 
-type Pt = { lat: number; lon: number };
-type Table = { minutes: number[][] | null; miles: number[][] | null };
-const tables = new Map<string, Promise<Table>>();
-/** Drive times from each stay to each course (shared by every component asking the same question). */
-function useDriveTable(from: Pt[], to: Pt[]) {
-  const enc = (ps: Pt[]) => ps.map((p) => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`).join('|');
-  const url = from.length && to.length ? `/api/drive?from=${enc(from)}&to=${enc(to)}` : '';
-  const [res, setRes] = useState<{ url: string; t: Table } | null>(null);
-  useEffect(() => {
-    if (!url) return;
-    let live = true;
-    if (!tables.has(url)) tables.set(url, fetch(url).then((r) => (r.ok ? r.json() : { minutes: null, miles: null })).catch(() => ({ minutes: null, miles: null })));
-    tables.get(url)!.then((t) => live && setRes({ url, t }));
-    return () => { live = false; };
-  }, [url]);
-  return res && res.url === url ? res.t : null;
-}
-
-/** Without routing: miles on the road, at a typical 38 mph plus a few minutes for parking and lights. */
-const estMinutes = (mi: number) => Math.round((mi / 38) * 60 + 3);
 const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
 
 /** For each stay: its letter on the map, and the drive to the courses and the airport. */
@@ -83,8 +64,6 @@ export function useStayDistances(dest: Option<DestinationData> | null, stays: Op
   return out;
 }
 
-/** "25 min", "1 hr 5 min". */
-export const driveLabel = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} hr${min % 60 ? ` ${min % 60} min` : ''}`);
 
 /** The Stay tab's map: each stay as a lettered house pin, with the trip's courses and the airport around it. */
 export function StayMap({ dest, stays }: { dest: Option<DestinationData>; stays: Option<LodgingData>[] }) {
@@ -111,7 +90,10 @@ export function StayMap({ dest, stays }: { dest: Option<DestinationData>; stays:
             <li key={o.id}>
               <span className="pin pin-home">{d.letter}</span>
               <span className="grow" style={{ minWidth: 0 }}>{o.data.name}</span>
-              <span className={`row-meta stay-drive${o.id === best ? ' best' : ''}`}>{d.avgMin !== null ? <><b>{driveLabel(d.avgMin)}</b> avg to golf</> : d.airportMin !== null ? `${driveLabel(d.airportMin)} from ${d.airportCode}` : ''}</span>
+              <span className="stay-drive-cols">
+                {d.airportMin !== null && <span className="row-meta stay-drive"><b>{driveLabel(d.airportMin)}</b> from {d.airportCode}</span>}
+                {d.avgMin !== null && <span className={`row-meta stay-drive${o.id === best ? ' best' : ''}`}><b>{driveLabel(d.avgMin)}</b> avg to golf</span>}
+              </span>
             </li>
           );
         })}

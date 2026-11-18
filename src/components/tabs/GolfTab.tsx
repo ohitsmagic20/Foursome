@@ -14,6 +14,7 @@ import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
 import { firstName } from '@/lib/client';
+import { driveLabel, legOf, useDriveTable } from '../drive';
 
 /** The destination being planned on this tab (the locked one, or the one picked in the switcher). */
 const viewedPlace = (state: TripState, id: string | null) => (optionsOf<DestinationData>(state, 'destination').find((d) => d.id === id) || null) as Option<DestinationData> | null;
@@ -44,6 +45,17 @@ export function GolfTab() {
   const known = useKnownPrices(rounds);
   // Where the group sleeps, as a house pin on the course map.
   const stay = pickOf<LodgingData>(state, 'lodging', ctx.place).option;
+  // Drive from the stay to each course on the map.
+  const stayPt = stay?.data.lat && stay.data.lon ? { lat: stay.data.lat, lon: stay.data.lon } : null;
+  const courseList = all.data?.courses || [];
+  const drives = useDriveTable(stayPt ? [stayPt] : [], stayPt ? courseList.map((c) => ({ lat: c.lat, lon: c.lon })) : []);
+  const fromStay = (r: Option<RoundData>) => {
+    const i = courseList.findIndex((c) => c.name === r.data.course);
+    if (!stayPt || i < 0) return undefined;
+    const l = legOf(drives, 0, i, stayPt, courseList[i]);
+    const short = stay!.data.name.split(/[,(·]/)[0].trim();
+    return `${l.est ? '~' : ''}${driveLabel(l.min)} from ${short.length <= 18 ? short : 'the stay'}`;
+  };
 
   return (
     <>
@@ -64,7 +76,7 @@ export function GolfTab() {
             <div className="day-label">Day {d}{date ? ` · ${dayLabel(date.data.start, d)}` : ''}{planned >= 2 && <Chip kind="plain">36 holes</Chip>}{wx.data && <DayWeather day={wx.data.days[d - 1]} mode={wx.data.mode} />}</div>
             {rs.length === 0
               ? <button className="card empty dashed" onClick={() => roundSheet(ctx, undefined, d)}>{d === 1 ? 'Arrival day' : d === days ? 'Travel home day' : 'Open day'}: suggest a round</button>
-              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} info={infoFor(r)} known={known[r.data.course]} />)}
+              : rs.map((r) => <RoundCard key={r.id} r={r} first={d === 1} info={infoFor(r)} known={known[r.data.course]} drive={fromStay(r)} />)}
           </section>
         );
       })}
@@ -72,7 +84,7 @@ export function GolfTab() {
         <section className="section">
           <div className="day-label">Outside the current dates</div>
           <Callout kind="warn">These fall after the trip ends. Move or remove them.</Callout>
-          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} info={infoFor(r)} known={known[r.data.course]} />)}
+          {rounds.filter((r) => r.data.day > days).map((r) => <RoundCard key={r.id} r={r} first={false} info={infoFor(r)} known={known[r.data.course]} drive={fromStay(r)} />)}
         </section>
       )}
       {wx.data && <WeatherCredit />}
@@ -115,7 +127,7 @@ function IdeaRounds() {
   );
 }
 
-function RoundCard({ r, first, info, known }: { r: Option<RoundData>; first: boolean; info?: MapCourse; known?: CoursePrices }) {
+function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; first: boolean; info?: MapCourse; known?: CoursePrices; drive?: string }) {
   const ctx = useTrip();
   const { state, me } = ctx;
   const dest = viewedPlace(state, ctx.place);
@@ -139,6 +151,7 @@ function RoundCard({ r, first, info, known }: { r: Option<RoundData>; first: boo
               {where}
             </div>
           )}
+          {drive && <div className="stay-drives"><span className="drive-chip">{drive}</span></div>}
 
         </div>
         <RoundFee r={r} known={known} />

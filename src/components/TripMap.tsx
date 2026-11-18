@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 
 import type { CourseInfo } from '@/lib/shared';
+import { driveLabel, legOf, useDriveTable, type Pt } from './drive';
 
 /** `search` is a different name to look up on the map; `courseId` is a course picked from the database. */
 export interface Stop { name: string; label: string; search?: string; courseId?: string }
@@ -47,6 +48,9 @@ function miles(a: { lat: number; lon: number }, b: { lat: number; lon: number })
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 /** Straight-line distance stretched to a rough road distance. */
+const straightClose = (a: Pt, b: Pt) => Math.abs(a.lat - b.lat) < 0.002 && Math.abs(a.lon - b.lon) < 0.002;
+const homeIcon = <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v10h14V10" /></svg>;
+
 export const roadMiles = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.max(1, Math.round(miles(a, b) * 1.25));
 
 /** A small map of the trip: the arrival airport and each course in playing order, joined by dashed lines. */
@@ -58,6 +62,12 @@ export function TripMap({ place, airport, stops, data: given, homes = [], legs: 
 
   // Stops in order, with coordinates where the course was found.
   const placed = data ? stops.map((s) => ({ ...s, at: data.courses.find((c) => c.name === s.name) || null })) : [];
+  // Drive times: from the stay to the airport and each course, or each leg of the route in order.
+  const homeOne = homes.length === 1 ? homes[0] : null;
+  const apPt = data?.airport ? { lat: data.airport.lat, lon: data.airport.lon } : null;
+  const coursePts = (data ? stops.map((s) => data.courses.find((c) => c.name === s.name)).filter(Boolean) : []) as Pt[];
+  const seqPts: Pt[] = [...(apPt ? [apPt] : []), ...coursePts];
+  const drive = useDriveTable(homeOne ? [homeOne] : seqPts, seqPts);
   const path = [...(data?.airport ? [{ label: data.airport.code, at: data.airport }] : []), ...placed.filter((p) => p.at).map((p) => ({ label: p.label, at: p.at! }))];
 
   useEffect(() => {
@@ -98,12 +108,25 @@ export function TripMap({ place, airport, stops, data: given, homes = [], legs: 
   }, [data, homes.map((h) => `${h.label}${h.lat},${h.lon}`).join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if ((!stops.length && !homes.length) || failed) return null;
-  const legs: { label: string; name: string; from?: number }[] = [];
-  let prev = data?.airport ? { lat: data.airport.lat, lon: data.airport.lon } : null;
+  // With one stay on the map: each course's drive from the stay (and the airport's to it).
+  // Without one: each leg in order, airport → first course → next.
+  const home = homes.length === 1 ? homes[0] : null;
+  const ap = data?.airport ? { lat: data.airport.lat, lon: data.airport.lon } : null;
+  const legs: { label: string; name: string; text: string }[] = [];
+  let k = 0, prev: Pt | null = ap, prevIdx = ap ? 0 : -1;
   for (const p of placed) {
-    legs.push({ label: p.label, name: p.name, from: p.at && prev ? roadMiles(prev, p.at) : undefined });
-    if (p.at) prev = p.at;
+    if (!p.at) { legs.push({ label: p.label, name: p.name, text: 'not on map' }); continue; }
+    if (home) {
+      const l = legOf(drive, 0, (ap ? 1 : 0) + k, home, p.at);
+      legs.push({ label: p.label, name: p.name, text: `${l.est ? '~' : ''}${driveLabel(l.min)} from the stay` });
+    } else if (prev) {
+      const same = straightClose(prev, p.at);
+      const l = legOf(drive, prevIdx, prevIdx + 1, prev, p.at);
+      legs.push({ label: p.label, name: p.name, text: same ? 'same course' : `${l.est ? '~' : ''}${driveLabel(l.min)} drive` });
+    } else legs.push({ label: p.label, name: p.name, text: '' });
+    prev = p.at; prevIdx = (ap ? 1 : 0) + k; k++;
   }
+  const apToHome = home && ap ? legOf(drive, 0, 0, home, ap) : null;
   return (
     <section className="trip-map">
       <div ref={el} className="trip-map-canvas" aria-label={`Map of ${place} with the courses in order`}>
@@ -111,12 +134,13 @@ export function TripMap({ place, airport, stops, data: given, homes = [], legs: 
       </div>
       {data && showLegs && (
         <ol className="trip-map-legs">
-          {data.airport && <li><span className="pin pin-airport">{data.airport.code}</span><span className="grow">Arrive</span></li>}
+          {data.airport && <li><span className="pin pin-airport">{data.airport.code}</span><span className="grow">Arrive</span>{apToHome && <span className="row-meta leg-time">{apToHome.est ? '~' : ''}{driveLabel(apToHome.min)} to the stay</span>}</li>}
+          {home && <li><span className="pin pin-home">{homeIcon}</span><span className="grow">{home.name}</span><span className="row-meta">the stay</span></li>}
           {legs.map((l, i) => (
             <li key={i}>
               <span className="pin">{l.label}</span>
               <span className="grow">{l.name}</span>
-              <span className="row-meta">{l.from !== undefined ? (l.from <= 1 && i ? 'same place' : `~${l.from} mi`) : 'not on map'}</span>
+              <span className="row-meta leg-time">{l.text}</span>
             </li>
           ))}
         </ol>
