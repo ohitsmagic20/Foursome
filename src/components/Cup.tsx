@@ -6,7 +6,7 @@ import { CUP_FORMATS, DEFAULT_SI, HCP_RULE, matchStrokes, marginsFor, segLabel, 
 import type { HoleWin } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
-import { Icon, useTrip, type TripCtx } from './ui';
+import { ConfirmButton, Icon, useTrip, type TripCtx } from './ui';
 
 const TEAM_CLASS = ['team-a', 'team-b'] as const;
 
@@ -697,12 +697,23 @@ function Scorecard({ matchId }: { matchId: string }) {
     setPending((p) => ({ ...p, [i]: w }));
     const after = play.slice(); after[i] = w;
     const nextOpen = after.findIndex((h, k) => k > i && !h);
-    // Move on to the next hole, unless that tap ended the match.
-    setSel(matchStatus({ ...m, play: after }).decided || nextOpen < 0 ? null : nextOpen);
+    // Move on to the next hole, unless that tap ended the match. Clearing a hole stays on it, ready to re-enter.
+    if (w === null) setSel(i);
+    else setSel(matchStatus({ ...m, play: after }).decided || nextOpen < 0 ? null : nextOpen);
     const ok = await act('cup', { op: 'hole', match: m.id, hole: i + 1, winner: w });
     if (!ok) setPending((p) => { const n = { ...p }; delete n[i]; return n; });
   };
   const leadClass = st.lead > 0 ? 'team-a-text' : st.lead < 0 ? 'team-b-text' : '';
+  // The last hole entered, for "Undo".
+  const lastIdx = play.reduce((acc, h, k) => (h ? k : acc), -1);
+  const undo = async () => {
+    if (lastIdx < 0) return;
+    setPending((p) => ({ ...p, [lastIdx]: null }));
+    setSel(lastIdx);
+    const ok = await act('cup', { op: 'hole', match: m.id, hole: lastIdx + 1, winner: null });
+    if (!ok) setPending((p) => { const n = { ...p }; delete n[lastIdx]; return n; });
+  };
+  const word = (h: HoleWin) => (h === 'a' ? `${sa} won it` : h === 'b' ? `${sb} won it` : 'halved');
   const strokes = matchStrokes(cup, m);
   // Who gets a stroke on the hole being entered, in words: "Joe gets a stroke" / "Joe gets 2".
   const strokeNote = (i: number) => {
@@ -721,20 +732,34 @@ function Scorecard({ matchId }: { matchId: string }) {
         <div className="sc-side team-b"><span className="team-dot team-b" />{sb}{!cup.duel && <small>{cup.teams[1].name}</small>}</div>
       </div>
       <div className={`sc-status ${leadClass}`}>{statusLabel(m, sa, sb)}</div>
+      {lastIdx >= 0 && (
+        <div className="sc-undo-row">
+          <span className="row-meta">Hole {lastIdx + off}: {word(play[lastIdx])}</span>
+          <button type="button" className="btn small sc-undo" onClick={undo}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>
+            Undo hole {lastIdx + off}
+          </button>
+        </div>
+      )}
 
       {!st.decided || sel !== null ? (
         <div className="sc-entry">
           <div className="sc-hole"><span>Hole</span><b>{hole + off}</b>{play[hole] && <small>Change this hole</small>}</div>
           {cup.net && <div className={`sc-stroke${strokeNote(hole).startsWith('Stroke') ? ' on' : ''}`}>{strokeNote(hole)}<small> · SI {(ownSi ? cup.si![m.round] : DEFAULT_SI)[hole + off - 1]}</small></div>}
           <div className="sc-buttons">
-            <button type="button" className={`sc-btn team-a-fill${play[hole] === 'a' ? ' on' : ''}`} onClick={() => save('a')}>{sa}<small>won the hole</small></button>
-            <button type="button" className={`sc-btn half${play[hole] === 'half' ? ' on' : ''}`} onClick={() => save('half')}>Halved</button>
-            <button type="button" className={`sc-btn team-b-fill${play[hole] === 'b' ? ' on' : ''}`} onClick={() => save('b')}>{sb}<small>won the hole</small></button>
+            <button type="button" className={`sc-btn team-a-fill${play[hole] === 'a' ? ' on' : ''}`} onClick={() => save(play[hole] === 'a' ? null : 'a')}>{sa}<small>{play[hole] === 'a' ? 'tap again to clear' : 'won the hole'}</small></button>
+            <button type="button" className={`sc-btn half${play[hole] === 'half' ? ' on' : ''}`} onClick={() => save(play[hole] === 'half' ? null : 'half')}>Halved{play[hole] === 'half' && <small>tap again to clear</small>}</button>
+            <button type="button" className={`sc-btn team-b-fill${play[hole] === 'b' ? ' on' : ''}`} onClick={() => save(play[hole] === 'b' ? null : 'b')}>{sb}<small>{play[hole] === 'b' ? 'tap again to clear' : 'won the hole'}</small></button>
           </div>
-          {play[hole] && <button type="button" className="link-btn" onClick={() => save(null)}>Clear hole {hole + off}</button>}
+          {play[hole] && (
+            <button type="button" className="btn small ghost sc-clear" onClick={() => save(null)}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              Clear hole {hole + off}
+            </button>
+          )}
         </div>
       ) : (
-        <p className="sub">Match over. Tap any hole below to fix it.</p>
+        <p className="sub">Match over. Tap any hole below to change or clear it, or undo the last one.</p>
       )}
 
       {segLabel(m) && <div className="match-seg" style={{ textAlign: 'center' }}>{segLabel(m)}</div>}
@@ -748,6 +773,10 @@ function Scorecard({ matchId }: { matchId: string }) {
           </button>
         ))}
       </div>
+      {lastIdx >= 0 && (
+        <ConfirmButton className="btn small ghost danger sc-reset" label="Clear the whole scorecard" confirmLabel="Tap again to clear every hole"
+          onConfirm={async () => { setPending({}); setSel(0); await act('cup', { op: 'clear_match', match: m.id }); }} />
+      )}
       <p className="hint">W and L are from {cup.duel ? (sa === 'You' ? 'your' : `${sa}’s`) : `${cup.teams[0].name}’s`} side.{cup.net ? ' Dots mark strokes; tap who won the hole after strokes.' : ''} Everyone on the trip sees each hole as it’s entered.</p>
       {cup.net && (
         <p className="hint">

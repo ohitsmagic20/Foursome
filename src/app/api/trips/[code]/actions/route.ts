@@ -416,7 +416,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             const roundId = str(b.round, 40);
             cup.matches = cup.matches.filter((m) => m.round !== roundId);
             if (cup.sitting) delete cup.sitting[roundId];
-          } else if (op === 'result' || op === 'hole') {
+          } else if (op === 'result' || op === 'hole' || op === 'clear_match') {
             // Scores come in from several phones at once. Save only if nobody changed the cup since we read it;
             // otherwise read it again and re-apply this score (a few tries).
             let fresh: Cup = cup;
@@ -426,7 +426,11 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
               if (!m) throw new HttpError(404, 'That match isn’t in the cup anymore.');
               const before = cupScore(fresh);
               const wasDone = m.result || null;
-              if (op === 'hole') {
+              if (op === 'clear_match') {
+                // Start the match over: every hole and the result.
+                m.play = [];
+                m.result = null; m.margin = undefined; m.auto = false;
+              } else if (op === 'hole') {
                 const i = int(b.hole, 1, m.holes, 0) - 1;
                 if (i < 0) throw new HttpError(400, 'Which hole?');
                 const w: HoleWin = b.winner === 'a' || b.winner === 'b' || b.winner === 'half' ? b.winner : null;

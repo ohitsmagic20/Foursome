@@ -914,3 +914,10 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .cup-hero-title { margin: 2px 0 0; font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 28px; line-height: 1.05; color: #fff; }
 .cup-hero-line { margin-top: 4px; font-size: 14px; color: #d5e4da; display: flex; align-items: center; gap: 6px; }
 .decide { display: flex; flex-direction: column; gap: 14px; }
+
+/* Scorecard: undo and clear */
+.sc-undo-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: -4px; }
+.sc-undo { display: inline-flex; align-items: center; gap: 6px; }
+.sc-clear { display: inline-flex; align-items: center; gap: 6px; color: var(--bad) !important; }
+.sc-reset { align-self: center; }
+.sc-btn.on small { font-weight: 700; }
