@@ -6,7 +6,7 @@ import { PlaceSwitcher, usePlaces } from '../Places';
 import { firstName } from '@/lib/client';
 import { PackagesNear } from '../Packages';
 import { StaySearch } from '../live';
-import { BookingRow, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
+import { BookButton, BookingTag, DriveLine, Fold, Icon, LockButton, MoreMenu, Tally, VoteControl, bookingItems, canEdit, useTrip } from '../ui';
 import { lodgingSheet } from '../sheets';
 import { StayMap, driveLabel, useStayDistances } from '../StayMap';
 import { Deadline } from '../Deadline';
@@ -28,6 +28,47 @@ export function StayTab() {
   const shown = locked ? [locked, ...opts.filter((o) => o.id !== locked.id)] : opts.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
   const dist = useStayDistances(dest, shown);
 
+  const card = (o: Option<LodgingData>) => {
+    const fits = !o.data.beds || o.data.beds >= need;
+    const far = dist.get(o.id);
+    const drive = far && far.avgMin !== null
+      ? `${driveLabel(far.avgMin)} avg to golf${far.airportMin !== null ? ` · ${driveLabel(far.airportMin)} from ${far.airportCode}` : ''}`
+      : far && far.letter && far.airportMin !== null ? `${driveLabel(far.airportMin)} from ${far.airportCode}` : '';
+    return (
+      <div key={o.id} className={`card opt ${o.locked ? 'locked' : ''}`}>
+        {o.data.image && <img className="opt-img" src={o.data.image} alt="" loading="lazy" />}
+        <div className="opt-head">
+          <div style={{ minWidth: 0 }}>
+            <div className="row-title" style={{ fontSize: 17 }}>{far?.letter && <span className="pin pin-home stay-letter">{far.letter}</span>}{o.data.name}</div>
+            <div className="row-meta">{o.data.bedrooms ? `${o.data.bedrooms} bedrooms` : 'Bedrooms not listed'} · {o.data.beds ? `${o.data.beds} beds` : 'beds not listed'}</div>
+            {drive && <DriveLine text={drive} />}
+            {far && !far.letter && <div className="row-meta">Not on the map yet{canEdit(me, o) ? '. Add an address from ••• below' : ''}.</div>}
+          </div>
+          <div className="fee">{money(o.data.total)}<small>total</small></div>
+        </div>
+        <div className="opt-status">
+          {o.locked ? <span className="good">{choosing ? `Picked for ${where}` : 'Locked'}</span> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <span className="flag">Leading</span> : null}
+          <BookingTag option={o} />
+          {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
+          <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
+        </div>
+        {!locked && <VoteControl option={o} />}
+        {!locked && <Tally option={o} />}
+        <div className="opt-foot">
+          {o.locked && <BookButton option={o} />}
+          {!o.locked && <LockButton option={o} lockLabel={choosing ? `Pick for ${where}` : undefined} />}
+          {o.data.url && <a className="btn small" href={o.data.url} target="_blank" rel="noopener noreferrer">Open listing</a>}
+          <span style={{ marginLeft: 'auto' }} />
+          <MoreMenu items={[
+            ...bookingItems(ctx, o),
+            canEdit(me, o) && { label: far && !far.letter ? 'Edit (add an address)' : 'Edit', onClick: () => lodgingSheet(ctx, o) },
+            o.locked && me?.is_organizer && { label: 'Unlock', onClick: () => ctx.act('unlock', { optionId: o.id }) },
+          ]} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section className="section">
       <PlaceSwitcher kind="lodging" />
@@ -39,45 +80,12 @@ export function StayTab() {
         : <p className="hint">Pick dates and a destination to search rentals.</p>}
       {dest && opts.length > 0 && <StayMap dest={dest} stays={shown} />}
       {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>{choosing && where ? `Suggest the first place to stay in ${where}.` : 'Suggest the first place to stay.'}</button>}
-      {shown.map((o) => {
-        const fits = !o.data.beds || o.data.beds >= need;
-        const far = dist.get(o.id);
-        return (
-          <div key={o.id} className={`card opt ${o.locked ? 'locked' : ''}`} style={locked && !o.locked ? { opacity: .6 } : undefined}>
-            {o.data.image && <img className="opt-img" src={o.data.image} alt="" loading="lazy" />}
-            <div className="opt-head">
-              <div style={{ minWidth: 0 }}>
-                <div className="row-title" style={{ fontSize: 17 }}>{far?.letter && <span className="pin pin-home stay-letter">{far.letter}</span>}{o.data.name}</div>
-                <div className="row-meta">{o.data.bedrooms ? `${o.data.bedrooms} bedrooms` : 'Bedrooms not listed'} · {o.data.beds ? `${o.data.beds} beds` : 'beds not listed'}</div>
-              </div>
-              <div className="fee">{money(o.data.total)}<small>total</small></div>
-            </div>
-            <div className="opt-status">
-              {o.locked ? <span className="good">{choosing ? `Picked for ${where}` : 'Locked'}</span> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <span className="flag">Leading</span> : null}
-              {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
-              <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
-            </div>
-            {far && (far.avgMin !== null
-              ? (
-                <div className="stay-drives">
-                  <span className="drive-chip"><b>{driveLabel(far.avgMin)}</b> avg to the courses{far.avgMi ? ` · ${far.avgMi} mi` : ''}</span>
-                  {far.maxMin !== null && far.maxMin > far.avgMin + 4 && <span className="drive-chip quiet">Longest {driveLabel(far.maxMin)}</span>}
-                  {far.airportMin !== null && <span className="drive-chip quiet">{driveLabel(far.airportMin)} from {far.airportCode}</span>}
-                </div>
-              )
-              : far.letter && far.airportMin !== null ? <div className="row-meta">{driveLabel(far.airportMin)} from {far.airportCode}. Add rounds on the Golf tab to see drives to the courses.</div>
-              : !far.letter ? <div className="row-meta">Not on the map yet. {canEdit(me, o) ? <button className="link-btn" onClick={() => lodgingSheet(ctx, o)}>Add an address</button> : 'Add an address to see it.'}</div> : null)}
-            <BookingRow option={o} />
-            {!locked && <VoteControl option={o} />}
-            <Tally option={o} />
-            <div className="opt-foot">
-              {o.data.url && <a className="btn small" href={o.data.url} target="_blank" rel="noopener noreferrer">Open listing</a>}
-              <LockButton option={o} lockLabel={choosing ? `Pick for ${where}` : undefined} />
-              {canEdit(me, o) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => lodgingSheet(ctx, o)}>Edit</button>}
-            </div>
-          </div>
-        );
-      })}
+      {(locked && !choosing ? [locked] : shown).map((o) => card(o))}
+      {locked && !choosing && shown.length > 1 && (
+        <Fold title={`Other options (${shown.length - 1})`} meta="Not picked. Kept here in case plans change.">
+          <div className="stack" style={{ gap: 10 }}>{shown.filter((o) => o.id !== locked.id).map((o) => card(o))}</div>
+        </Fold>
+      )}
       {locked && !choosing && <Rooms stay={locked} />}
       {!locked && dest && <PackagesNear dest={dest.data.name} airports={destAirports(dest.data)} />}
     </section>
@@ -101,15 +109,17 @@ function Rooms({ stay }: { stay: Option<LodgingData> }) {
       <div className="section-head"><h3>Rooms</h3>{me.is_organizer && <div className="btn-row">
         <button className="btn small" onClick={async () => { if (await act('rooms', { op: 'auto' })) toast('Rooms assigned. Everyone can still move.'); }}>{placed.size ? 'Re-assign' : 'Assign rooms'}</button>
       </div>}</div>
-      <div className="rooms">
+      <div className="list rooms-list">
         {rooms.map((r, i) => {
           const crowded = r.length > 1 ? r.filter(wantsOwn).map(who) : [];
           return (
-            <div key={i} className={`room${i === mine ? ' mine' : ''}`}>
-              <div className="room-name">Room {i + 1}</div>
-              <div className="room-who">{r.length ? andList(r.map(who)) : <span className="row-meta">Open</span>}</div>
-              {crowded.length > 0 && <div className="row-meta warn-text">{andList(crowded)} wanted {crowded.length > 1 ? 'their own beds' : crowded[0] === 'You' ? 'your own bed' : 'their own bed'}</div>}
-              {i !== mine && <button className="link-btn" onClick={() => act('rooms', { op: 'move', room: i })}>{mine >= 0 ? 'Move here' : 'Take this one'}</button>}
+            <div key={i} className={`row room-row${i === mine ? ' mine' : ''}`}>
+              <span className="room-num">{i + 1}</span>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="row-title">{r.length ? andList(r.map(who)) : <span className="room-open">Open</span>}</div>
+                {crowded.length > 0 && <div className="row-meta warn-text">{andList(crowded)} wanted {crowded.length > 1 ? 'their own beds' : crowded[0] === 'You' ? 'your own bed' : 'their own bed'}</div>}
+              </div>
+              {i === mine ? <span className="chip good">Yours</span> : <button className="btn small" onClick={() => act('rooms', { op: 'move', room: i })}>{mine >= 0 ? 'Move here' : 'Take it'}</button>}
             </div>
           );
         })}

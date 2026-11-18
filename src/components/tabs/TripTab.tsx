@@ -400,7 +400,16 @@ function Crew() {
   return (
     <section className="section">
       <div className="section-head"><h2>Crew</h2><span className="sub">{state.members.length} going</span></div>
-      <div className="list">
+      {/* Everyone as a row of initials; tap for the full list. */}
+      <details className="card crew-fold">
+        <summary>
+          <span className="crew-faces" aria-hidden="true">
+            {state.members.slice(0, state.members.length > 7 ? 6 : 7).map((m) => <span key={m.id} className={`face${m.id === me?.id ? ' me' : ''}${m.flight_price !== null ? ' flown' : ''}`}>{initials(m.name)}</span>)}
+            {state.members.length > 7 && <span className="face more">+{state.members.length - 6}</span>}
+          </span>
+          <span className="crew-see">See everyone</span>
+        </summary>
+      <div className="list crew-list">
         {state.members.map((m) => (
           <div className="row" key={m.id}>
             <div className="avatar">{initials(m.name)}</div>
@@ -412,6 +421,7 @@ function Crew() {
           </div>
         ))}
       </div>
+      </details>
       <InviteButton ctx={ctx} className="btn primary block" label="Invite people" />
       <GroupUpdate ctx={ctx} />
       {me?.is_organizer ? <RemoveMember ctx={ctx} /> : (

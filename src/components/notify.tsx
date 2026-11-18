@@ -68,26 +68,19 @@ export function NotifyCard() {
     } finally { setBusy(false); }
   }
   if (status === 'loading' || status === 'unsupported') return null;
+  // One quiet line, not a card: it's a setting, not news.
+  const bell = <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>;
   return (
-    <div className="list">
+    <div className={`notif-line ${status}`}>
+      {bell}
       {status === 'on' ? (
-        <div className="row">
-          <div className="grow row-title">Notifications on</div>
-          <button className="btn small ghost" onClick={turnOff} disabled={busy}>Turn off</button>
-        </div>
+        <><span className="grow">Notifications are on</span><button className="link-quiet" onClick={turnOff} disabled={busy}>Turn off</button></>
       ) : status === 'needs-home-screen' ? (
-        <div className="row">
-          <div className="grow"><div className="row-title">Notifications</div><div className="row-meta">Add Foresome to your Home Screen first (Share → Add to Home Screen).</div></div>
-        </div>
+        <span className="grow">For notifications, add Foresome to your Home Screen (Share → Add to Home Screen)</span>
       ) : status === 'blocked' ? (
-        <div className="row">
-          <div className="grow"><div className="row-title">Notifications blocked</div><div className="row-meta">Settings → Notifications → Foresome</div></div>
-        </div>
+        <span className="grow">Notifications are blocked: Settings → Notifications → Foresome</span>
       ) : (
-        <div className="row">
-          <div className="grow row-title">Notifications</div>
-          <button className="btn small primary" onClick={turnOn} disabled={busy}>{busy ? <span className="spinner" /> : 'Turn on'}</button>
-        </div>
+        <><span className="grow">Get a ping when plans change</span><button className="btn small primary" onClick={turnOn} disabled={busy}>{busy ? <span className="spinner" /> : 'Turn on'}</button></>
       )}
     </div>
   );

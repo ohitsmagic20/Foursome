@@ -81,28 +81,67 @@ export function TripMap({ place, airport, stops, data: given, homes = [], legs: 
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 16, attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' }).addTo(map);
       const route = path.map((p) => L.latLng(p.at.lat, p.at.lon));
       const pts = [...route, ...homes.map((h) => L.latLng(h.lat, h.lon))];
-      if (route.length > 1) L.polyline(route, { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 }).addTo(map);
+      // Lines: with one stay, spokes from the stay to each course (and a lighter one to the airport),
+      // matching the "from the stay" list. Several stays (the Stay tab): no lines. No stay: the route in order.
+      const line = { color: '#1e5a3b', weight: 2.5, dashArray: '6 6', opacity: 0.9 };
+      if (homes.length === 1) {
+        const h = L.latLng(homes[0].lat, homes[0].lon);
+        path.forEach((p, i) => {
+          const isAirport = !!data.airport && i === 0;
+          L.polyline([h, L.latLng(p.at.lat, p.at.lon)], isAirport ? { ...line, color: '#5b6a61', opacity: 0.6, dashArray: '2 6' } : line).addTo(map!);
+        });
+      } else if (!homes.length && route.length > 1) L.polyline(route, line).addTo(map);
       // Stops within about half a mile (the same course, or courses at one resort) share one pin with every number on it.
       const pins: { at: { lat: number; lon: number }; labels: string[]; airport: boolean }[] = [];
+      const markers: L.Marker[] = [];
       path.forEach((p, i) => {
         const isAirport = !!data.airport && i === 0;
         const near = !isAirport && pins.find((e) => !e.airport && miles(e.at, p.at) < 0.6);
         if (near) near.labels.push(p.label);
         else pins.push({ at: p.at, labels: [p.label], airport: isAirport });
       });
+      // A stay at a course (a resort's own course) shares that pin: "⌂ 3".
+      const homeLabels = homes.map(() => [] as string[]);
+      for (let k = pins.length - 1; k >= 0; k--) {
+        const e = pins[k];
+        if (e.airport) continue;
+        const hi = homes.findIndex((h) => miles(h, e.at) < 0.4);
+        if (hi >= 0) { homeLabels[hi].unshift(...e.labels); pins.splice(k, 1); }
+      }
       for (const e of pins) {
         const html = `<span class="pin${e.airport ? ' pin-airport' : ''}">${e.labels.join(' ')}</span>`;
-        L.marker([e.at.lat, e.at.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false }).addTo(map);
+        markers.push(L.marker([e.at.lat, e.at.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false }).addTo(map));
       }
       // Stays: a house pin each, on top of the course pins.
-      for (const h of homes) {
-        const html = `<span class="pin pin-home" title="${h.name.replace(/[<>"&]/g, '')}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>${h.label}</span>`;
-        L.marker([h.lat, h.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false, zIndexOffset: 500 }).addTo(map);
-      }
+      homes.forEach((h, hi) => {
+        const extra = homeLabels[hi].length ? `<b class="pin-also">${homeLabels[hi].join(' ')}</b>` : '';
+        const html = `<span class="pin pin-home" title="${h.name.replace(/[<>"&]/g, '')}"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>${h.label}${extra}</span>`;
+        markers.push(L.marker([h.lat, h.lon], { icon: L.divIcon({ className: '', html, iconSize: undefined as unknown as L.PointExpression }), keyboard: false, zIndexOffset: 500 }).addTo(map!));
+      });
       map.invalidateSize();
       // Fit tightly (quarter zoom steps), leaving room around the edges for the pins.
       if (pts.length === 1) map.setView(pts[0], 12);
-      else map.fitBounds(L.latLngBounds(pts), { maxZoom: 13, padding: [28, 28] });
+      else map.fitBounds(L.latLngBounds(pts), { maxZoom: 13, paddingTopLeft: [30, homes.length ? 48 : 30], paddingBottomRight: [30, 30] });
+      // Pins that land on top of each other at this zoom get nudged apart, so every number and house shows.
+      const m = map;
+      const spread = () => {
+        const placedPx: { x: number; y: number }[] = [];
+        // Houses first: lines start at the stay, so it keeps its spot and the course pins move aside.
+        const order = [...markers.slice(markers.length - homes.length), ...markers.slice(0, markers.length - homes.length)];
+        const steps = [[0, 0], [28, 0], [-28, 0], [0, 26], [0, -26], [28, 26], [-28, 26], [28, -26], [-28, -26]];
+        for (const mk of order) {
+          const pin = mk.getElement()?.firstElementChild as HTMLElement | null;
+          if (!pin) continue;
+          pin.style.translate = '';
+          const p = m.latLngToContainerPoint(mk.getLatLng());
+          const free = steps.find(([sx, sy]) => !placedPx.some((q) => Math.abs(q.x - (p.x + sx)) < 30 && Math.abs(q.y - (p.y + sy)) < 24)) || [0, 0];
+          const [dx, dy] = free;
+          if (dx || dy) pin.style.translate = `${dx}px ${dy}px`;
+          placedPx.push({ x: p.x + dx, y: p.y + dy });
+        }
+      };
+      spread();
+      m.on('zoomend', spread);
     });
     return () => { cancelled = true; map?.remove(); };
   }, [data, homes.map((h) => `${h.label}${h.lat},${h.lon}`).join('|')]); // eslint-disable-line react-hooks/exhaustive-deps

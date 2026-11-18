@@ -708,7 +708,7 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .stay-map-list .best { color: var(--good); font-weight: 700; }
 .stay-letter { display: inline-flex; vertical-align: 2px; margin-right: 6px; transform: none !important; border: 0 !important; box-shadow: none !important; height: 20px; font-size: 12px; }
 /* On the map, a stay's pin sits just above its spot so it doesn't hide a course number there. */
-.trip-map-canvas .pin-home { transform: translate(-50%, -125%); }
+.trip-map-canvas .pin-home { transform: translate(-50%, -50%); }
 .tier.inline { display: inline-block; margin: 0 6px 0 0; font-size: 12px; vertical-align: 1px; }
 .row-title .tier.inline { margin: 0 0 0 4px; }
 .course-hits .tier.inline { flex: none; }
@@ -837,3 +837,59 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .stay-drive-cols { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; flex: none; }
 .leg-time { white-space: nowrap; }
 .trip-map-legs .pin-home { padding: 0 6px; }
+
+/* ••• menu */
+.more { position: relative; }
+.more-btn { padding: 0 10px !important; min-width: 40px; }
+.more-menu { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 30; min-width: 220px; display: flex; flex-direction: column; padding: 6px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 12px 32px -12px rgba(0,0,0,.35); }
+.more-menu button { text-align: left; padding: 11px 12px; border: 0; background: none; border-radius: 9px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.more-menu button:hover, .more-menu button:focus-visible { background: var(--soft); }
+.more-menu button.danger { color: var(--bad); }
+
+/* Drive time: one quiet line */
+.drive-line { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 13px; color: var(--muted); }
+.drive-line svg { flex: none; color: var(--green); }
+.drive-line b { color: var(--ink); font-weight: 700; }
+
+/* Pick a person */
+.pick-list { display: flex; flex-direction: column; gap: 6px; }
+.pick { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font: inherit; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; }
+.pick.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.avatar-sm { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); font-size: 12px; font-weight: 700; color: var(--green); flex: none; }
+
+/* Rooms as a compact list */
+.rooms-list .room-row { gap: 12px; }
+.room-num { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--soft); color: var(--muted); font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 16px; flex: none; }
+.room-row.mine .room-num { background: var(--green); color: var(--green-ink); }
+.room-open { color: var(--muted); font-weight: 500; }
+
+/* Crew as a row of faces */
+.crew-fold { padding: 0; }
+.crew-fold > summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; list-style: none; }
+.crew-fold > summary::-webkit-details-marker { display: none; }
+.crew-fold > summary::before { display: none !important; }
+.crew-faces { display: flex; flex: 1; min-width: 0; padding-left: 6px; overflow: hidden; }
+.face { width: 36px; height: 36px; margin-left: -6px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--green); font-size: 12px; font-weight: 700; box-shadow: 0 0 0 2.5px var(--card); flex: none; }
+.face.flown { background: var(--good-soft); }
+.face.me { background: var(--green); color: var(--green-ink); }
+.face.more { background: var(--card); color: var(--muted); border: 1px solid var(--line); }
+.crew-see { font-size: 14px; font-weight: 600; color: var(--green); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.crew-see::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform .15s; }
+.crew-fold[open] .crew-see::after { transform: rotate(-135deg); }
+.crew-fold[open] .crew-see { font-size: 0; gap: 0; }
+.crew-fold[open] .crew-see::after { width: 7px; height: 7px; }
+.crew-list { border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; box-shadow: none; }
+
+/* Notifications: one quiet line */
+.notif-line { display: flex; align-items: center; gap: 8px; padding: 4px 4px; font-size: 13px; color: var(--muted); }
+.notif-line svg { flex: none; }
+.notif-line.on svg { color: var(--good); }
+.notif-line.blocked svg { color: var(--warn); }
+.link-quiet { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Actions vs links: a standalone action is green text (or a button); a link inside a sentence stays underlined. */
+.link-btn { text-decoration: none; color: var(--green); cursor: pointer; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .link-btn { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.section-head .link-btn { font-size: 14px; }
+.pin-also { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 4px; border-radius: 50%; background: var(--green); color: #fff; font-size: 11px; box-shadow: 0 0 0 1.5px #fff; }

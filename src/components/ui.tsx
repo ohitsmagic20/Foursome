@@ -1,9 +1,9 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Member, Option, TripState, VoteValue } from '@/lib/shared';
 import { andList, formatTee, parseTee, votesFor , TIER_HINT, priceTier } from '@/lib/shared';
-import { firstName } from '@/lib/client';
+import { firstName, initials } from '@/lib/client';
 
 /* ---------- icons ---------- */
 const sv = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -246,6 +246,87 @@ export function TimeField({ name, label, defaultValue, hint }: { name: string; l
 
 /* ---------- who books it ---------- */
 /** On a locked place or planned round: who's booking it and whether it's done. */
+/** "🚗 9 min from We-Ko-Pa": one quiet line under a name. */
+export function DriveLine({ text }: { text: string }) {
+  return (
+    <div className="drive-line">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 17h14l-1.5-6.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5Z" /><circle cx="8" cy="17" r="2" /><circle cx="16" cy="17" r="2" /></svg>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+/* ---------- the "•••" menu for a card's less-used actions ---------- */
+export interface MenuItem { label: string; onClick: () => void; danger?: boolean }
+export function MoreMenu({ items, label = 'More options' }: { items: (MenuItem | false | null | undefined)[]; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const list = items.filter(Boolean) as MenuItem[];
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | TouchEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', close); document.addEventListener('touchstart', close); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  if (!list.length) return null;
+  return (
+    <div className="more" ref={ref}>
+      <button type="button" className="btn small ghost more-btn" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></svg>
+      </button>
+      {open && (
+        <div className="more-menu" role="menu">
+          {list.map((it) => <button key={it.label} type="button" role="menuitem" className={it.danger ? 'danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- booking: a status tag, the main button, and menu items ---------- */
+type Bookable = Option<{ owner?: string; booked?: boolean; confirmation?: string }>;
+/** "Booked · #1234" or "Not booked · Joe's booking", as a tag. Only for locked options. */
+export function BookingTag({ option }: { option: Bookable }) {
+  const { state, me } = useTrip();
+  if (!option.locked || !me) return null;
+  const owner = state.members.find((m) => m.id === option.data.owner);
+  const who = owner ? (owner.id === me.id ? 'you’re booking' : `${firstName(owner.name)}’s booking`) : '';
+  return option.data.booked
+    ? <span className="good">Booked{option.data.confirmation ? ` · #${option.data.confirmation}` : owner ? ` by ${owner.id === me.id ? 'you' : firstName(owner.name)}` : ''}</span>
+    : <span className="warn">Not booked{who ? ` · ${who}` : ''}</span>;
+}
+/** The card's main button while it isn't booked: "Mark booked", for the organizer or whoever is booking it. */
+export function BookButton({ option }: { option: Bookable }) {
+  const ctx = useTrip();
+  const { me } = ctx;
+  if (!option.locked || !me || option.data.booked) return null;
+  if (!me.is_organizer && option.data.owner !== me.id) return null;
+  return <button className="btn small primary" onClick={() => bookedSheet(ctx, option as Option<Record<string, unknown>>)}>Mark booked</button>;
+}
+/** Booking items for the "•••" menu: assign who books it, or undo "booked". */
+export function bookingItems(ctx: TripCtx, option: Bookable): (MenuItem | false)[] {
+  const { me, act } = ctx;
+  if (!option.locked || !me) return [];
+  const canMark = me.is_organizer || option.data.owner === me.id;
+  return [
+    me.is_organizer && !option.data.booked && { label: option.data.owner ? 'Change who’s booking it' : 'Who’s booking it?', onClick: () => ownerSheet(ctx, option) },
+    canMark && !!option.data.booked && { label: 'Mark not booked', onClick: () => act('set_booking', { optionId: option.id, booked: false }) },
+  ];
+}
+function ownerSheet(ctx: TripCtx, option: Bookable) {
+  ctx.sheet({ title: 'Who’s booking it?', body: (
+    <div className="pick-list">
+      {ctx.state.members.map((m) => (
+        <button key={m.id} type="button" className={`pick${option.data.owner === m.id ? ' on' : ''}`} onClick={async () => { if (await ctx.act('set_booking', { optionId: option.id, owner: m.id })) { ctx.sheet(null); ctx.toast(`${m.id === ctx.me?.id ? 'You’re' : `${firstName(m.name)}’s`} booking it`); } }}>
+          <span className="avatar-sm">{initials(m.name)}</span>{m.id === ctx.me?.id ? 'Me' : m.name}
+        </button>
+      ))}
+      {option.data.owner && <button type="button" className="btn ghost block" onClick={async () => { if (await ctx.act('set_booking', { optionId: option.id, owner: '' })) ctx.sheet(null); }}>Nobody yet</button>}
+    </div>
+  ) });
+}
+
 export function BookingRow({ option }: { option: Option<{ owner?: string; booked?: boolean; confirmation?: string }> }) {
   const ctx = useTrip();
   const { state, me, act, toast } = ctx;

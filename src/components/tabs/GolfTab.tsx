@@ -6,7 +6,7 @@ import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { bookingOpens, dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { PlaceSwitcher, usePlaces } from '../Places';
-import { BookingRow, Callout, Chip, Fold, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip, type TripCtx } from '../ui';
+import { BookButton, BookingTag, Callout, Chip, Fold, Icon, LockButton, DriveLine, MoreMenu, Tally, Tier, VoteControl, bookingItems, canEdit, useTrip, type TripCtx } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { CupDropdown } from '../Cup';
@@ -54,7 +54,7 @@ export function GolfTab() {
     if (!stayPt || i < 0) return undefined;
     const l = legOf(drives, 0, i, stayPt, courseList[i]);
     const short = stay!.data.name.split(/[,(·]/)[0].trim();
-    return `${l.est ? '~' : ''}${driveLabel(l.min)} from ${short.length <= 18 ? short : 'the stay'}`;
+    return `${l.est ? '~' : ''}${driveLabel(l.min)} from ${short.length <= 14 ? short : 'the stay'}`;
   };
 
   return (
@@ -139,6 +139,9 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
   const access = (info?.access || r.data.access || '') as CourseAccess;
   const where = info?.city ? `${info.city}, ${info.state}` : r.data.where || '';
   const url = r.data.url || info?.website || '';
+  const organizer = !!me?.is_organizer;
+  const pairs = groupNames(state, r.data.groups);
+  const hasNotes = !!(r.data.notes || r.data.bookBy);
   return (
     <div className={`card opt ${r.locked ? 'locked' : ''}`}>
       <div className="round">
@@ -151,29 +154,41 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
               {where}
             </div>
           )}
-          {drive && <div className="stay-drives"><span className="drive-chip">{drive}</span></div>}
-
+          {drive && <DriveLine text={drive} />}
         </div>
         <RoundFee r={r} known={known} />
       </div>
       {info?.tees?.length ? <TeeStats tees={info.tees} /> : null}
-      {r.locked
-        ? <div className="opt-status"><span className="good">In the {plans}</span></div>
-        : t.yes > state.members.length / 2 ? <div className="opt-status"><span className="flag">Most are in</span></div> : null}
-      {r.locked && <Pairings r={r} />}
-      {r.locked && <BookingRow option={r} />}
+      {(r.locked || t.yes > state.members.length / 2) && (
+        <div className="opt-status">
+          {r.locked ? <span className="good">In the {plans}</span> : <span className="flag">Most are in</span>}
+          {r.locked && <BookingTag option={r} />}
+        </div>
+      )}
+      {r.locked && pairs.length > 0 && (
+        <div className="pairings">{pairs.map((g, i) => <div className="row-meta" key={i}><strong>{teeAfter(r.data.time, i)}</strong> · {g}</div>)}</div>
+      )}
       {early && <Callout kind="warn">Early on arrival day. Check everyone lands in time.</Callout>}
-      <RoundNotes r={r} />
+      {hasNotes && <RoundNotes r={r} />}
       {!r.locked && <VoteControl option={r} />}
-      <Tally option={r} />
+      {!r.locked && <Tally option={r} />}
       <div className="opt-foot">
+        {r.locked && <BookButton option={r} />}
+        {!r.locked && <LockButton option={r} lockLabel={`Add to ${plans}`} />}
         <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
-        <LockButton option={r} lockLabel={`Add to ${plans}`} unlockLabel="Remove from plan" />
-        {canEdit(me, r) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => roundSheet(ctx, r)}>Edit</button>}
+        <span style={{ marginLeft: 'auto' }} />
+        <MoreMenu items={[
+          r.locked && organizer && state.members.length > 1 && { label: pairs.length ? 'Change pairings' : 'Set pairings', onClick: () => pairingsSheet(ctx, r) },
+          ...bookingItems(ctx, r),
+          { label: hasNotes ? 'Edit note or reminder' : 'Add a note or booking reminder', onClick: () => notesSheet(ctx, r) },
+          canEdit(me, r) && { label: 'Edit round', onClick: () => roundSheet(ctx, r) },
+          r.locked && organizer && { label: 'Remove from plan', onClick: () => ctx.act('unlock', { optionId: r.id }) },
+        ]} />
       </div>
     </div>
   );
 }
+
 
 /** Notes on a round and, if set, when its tee times open, with who gets reminded. */
 function RoundNotes({ r }: { r: Option<RoundData> }) {
@@ -283,17 +298,3 @@ function useKnownPrices(rounds: Option<RoundData>[]) {
   return map;
 }
 
-/** Who plays with whom in a planned round. */
-function Pairings({ r }: { r: Option<RoundData> }) {
-  const ctx = useTrip();
-  const { state, me } = ctx;
-  if (state.members.length < 2) return null;
-  const names = groupNames(state, r.data.groups);
-  if (!names.length && !me?.is_organizer) return null;
-  return (
-    <div className="pairings">
-      {names.map((g, i) => <div className="row-meta" key={i}><strong>{teeAfter(r.data.time, i)}</strong> · {g}</div>)}
-      {me?.is_organizer && <button className="link-btn" onClick={() => pairingsSheet(ctx, r)}>{names.length ? 'Change pairings' : 'Set pairings'}</button>}
-    </div>
-  );
-}
