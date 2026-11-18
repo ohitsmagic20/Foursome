@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
 import { CUP_FORMATS, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
 import type { HoleWin } from '@/lib/shared';
@@ -73,7 +73,15 @@ export function CupLink() {
  */
 export function CupDropdown() {
   const ctx = useTrip();
-  const { state, go } = ctx;
+  const { state } = ctx;
+  const ref = useRef<HTMLDetailsElement>(null);
+  // Links to the cup (#cup, notifications) open it here and scroll to it.
+  useEffect(() => {
+    const show = () => { if (!ref.current) return; ref.current.open = true; ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    if (window.location.hash === '#cup') setTimeout(show, 150);
+    window.addEventListener('foresome:cup', show);
+    return () => window.removeEventListener('foresome:cup', show);
+  }, []);
   if (!('cup' in state.trip)) return null;
   const cup = state.trip.cup;
   const score = cup ? cupScore(cup) : null;
@@ -84,7 +92,7 @@ export function CupDropdown() {
     : cup.drafting ? 'The draft is on'
     : `${cup.teams[0].name} ${pts(score!.a)} · ${pts(score!.b)} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`;
   return (
-    <details className="card cup-drop">
+    <details className="card cup-drop" id="cup" ref={ref}>
       <summary>
         <span className="cup-drop-icon" aria-hidden="true">{Icon.cup}</span>
         <span className="grow" style={{ minWidth: 0 }}>
@@ -94,7 +102,6 @@ export function CupDropdown() {
       </summary>
       <div className="cup-drop-body">
         {cup ? <CupSection /> : <CupPreview />}
-        {hasCupTab(state) && <button className="btn block" onClick={() => go('cup')}>Open the Cup tab</button>}
       </div>
     </details>
   );

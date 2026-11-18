@@ -70,12 +70,9 @@ export function TripTab() {
             </button>
           ))}
         </div>
-        <div className="share-onepager">
-          <OnePagerButton block />
-          <p className="hint">A one-page PDF of where the trip stands, decided or not, with what’s left to do. Made for the group chat.</p>
-        </div>
+        <div className="share-onepager"><OnePagerButton /></div>
       </section>}
-      {countdown !== null && countdown <= 0 && <section className="section"><OnePagerButton block /></section>}
+      {countdown !== null && countdown <= 0 && <section className="section"><OnePagerButton /></section>}
 
       <Arrivals />
 

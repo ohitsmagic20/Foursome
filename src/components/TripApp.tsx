@@ -14,14 +14,12 @@ import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 import { registerServiceWorker } from './notify';
 import { SwitcherSheet } from './TripSwitcher';
-import { CupTab, hasCupTab } from './Cup';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'trip', label: 'Home' },
   { id: 'vote', label: 'Plan' },
   { id: 'stay', label: 'Stay' },
   { id: 'golf', label: 'Golf' },
-  { id: 'cup', label: 'Cup' },
   { id: 'flights', label: 'Flights' },
 ];
 const POLL_MS = 5000;
@@ -66,7 +64,9 @@ export default function TripApp({ code }: { code: string }) {
 
   useEffect(() => {
     const h = window.location.hash.slice(1) as TabId;
-    if (TABS.some((t) => t.id === h)) setTab(h);
+    // The Cup lives in the Golf tab; old links and notifications still say #cup.
+    if (h === 'cup') setTab('golf');
+    else if (TABS.some((t) => t.id === h)) setTab(h);
   }, []);
 
   const toast = useCallback((msg: string) => {
@@ -100,6 +100,13 @@ export default function TripApp({ code }: { code: string }) {
   }, [act]);
 
   const go = useCallback((t: TabId) => {
+    if (t === 'cup') {
+      // No Cup tab: open the cup on the Golf tab instead.
+      setTab('golf');
+      history.replaceState(null, '', '#cup');
+      setTimeout(() => window.dispatchEvent(new Event('foresome:cup')), 50);
+      return;
+    }
     setTab(t);
     history.replaceState(null, '', `#${t}`);
     window.scrollTo({ top: 0 });
@@ -155,16 +162,15 @@ export default function TripApp({ code }: { code: string }) {
           {tab === 'vote' && <VoteTab />}
           {tab === 'stay' && <StayTab />}
           {tab === 'golf' && <GolfTab />}
-          {tab === 'cup' && (hasCupTab(state) ? <CupTab /> : <TripTab />)}
           {tab === 'flights' && <FlightsTab />}
         </main>
       </div>
       <nav className="tabs" aria-label="Sections">
         <div className="in">
-          {TABS.filter((t) => t.id !== 'cup' || hasCupTab(state)).map((t) => (
+          {TABS.map((t) => (
             <button key={t.id} className="tab" aria-current={tab === t.id ? 'page' : undefined} onClick={() => go(t.id)}>
               {Icon[t.id]}{t.label}
-              {t.id !== 'trip' && t.id !== 'flights' && t.id !== 'cup' && unvoted(state, t.id) > 0 && <span className="badge">{unvoted(state, t.id)}</span>}
+              {t.id !== 'trip' && t.id !== 'flights' && unvoted(state, t.id) > 0 && <span className="badge">{unvoted(state, t.id)}</span>}
             </button>
           ))}
         </div>
