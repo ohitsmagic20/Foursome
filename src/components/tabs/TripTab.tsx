@@ -4,13 +4,14 @@ import type { DateData, DestinationData, LodgingData, Member } from '@/lib/share
 import { andList, packingTips, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
-import { Callout, Chip, ConfirmButton, Icon, useTrip, type TripCtx } from '../ui';
+import { Callout, Chip, ConfirmButton, Fold, Icon, useTrip, type TripCtx } from '../ui';
 import { meSheet } from '../sheets';
 import { NotifyCard, useNudge } from '../notify';
 import { openItems } from '@/lib/openItems';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
 import { OnePagerButton } from '../OnePager';
+import { When, Where } from './VoteTab';
 import { useWeather } from '../live';
 import { AppFooter } from '../Feedback';
 
@@ -58,6 +59,7 @@ export function TripTab() {
       <TripPlan />
       <YourTurn />
       <WaitingOn />
+      <Decide />
       <ToBook />
 
       {(countdown === null || countdown > 0) && <section className="section">
@@ -81,6 +83,27 @@ export function TripTab() {
       <Crew />
       <AppFooter tripCode={state.trip.code} />
     </>
+  );
+}
+
+/**
+ * Where and when, on Home (this used to be the Plan tab). Still being decided: the full vote, right here.
+ * Locked: folded into one line (the plan card above already shows it), with the other options inside.
+ */
+function Decide() {
+  const { state } = useTrip();
+  const date = pickOf<DateData>(state, 'date'), dest = pickOf<DestinationData>(state, 'destination');
+  const dests = state.options.filter((o) => o.kind === 'destination').length;
+  const dates = state.options.filter((o) => o.kind === 'date').length;
+  return (
+    <div id="decide" className="decide">
+      {dest.locked
+        ? <Fold title={`Where: ${dest.option!.data.name}`} meta={dests > 1 ? `Locked · ${dests - 1} other option${dests > 2 ? 's' : ''} and the comparison` : 'Locked'} icon={Icon.vote}><Where /></Fold>
+        : <Where />}
+      {date.locked
+        ? <Fold title={`When: ${rangeLabel(date.option!.data.start, nightsOf(state.trip, date.option!.data))}`} meta={dates > 1 ? `Locked · everyone’s availability` : 'Locked'} icon={Icon.calendar}><When /></Fold>
+        : <When />}
+    </div>
   );
 }
 
@@ -524,7 +547,7 @@ function GetStarted() {
   const steps: { done: boolean; title: string; meta: string; action?: React.ReactNode }[] = [
     { done: state.members.length > 1, title: 'Invite the group', meta: 'One link. Friends join with their name and home city, no app or password.',
       action: org ? <InviteButton ctx={ctx} className="btn small" label="Share invite link" /> : undefined },
-    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Go to Plan tab</button> },
+    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Suggest a place</button> },
     { done: has('date'), title: 'Suggest when', meta: 'Add a few date options. Each can be a different length: a long weekend next to a full week.' },
     { done: voted('date') || voted('destination'), title: 'Everyone votes', meta: 'Tap in, maybe or out on each option. You can see who hasn’t answered.' },
     { done: date.locked || dest.locked, title: org ? 'Lock the winners' : 'The organizer locks the winners', meta: 'Then pick a place to stay, add rounds of golf, and line up flights.' },

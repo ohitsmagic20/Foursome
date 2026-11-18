@@ -7,7 +7,7 @@ import { api, rememberTrip, setToken, initials } from '@/lib/client';
 import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
 import { TripTab } from './tabs/TripTab';
-import { VoteTab } from './tabs/VoteTab';
+import { CupTab } from './Cup';
 import { StayTab } from './tabs/StayTab';
 import { GolfTab } from './tabs/GolfTab';
 import { FlightsTab } from './tabs/FlightsTab';
@@ -15,13 +15,16 @@ import { tripSheet } from './sheets';
 import { registerServiceWorker } from './notify';
 import { SwitcherSheet } from './TripSwitcher';
 
+// Plan (dates and destination votes) lives on Home now; the Cup sits in the middle of the bar.
 const TABS: { id: TabId; label: string }[] = [
   { id: 'trip', label: 'Home' },
-  { id: 'vote', label: 'Plan' },
   { id: 'stay', label: 'Stay' },
+  { id: 'cup', label: 'Cup' },
   { id: 'golf', label: 'Golf' },
   { id: 'flights', label: 'Flights' },
 ];
+/** Scroll Home to the dates and destination votes (old #vote links and checklist rows land here). */
+const toDecide = () => setTimeout(() => document.getElementById('decide')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
 const POLL_MS = 5000;
 
 export default function TripApp({ code }: { code: string }) {
@@ -64,8 +67,7 @@ export default function TripApp({ code }: { code: string }) {
 
   useEffect(() => {
     const h = window.location.hash.slice(1) as TabId;
-    // The Cup lives in the Golf tab; old links and notifications still say #cup.
-    if (h === 'cup') setTab('golf');
+    if (h === 'vote') { setTab('trip'); toDecide(); }
     else if (TABS.some((t) => t.id === h)) setTab(h);
   }, []);
 
@@ -100,11 +102,11 @@ export default function TripApp({ code }: { code: string }) {
   }, [act]);
 
   const go = useCallback((t: TabId) => {
-    if (t === 'cup') {
-      // No Cup tab: open the cup on the Golf tab instead.
-      setTab('golf');
-      history.replaceState(null, '', '#cup');
-      setTimeout(() => window.dispatchEvent(new Event('foresome:cup')), 50);
+    if (t === 'vote') {
+      // The old Plan tab: its votes are on Home now.
+      setTab('trip');
+      history.replaceState(null, '', '#trip');
+      toDecide();
       return;
     }
     setTab(t);
@@ -159,7 +161,7 @@ export default function TripApp({ code }: { code: string }) {
         </header>
         <main className="stack">
           {tab === 'trip' && <TripTab />}
-          {tab === 'vote' && <VoteTab />}
+          {tab === 'cup' && <CupTab />}
           {tab === 'stay' && <StayTab />}
           {tab === 'golf' && <GolfTab />}
           {tab === 'flights' && <FlightsTab />}
@@ -168,9 +170,9 @@ export default function TripApp({ code }: { code: string }) {
       <nav className="tabs" aria-label="Sections">
         <div className="in">
           {TABS.map((t) => (
-            <button key={t.id} className="tab" aria-current={tab === t.id ? 'page' : undefined} onClick={() => go(t.id)}>
-              {Icon[t.id]}{t.label}
-              {t.id !== 'trip' && t.id !== 'flights' && unvoted(state, t.id) > 0 && <span className="badge">{unvoted(state, t.id)}</span>}
+            <button key={t.id} className={`tab${t.id === 'cup' ? ' tab-cup' : ''}`} aria-current={tab === t.id ? 'page' : undefined} onClick={() => go(t.id)}>
+              {t.id === 'cup' ? <span className="tab-cup-badge">{Icon.cup}</span> : Icon[t.id]}{t.label}
+              {t.id !== 'cup' && t.id !== 'flights' && unvoted(state, t.id) > 0 && <span className="badge">{unvoted(state, t.id)}</span>}
             </button>
           ))}
         </div>
@@ -184,7 +186,7 @@ export default function TripApp({ code }: { code: string }) {
 /** How many open options on a tab still need my vote. */
 function unvoted(state: TripState, tab: TabId): number {
   const o = openVotes(state);
-  return tab === 'vote' ? o.date + o.destination : tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
+  return tab === 'trip' || tab === 'vote' ? o.date + o.destination : tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
 }
 
 /** On the invite page: who's already in, and what's settled or still up for a vote. */

@@ -36,7 +36,7 @@ export function PlaceSwitcher({ kind }: { kind: 'lodging' | 'round' }) {
           );
         })}
       </div>
-      <p className="hint">Each place gets its own {kind === 'lodging' ? 'stays' : 'rounds'}. Plan them all, then the group compares and picks the place on the <button className="link-btn" onClick={() => go('vote')}>Plan tab</button>.</p>
+      <p className="hint">Each place gets its own {kind === 'lodging' ? 'stays' : 'rounds'}. Plan them all, then the group compares and picks the place on <button className="link-btn" onClick={() => go('vote')}>Home</button>.</p>
     </div>
   );
 }

@@ -19,32 +19,35 @@ export function hasCupTab(state: TripCtx['state']): boolean {
 /** The Cup tab: set-up for the organizer, the draft, then the scoreboard and matches. */
 export function CupTab() {
   const { state, me } = useTrip();
-  if (!('cup' in state.trip)) {
-    return (
-      <section className="section">
-        <div className="section-head"><h2>The Cup</h2></div>
+  const n = state.members.length;
+  const cup = 'cup' in state.trip ? state.trip.cup : undefined;
+  const duel = cup ? !!cup.duel : n === 2;
+  const score = cup ? cupScore(cup) : null;
+  const rec = cup?.duel ? duelRecord(cup) : null;
+  const live = cup ? cupLive(cup) : null;
+  void score; void rec;
+  // The banner: the competition at a glance, in the trophy colors.
+  const line = !cup ? (n === 2 ? 'One on one, every match on the record' : n >= 4 ? 'Two teams, match play, a point a match' : 'Needs 2 players for match play, or 4+ for a team cup')
+    : rec ? `${cup.teams[0].name} ${rec.w}–${rec.l}${rec.h ? `–${rec.h}` : ''} ${cup.teams[1].name}`
+    : cup.drafting ? 'The draft is on'
+    : `${cup.teams[0].name} ${pts(score!.a)} · ${pts(score!.b)} ${cup.teams[1].name}`;
+  return (
+    <>
+      <div className="cup-hero">
+        <span className="cup-hero-icon" aria-hidden="true">{Icon.cup}</span>
+        <div style={{ minWidth: 0 }}>
+          <div className="cup-hero-eyebrow">{duel ? 'Match play' : 'The Cup'}</div>
+          <h1 className="cup-hero-title">{cup ? cup.name : 'Preview'}</h1>
+          {/* The scoreboard below has the score; the banner only pitches it before there's a cup. */}
+          {!cup && <div className="cup-hero-line">{line}</div>}
+          {cup && live && live.live > 0 && <div className="cup-hero-line"><span className="live-dot" /> {live.live} match{live.live === 1 ? '' : 'es'} on the course</div>}
+        </div>
+      </div>
+      {cup === undefined ? (
         <div className="card empty">{me?.is_organizer
           ? 'The Cup needs a one-time database update before it can save teams and results. Run supabase/008_cup.sql in the Supabase SQL Editor, then come back.'
           : 'The Cup isn’t switched on for this trip yet.'}</div>
-      </section>
-    );
-  }
-  if (!state.trip.cup && !me?.is_organizer) {
-    return (
-      <section className="section">
-        <div className="section-head"><h2>The Cup</h2></div>
-        <div className="card cup-pitch">
-          <div className="eyebrow">Coming soon, maybe</div>
-          <div className="row-title">No cup yet</div>
-          <p className="sub">When the organizer sets one up, you’ll see the teams, the draft and the pairings for each round here, and you can enter who won your match.</p>
-        </div>
-      </section>
-    );
-  }
-  return (
-    <>
-      {!state.trip.cup && <div className="section-head"><h2>The Cup</h2></div>}
-      <CupSection />
+      ) : cup ? <CupSection /> : <section className="section"><div className="card"><CupPreview /></div></section>}
     </>
   );
 }

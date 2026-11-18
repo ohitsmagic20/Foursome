@@ -17,7 +17,7 @@ export function VoteTab() {
   return (<><Where /><When /></>);
 }
 
-function When() {
+export function When() {
   const ctx = useTrip();
   const { state, me, vote } = ctx;
   const dates = optionsOf<DateData>(state, 'date').slice().sort((a, b) => a.data.start.localeCompare(b.data.start));
@@ -84,7 +84,7 @@ function When() {
   );
 }
 
-function Where() {
+export function Where() {
   const ctx = useTrip();
   const { state, me } = ctx;
   const dests = optionsOf<DestinationData>(state, 'destination');

@@ -893,3 +893,24 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .link-btn { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .section-head .link-btn { font-size: 14px; }
 .pin-also { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 4px; border-radius: 50%; background: var(--green); color: #fff; font-size: 11px; box-shadow: 0 0 0 1.5px #fff; }
+
+/* The Cup tab: a raised trophy button in the middle of the bar */
+.tab-cup { position: relative; }
+.tab-cup-badge { display: grid; place-items: center; width: 52px; height: 52px; margin-top: -24px; margin-bottom: 1px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f4d27a, var(--flag) 55%, #b9861c); color: #3b2a05;
+  box-shadow: 0 0 0 4px var(--card), 0 8px 18px -6px rgba(140, 100, 20, .65); transition: transform .15s; }
+.tab-cup-badge svg { width: 26px; height: 26px; }
+.tab-cup[aria-current="page"] .tab-cup-badge { transform: translateY(-2px); box-shadow: 0 0 0 4px var(--card), 0 0 0 6px color-mix(in srgb, var(--flag) 45%, transparent), 0 10px 20px -6px rgba(140, 100, 20, .7); }
+.tab-cup[aria-current="page"] { color: var(--warn); }
+.tabs .tab.tab-cup { overflow: visible; }
+
+/* Cup tab banner */
+.cup-hero { display: flex; align-items: center; gap: 14px; padding: 18px 18px; border-radius: 20px; color: #fff;
+  background: radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--flag) 55%, transparent) 0%, transparent 55%), linear-gradient(135deg, #1e5a3b, #133a26); }
+.cup-hero-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; flex: none;
+  background: radial-gradient(circle at 35% 30%, #f4d27a, var(--flag) 55%, #b9861c); color: #3b2a05; box-shadow: 0 6px 14px -6px rgba(0,0,0,.5); }
+.cup-hero-icon svg { width: 30px; height: 30px; }
+.cup-hero-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--flag); }
+.cup-hero-title { margin: 2px 0 0; font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 28px; line-height: 1.05; color: #fff; }
+.cup-hero-line { margin-top: 4px; font-size: 14px; color: #d5e4da; display: flex; align-items: center; gap: 6px; }
+.decide { display: flex; flex-direction: column; gap: 14px; }

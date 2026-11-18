@@ -9,7 +9,6 @@ import { PlaceSwitcher, usePlaces } from '../Places';
 import { BookButton, BookingTag, Callout, Chip, Fold, Icon, LockButton, DriveLine, MoreMenu, Tally, Tier, VoteControl, bookingItems, canEdit, useTrip, type TripCtx } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
-import { CupDropdown } from '../Cup';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
@@ -61,7 +60,6 @@ export function GolfTab() {
     <>
       <PlaceSwitcher kind="round" />
       <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far{unpriced ? ` · ${unpriced} round${unpriced === 1 ? '' : 's'} without a price yet` : ''}</Callout>
-      <CupDropdown />
       {destOpt && rounds.length > 0 && !all.failed && (
         <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))}
           homes={stay?.data.lat && stay.data.lon ? [{ label: '', name: stay.data.name, lat: stay.data.lat, lon: stay.data.lon }] : []} />
