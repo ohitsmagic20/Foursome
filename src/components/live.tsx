@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CourseAccess, CoursePrices, CourseTee, NearbyCourse, WeatherDay, WeatherReport } from '@/lib/shared';
-import { ACCESS_LABEL } from '@/lib/shared';
+import { ACCESS_LABEL, weatherBasis } from '@/lib/shared';
 import { bedsNeeded, lodgingSearchLinks, rangeLabel, tripNights } from '@/lib/shared';
 import { Chip, Tier, useTrip } from './ui';
 import { roundSheet } from './sheets';
@@ -65,8 +65,9 @@ export function WeatherStrip({ place, start, nights }: { place: string; start: s
         <Chip kind={kind}>{label}</Chip>
       </div>
       <div className="row-meta">
-        {[data.rain !== null ? `${data.rain}% rain` : '', data.wind !== null ? `${data.wind} mph wind` : ''].filter(Boolean).join(' · ')}
+        {[data.rain !== null ? `${data.rain}% chance of rain` : '', data.wind !== null ? `wind to ${data.wind} mph` : ''].filter(Boolean).join(' · ')}
       </div>
+      <div className="wx-basis">{weatherBasis(data)}</div>
     </div>
   );
 }
@@ -75,7 +76,7 @@ export function WeatherStrip({ place, start, nights }: { place: string; start: s
 export function DayWeather({ day, mode }: { day: WeatherDay | undefined; mode: WeatherReport['mode'] }) {
   if (!day) return null;
   return (
-    <span className="wx-day">
+    <span className="wx-day" title={day.fc ? 'NWS forecast' : 'Typical for this date'}>
       {day.hi !== null ? `${deg(day.hi)}/${deg(day.lo)}` : `Tonight ${deg(day.lo)}`}{day.rain !== null ? ` · ${day.rain}% rain` : ''}{day.wind !== null && day.wind >= 18 ? ` · windy` : ''}
     </span>
   );

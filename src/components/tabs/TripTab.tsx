@@ -174,7 +174,8 @@ function BeforeYouGo({ days }: { days: number }) {
   if (!me) return null;
   const all = openItems(state);
   const rows = me.is_organizer ? all.map((i) => ({ text: i.who.includes(me.id) && i.mine ? i.mine : i.text, tab: i.tab })) : all.filter((i) => i.who.includes(me.id)).map((i) => ({ text: i.mine || i.text, tab: i.tab }));
-  const tips = wx.data?.mode === 'forecast' && date ? packingTips(wx.data.days, date.data.start, plannedRounds(state).map((r) => r.data)) : [];
+  const fcDays = wx.data?.days.filter((d) => d.fc) ?? [];
+  const tips = fcDays.length && date ? packingTips(fcDays, date.data.start, plannedRounds(state).map((r) => r.data)) : [];
   if (!rows.length && !tips.length) return me.is_organizer ? <Callout kind="good">Everything’s booked for the trip in {days} day{days > 1 ? 's' : ''}. Nice work.</Callout> : null;
   return (
     <section className="section">

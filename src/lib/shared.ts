@@ -315,14 +315,25 @@ export function autoGroups(ids: string[]): string[][] {
 }
 
 /* ---------- weather and courses (from /api/weather and /api/courses) ---------- */
-export interface WeatherDay { date: string; hi: number | null; lo: number | null; rain: number | null; wind: number | null }
+/** One trip day. `fc` marks a day from the official NWS forecast; the rest are long-run averages for that date. */
+export interface WeatherDay { date: string; hi: number | null; lo: number | null; rain: number | null; wind: number | null; fc?: boolean }
 export interface WeatherReport {
-  mode: 'forecast' | 'typical';
-  years: number;              // how many past years the "typical" numbers average
+  mode: 'forecast' | 'typical'; // 'forecast' only when every day is from the NWS forecast
+  years: number;              // how many past years the averaged days cover (30 = NOAA normals; 0 = all forecast)
+  source?: 'nws' | 'noaa' | 'nasa'; // where the averaged days came from (or 'nws' when all forecast)
   days: WeatherDay[];
   hi: number | null; lo: number | null; rain: number | null; wind: number | null;
   verdict: 'good' | 'mixed' | 'wet' | 'cold' | 'hot';
   place?: string;
+}
+
+/** Plain words for where the numbers came from, for under the weather strip. */
+export function weatherBasis(w: Pick<WeatherReport, 'mode' | 'years' | 'source' | 'days'>): string {
+  const fc = w.days.filter((d) => d.fc).length;
+  const avg = w.source === 'noaa' ? 'NOAA 30-year averages' : `the last ${w.years} year${w.years === 1 ? '' : 's'} on these dates`;
+  if (w.mode === 'forecast' || (fc && fc === w.days.length)) return 'National Weather Service forecast';
+  if (fc) return `Forecast for ${fc} day${fc === 1 ? '' : 's'}, ${avg} for the rest`;
+  return w.source === 'noaa' ? 'Typical for these dates: NOAA 30-year averages' : `Typical for these dates: ${avg}`;
 }
 /** How the public can play a course: from the course database (blank when unknown). */
 export type CourseAccess = 'public' | 'semi-private' | 'private' | 'resort' | 'municipal' | '';

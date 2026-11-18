@@ -9,7 +9,7 @@ import type { WeatherReport, WeatherDay } from '@/lib/shared';
 //  - Outside the US (and for wind): what those same dates were like over the last 5 years, from NASA POWER (worldwide).
 
 const UA = 'Foresome golf trip planner (https://www.foresomes.net; support@foresomes.net)';
-const RAIN_DAY_INCHES = 0.04; // about 1 mm: enough to notice on the course
+const RAIN_DAY_INCHES = 0.04; // about 1 mm. NASA's model shows a trace of drizzle on most days, so 0.01" would overstate it
 const FORECAST_DAYS = 7;
 
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
@@ -29,26 +29,36 @@ export function GET(req: Request) {
 
     const first = parseDay(start);
     const count = nights + 1;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0); // server time is UTC, a few hours ahead of US evenings
     const offset = Math.round((first.getTime() - today.getTime()) / 864e5);
 
+    // Days the NWS forecast reaches use it (it covers about the next 7 days); the rest use long-run averages.
+    // A trip that starts in 5 days gets real forecasts for its first days instead of averages for all of them.
+    const forecast = offset >= -count && offset <= FORECAST_DAYS ? await nwsForecast(place.lat, place.lon, start, count) : null;
+    const fcDays = forecast?.filter((d): d is WeatherDay => !!d) ?? [];
+
     let report: WeatherReport | null = null;
-    if (offset >= 0 && offset + count <= FORECAST_DAYS) {
-      const days = await nwsForecast(place.lat, place.lon, start, count);
-      if (days) report = { mode: 'forecast', years: 0, days, ...summarize(days) };
-    }
-    if (!report) {
+    if (forecast && fcDays.length === count) {
+      report = { mode: 'forecast', years: 0, source: 'nws', days: fcDays, ...summarize(fcDays) };
+    } else {
       // US: NOAA's official 1991–2020 normals from the nearest weather station (most accurate, especially on the coast).
       // NASA's 5-year history fills in wind, and covers trips outside the US.
       const [normals, nasa] = await Promise.all([
         noaaNormals(place.lat, place.lon, first, nights).catch(() => null),
         typical(place.lat, place.lon, first, nights, today).catch((e) => { if (!(e instanceof HttpError)) console.error(e); return null; }),
       ]);
+      let avgDays: WeatherDay[] | null = null, years = 0, source: WeatherReport['source'];
       if (normals) {
-        const days = normals.map((d, i) => ({ ...d, rain: d.rain ?? nasa?.days[i]?.rain ?? null, wind: nasa?.days[i]?.wind ?? null }));
-        report = { mode: 'typical', years: 30, days, ...summarize(days) };
+        avgDays = normals.map((d, i) => ({ ...d, rain: d.rain ?? nasa?.days[i]?.rain ?? null, wind: nasa?.days[i]?.wind ?? null }));
+        years = 30; source = 'noaa';
       } else if (nasa) {
-        report = { mode: 'typical', years: nasa.years, days: nasa.days, ...summarize(nasa.days) };
+        avgDays = nasa.days; years = nasa.years; source = 'nasa';
+      }
+      if (avgDays) {
+        const days = avgDays.map((d, i) => forecast?.[i] ?? d);
+        report = { mode: 'typical', years, source, days, ...summarize(days) };
+      } else if (fcDays.length) {
+        report = { mode: 'typical', years: 0, source: 'nws', days: fcDays, ...summarize(fcDays) };
       } else throw new HttpError(502, 'Past weather for these dates is not available right now.');
     }
 
@@ -60,8 +70,9 @@ export function GET(req: Request) {
 
 interface NwsPeriod { startTime: string; isDaytime: boolean; temperature: number; temperatureUnit: string; windSpeed: string; probabilityOfPrecipitation?: { value: number | null } }
 
-/** The official NWS forecast, day and night periods folded into days. Null outside the US or if NWS is down. */
-async function nwsForecast(lat: number, lon: number, start: string, count: number): Promise<WeatherDay[] | null> {
+/** The official NWS forecast, day and night periods folded into days: one entry per trip day, null for days it
+ *  doesn't reach (past or too far out). Null outside the US or if NWS is down. */
+async function nwsForecast(lat: number, lon: number, start: string, count: number): Promise<(WeatherDay | null)[] | null> {
   const get = async (url: string, revalidate: number) => {
     const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/geo+json' }, next: { revalidate } });
     return res.ok ? res.json() : null;
@@ -74,11 +85,11 @@ async function nwsForecast(lat: number, lon: number, start: string, count: numbe
     const periods = (fc?.properties?.periods || []) as NwsPeriod[];
     if (!periods.length) return null;
     const first = parseDay(start);
-    const days: WeatherDay[] = [];
+    const days: (WeatherDay | null)[] = [];
     for (let i = 0; i < count; i++) {
       const date = isoDay(addDays(first, i));
       const ps = periods.filter((p) => p.startTime.slice(0, 10) === date);
-      if (!ps.length) return null; // the forecast doesn't reach this day
+      if (!ps.length) { days.push(null); continue; } // the forecast doesn't reach this day
       const f = (p: NwsPeriod) => (p.temperatureUnit === 'C' ? p.temperature * 9 / 5 + 32 : p.temperature);
       const day = ps.find((p) => p.isDaytime), night = ps.find((p) => !p.isDaytime);
       const pops = ps.map((p) => p.probabilityOfPrecipitation?.value).filter((v): v is number => typeof v === 'number');
@@ -89,9 +100,10 @@ async function nwsForecast(lat: number, lon: number, start: string, count: numbe
         lo: night ? r(f(night)) : null,
         rain: pops.length ? Math.max(...pops) : 0,
         wind: winds.length ? Math.max(...winds) : null,
+        fc: true,
       });
     }
-    return days;
+    return days.some(Boolean) ? days : null;
   } catch { return null; }
 }
 
@@ -126,7 +138,7 @@ async function noaaNormals(lat: number, lon: number, first: Date, nights: number
   }
   const rows: Record<string, Record<string, string>[]> = {}; // "MM-DD" → rows, one per station
   for (const [a, b] of ranges) {
-    const res = await fetch(`${NCEI}/data/v1?dataset=${NORMALS}&stations=${stations.join(',')}&startDate=2010-${a}&endDate=2010-${b}&dataTypes=DLY-TMAX-NORMAL,DLY-TMIN-NORMAL,DLY-PRCP-PCTALL-GE010HI&format=json`, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
+    const res = await fetch(`${NCEI}/data/v1?dataset=${NORMALS}&stations=${stations.join(',')}&startDate=2010-${a}&endDate=2010-${b}&dataTypes=DLY-TMAX-NORMAL,DLY-TMIN-NORMAL,DLY-PRCP-PCTALL-GE001HI&format=json`, { headers: { 'User-Agent': UA }, next: { revalidate: 60 * 60 * 24 * 30 } });
     if (!res.ok) return null;
     for (const row of (await res.json()) as Record<string, string>[]) (rows[row.DATE] ||= []).push(row);
   }
@@ -136,8 +148,8 @@ async function noaaNormals(lat: number, lon: number, first: Date, nights: number
   const days = dates.map((d) => {
     const list = (rows[md(d) === '02-29' ? '02-28' : md(d)] || []).slice().sort((a, b) => rank(a) - rank(b));
     const temps = list.find((x) => Number.isFinite(num(x['DLY-TMAX-NORMAL'])));
-    const wet = list.find((x) => Number.isFinite(num(x['DLY-PRCP-PCTALL-GE010HI'])));
-    return { date: isoDay(d), hi: r(num(temps?.['DLY-TMAX-NORMAL'])), lo: r(num(temps?.['DLY-TMIN-NORMAL'])), rain: r(num(wet?.['DLY-PRCP-PCTALL-GE010HI'])), wind: null as number | null };
+    const wet = list.find((x) => Number.isFinite(num(x['DLY-PRCP-PCTALL-GE001HI'])));
+    return { date: isoDay(d), hi: r(num(temps?.['DLY-TMAX-NORMAL'])), lo: r(num(temps?.['DLY-TMIN-NORMAL'])), rain: r(num(wet?.['DLY-PRCP-PCTALL-GE001HI'])), wind: null as number | null };
   });
   return days.some((d) => d.hi !== null) ? days : null;
 }

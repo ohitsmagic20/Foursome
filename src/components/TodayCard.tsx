@@ -32,7 +32,7 @@ export function TodayCard() {
   const rounds = plannedRounds(state).filter((r) => r.data.day === shown).sort((a, b) => teeMinutes(a.data.time) - teeMinutes(b.data.time));
   const landing = state.members.filter((m) => m.flight_arrive_at?.startsWith(iso)).sort((a, b) => a.flight_arrive_at!.localeCompare(b.flight_arrive_at!));
   const leaving = state.members.filter((m) => m.flight_depart_at?.startsWith(iso)).sort((a, b) => a.flight_depart_at!.localeCompare(b.flight_depart_at!));
-  const wxDay = wx.data?.mode === 'forecast' ? wx.data.days.find((d) => d.date === iso) : undefined;
+  const wxDay = wx.data?.days.find((d) => d.date === iso && d.fc);
   const where = dest?.data.name || '';
   const owe = me ? settleUp(state).payments.filter((p) => p.from === me.id) : [];
 

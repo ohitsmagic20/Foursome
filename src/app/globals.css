@@ -892,3 +892,5 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .plan-round-text { min-width: 0; overflow-wrap: anywhere; }
 .plan-round .chip { margin-top: 1px; }
 .plan-course { display: block; font-weight: 600; }
+
+.wx-basis { font-size: 11px; color: var(--muted); margin-top: 2px; opacity: .85; }
