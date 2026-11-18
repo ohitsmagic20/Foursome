@@ -817,3 +817,20 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .drive-chip.quiet::before { display: none; }
 .stay-drive b { font-weight: 700; color: var(--ink); }
 .stay-drive.best b, .stay-drive.best { color: var(--good); }
+
+/* Notes and booking reminders on a round */
+.note-add { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin-top: 8px; padding: 4px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.note-add svg { width: 15px; height: 15px; }
+.note-add:hover { color: var(--green); }
+.round-notes { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 10px; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--soft); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.remind-line { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.35; }
+.remind-line small { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
+.remind-icon { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: var(--card); color: var(--green); }
+.remind-line.soon .remind-icon { background: var(--flag); color: #16241c; }
+.remind-line.soon b { color: var(--warn); }
+.remind-line.done { color: var(--muted); }
+.note-text { font-size: 14px; white-space: pre-wrap; line-height: 1.4; color: var(--ink); }
+.remind-line + .note-text { padding-top: 6px; border-top: 1px solid var(--line); }
+.days-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.days-row input { width: 76px !important; text-align: center; }
+.field textarea { border-radius: 12px; border: 1px solid var(--line); background: var(--card); padding: 10px 12px; font: inherit; font-size: 16px; resize: vertical; color: var(--ink); }

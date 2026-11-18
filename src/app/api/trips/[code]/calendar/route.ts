@@ -1,6 +1,7 @@
 import { calendarKey, db, handle, HttpError, loadState, str, tripByCode } from '@/lib/server';
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { addDays, isoDay, nightsOf, parseDay, pickOf, plannedRounds, teeMinutes } from '@/lib/shared';
+import { addDays, bookingOpens, inPlace, isoDay, nightsOf, parseDay, pickOf, plannedRounds, teeMinutes, tripPlace } from '@/lib/shared';
+import type { Option, RoundData } from '@/lib/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,20 @@ export function GET(req: Request, { params }: { params: Promise<{ code: string }
         `SUMMARY:${esc(`Tee time · ${r.data.course}`)}`,
         `LOCATION:${esc(`${r.data.course}${where ? `, ${where}` : ''}`)}`,
         `DESCRIPTION:${esc(`${r.data.time} first tee time${r.data.booked ? ' (booked)' : ' (not booked yet)'}`)}`,
+      ]);
+    }
+    // When tee times open for booking: an event at that moment, with an alert, until the round is booked.
+    for (const r of inPlace<RoundData>(state, 'round', tripPlace(state)) as Option<RoundData>[]) {
+      const open = bookingOpens(state, r);
+      if (!open || r.data.booked || open.daysAway < 0) continue;
+      const t = open.at ? teeMinutes(open.at) : 7 * 60;
+      add(`book-${r.id}`, [
+        `DTSTART:${local(open.iso, t)}`,
+        `DTEND:${local(open.iso, Math.min(t + 15, 23 * 60 + 59))}`,
+        `SUMMARY:${esc(`📞 Book tee times · ${r.data.course}`)}`,
+        `DESCRIPTION:${esc(`Tee times open ${open.days} day${open.days === 1 ? '' : 's'} ahead for the ${r.data.time} round.${r.data.notes ? `\n${r.data.notes}` : ''}`)}`,
+        'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`Book tee times at ${r.data.course}`)}`, 'TRIGGER:-PT10M', 'END:VALARM',
+        'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`Tee times open now at ${r.data.course}`)}`, 'TRIGGER:PT0M', 'END:VALARM',
       ]);
     }
     const flight = (iso: string | null, label: string, id: string) => {

@@ -1,7 +1,7 @@
 // What goes on the trip one-pager: a snapshot of the plan, decided or not, plus what's still open.
 import type { DateData, DestinationData, LodgingData, Option, RoundData, TripState } from './shared';
 import {
-  andList, costOf, dayLabel, duelRecord, money, nightsOf, optionsOf, parseDay, pickOf, placePlan,
+  andList, bookingOpens, costOf, dayLabel, duelRecord, money, nightsOf, optionsOf, parseDay, pickOf, placePlan,
   plannedRounds, priceTier, pts, rangeLabel, tally, teeMinutes, teeTimesNeeded, cupScore,
 } from './shared';
 
@@ -191,6 +191,9 @@ export function buildOnePager(state: TripState, now = new Date()): OnePager {
   else if (!stay.option.data.booked) todo.push(`Book ${stay.option.data.name}`);
   if (!planned.length) todo.push(rounds.length ? 'Settle the rounds and add them to the plan' : 'Suggest some courses');
   else if (booked < planned.length) todo.push(`Book ${planned.length - booked} tee time${planned.length - booked === 1 ? '' : 's'}`);
+  // The next tee sheet to open, from a round's "book N days ahead" note.
+  const opening = rounds.filter((r) => !r.data.booked).map((r) => ({ r, o: bookingOpens(state, r, now) })).filter((x) => x.o && x.o.daysAway >= 0).sort((a, b) => a.o!.daysAway - b.o!.daysAway)[0];
+  if (opening) todo.push(`Book ${opening.r.data.course} when tee times open ${opening.o!.daysAway === 0 ? 'today' : opening.o!.daysAway === 1 ? 'tomorrow' : opening.o!.label}${opening.o!.at ? ` at ${opening.o!.at}` : ''}`);
   const unpriced = rounds.filter((r) => !Number(r.data.fee)).length;
   if (unpriced) todo.push(`Get prices for ${unpriced} round${unpriced === 1 ? '' : 's'}`);
   if (flown < n) {

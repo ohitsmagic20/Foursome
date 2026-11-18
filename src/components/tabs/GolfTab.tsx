@@ -4,15 +4,16 @@ import { useEffect, useState } from 'react';
 import type { CoursePrices, DateData, DestinationData, LodgingData, Option, RoundData, TripState } from '@/lib/shared';
 import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
-import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
+import { bookingOpens, dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { PlaceSwitcher, usePlaces } from '../Places';
-import { BookingRow, Callout, Chip, Fold, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip } from '../ui';
+import { BookingRow, Callout, Chip, Fold, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip, type TripCtx } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { CupDropdown } from '../Cup';
 import { TripMap, useTripCourses, type MapCourse, type Stop } from '../TripMap';
 import { TEMPLATES, templateBySlug } from '@/data/templates';
 import { destAirports } from '@/lib/shared';
+import { firstName } from '@/lib/client';
 
 /** The destination being planned on this tab (the locked one, or the one picked in the switcher). */
 const viewedPlace = (state: TripState, id: string | null) => (optionsOf<DestinationData>(state, 'destination').find((d) => d.id === id) || null) as Option<DestinationData> | null;
@@ -149,6 +150,7 @@ function RoundCard({ r, first, info, known }: { r: Option<RoundData>; first: boo
       {r.locked && <Pairings r={r} />}
       {r.locked && <BookingRow option={r} />}
       {early && <Callout kind="warn">Early on arrival day. Check everyone lands in time.</Callout>}
+      <RoundNotes r={r} />
       {!r.locked && <VoteControl option={r} />}
       <Tally option={r} />
       <div className="opt-foot">
@@ -159,6 +161,83 @@ function RoundCard({ r, first, info, known }: { r: Option<RoundData>; first: boo
     </div>
   );
 }
+
+/** Notes on a round and, if set, when its tee times open, with who gets reminded. */
+function RoundNotes({ r }: { r: Option<RoundData> }) {
+  const ctx = useTrip();
+  const { state } = ctx;
+  const open = bookingOpens(state, r);
+  const has = !!(r.data.notes || r.data.bookBy);
+  if (!has) {
+    return <button type="button" className="note-add" onClick={() => notesSheet(ctx, r)}>{Icon.edit}<span>Add a note or a booking reminder</span></button>;
+  }
+  const owner = state.members.find((m) => m.id === r.data.owner);
+  const meOrg = state.members.find((m) => m.id === state.meId)?.is_organizer;
+  // Reminders go to whoever is booking it; with nobody assigned, the organizer and whoever set the reminder.
+  const who = owner ? (owner.id === state.meId ? 'you' : firstName(owner.name)) : meOrg || r.data.bookBy?.by === state.meId ? 'you' : 'the organizer';
+  return (
+    <button type="button" className="round-notes" onClick={() => notesSheet(ctx, r)} aria-label="Edit notes and reminder">
+      {open && (
+        <span className={`remind-line${r.data.booked ? ' done' : open.daysAway <= 1 && open.daysAway >= 0 ? ' soon' : ''}`}>
+          <span className="remind-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="7" /><path d="M12 10v3l2 2M5 4 3 6M19 4l2 2" /></svg></span>
+          <span>
+            {r.data.booked ? <>Booked. Tee times opened {open.label}</>
+              : open.daysAway < 0 ? <>Tee times opened {open.label}{open.at ? ` at ${open.at}` : ''}. Not booked yet</>
+              : <><b>Tee times open {open.daysAway === 0 ? 'today' : open.daysAway === 1 ? 'tomorrow' : open.label}{open.at ? ` at ${open.at}` : ''}</b> · {open.days} day{open.days === 1 ? '' : 's'} ahead</>}
+            {!r.data.booked && open.daysAway >= 0 && <small>{open.locked ? `We’ll remind ${who} the day before and that morning` : 'Reminders start once the dates are locked'}</small>}
+          </span>
+        </span>
+      )}
+      {!open && r.data.bookBy && <span className="remind-line"><span>Tee times open {r.data.bookBy.days} days ahead<small>Set the trip dates to get a reminder date</small></span></span>}
+      {r.data.notes && <span className="note-text">{r.data.notes}</span>}
+    </button>
+  );
+}
+
+function NotesForm({ ctx, r }: { ctx: TripCtx; r: Option<RoundData> }) {
+  const [notes, setNotes] = useState(r.data.notes || '');
+  const [on, setOn] = useState(!!r.data.bookBy);
+  const [days, setDays] = useState(String(r.data.bookBy?.days ?? 7));
+  const [at, setAt] = useState(r.data.bookBy?.at || '');
+  const [busy, setBusy] = useState(false);
+  const preview = on && Number(days) >= 0 ? bookingOpens(ctx.state, { ...r, data: { ...r.data, bookBy: { days: Number(days), at } } }) : null;
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault(); setBusy(true);
+      const ok = await ctx.act('round_note', { optionId: r.id, notes, bookBy: on ? { days: Number(days), at } : null });
+      setBusy(false); if (ok) { ctx.sheet(null); ctx.toast(on ? 'Saved. Reminder set.' : 'Saved'); }
+    }}>
+      <div className="field">
+        <label htmlFor="rn-notes">Notes for the group</label>
+        <textarea id="rn-notes" rows={3} maxLength={600} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Call the pro shop, not online. Ask for the twilight rate. Carts required…" />
+      </div>
+      <div className={`thirtysix${on ? ' on' : ''}`}>
+        <label className="check-row"><input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} /> Remind us when tee times open</label>
+        {on && (
+          <>
+            <div className="field">
+              <label htmlFor="rn-days">They take bookings this many days ahead</label>
+              <div className="days-row">
+                <input id="rn-days" type="number" inputMode="numeric" min={0} max={365} value={days} onChange={(e) => setDays(e.target.value)} />
+                {[7, 14, 30, 60, 90].map((d) => <button key={d} type="button" className="chip-btn" aria-pressed={Number(days) === d} onClick={() => setDays(String(d))}>{d}</button>)}
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="rn-at">Opens at (optional, the course’s local time)</label>
+              <input id="rn-at" value={at} onChange={(e) => setAt(e.target.value)} placeholder="7:00 AM" autoComplete="off" />
+            </div>
+            <p className="hint">
+              {preview ? <>Opens <b>{preview.label}{preview.at ? ` at ${preview.at}` : ''}</b>{preview.daysAway < 0 ? ', which has already passed.' : '.'} </> : 'Set the trip dates and the date is worked out for you. '}
+              Whoever is booking this round (or the organizer) gets a push and email the morning before and that morning, and it’s in the trip calendar with an alert.
+            </p>
+          </>
+        )}
+      </div>
+      <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Save'}</button>
+    </form>
+  );
+}
+function notesSheet(ctx: TripCtx, r: Option<RoundData>) { ctx.sheet({ title: `Notes · ${r.data.course}`, body: <NotesForm ctx={ctx} r={r} /> }); }
 
 /** The greens fee with its $/$$/$$$ tier. With no price entered: what other groups paid, if known, or "Price TBD". */
 function RoundFee({ r, known }: { r: Option<RoundData>; known?: CoursePrices }) {

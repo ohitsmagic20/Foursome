@@ -67,6 +67,10 @@ export interface RoundData {
   lon?: number;
   access?: CourseAccess;
   where?: string;
+  /** Notes anyone on the trip can leave on the round ("Tee sheet opens 7 days out, call the pro shop"). */
+  notes?: string;
+  /** When booking opens: this many days before the round, at this local time (optional). Drives the reminders. */
+  bookBy?: { days: number; at?: string; by?: string };
 }
 
 export interface Option<T = unknown> {
@@ -758,4 +762,22 @@ export function groupsFromMatches(matches: CupMatch[], sitting: string[] = []): 
     if (open) open.push(id); else groups.push([id]);
   }
   return groups;
+}
+
+
+/**
+ * When a round's tee times open for booking, from its "book N days ahead" setting and the trip's dates.
+ * Null without the setting or without dates. `locked` says whether the dates are final.
+ */
+export function bookingOpens(state: TripState, r: Option<RoundData>, now = new Date()) {
+  const b = r.data.bookBy;
+  if (!b || !(b.days >= 0)) return null;
+  const date = pickOf<DateData>(state, 'date');
+  if (!date.option) return null;
+  const roundDay = addDays(parseDay(date.option.data.start), r.data.day - 1);
+  const opens = addDays(roundDay, -b.days);
+  const today = new Date(now); today.setHours(0, 0, 0, 0);
+  const daysAway = Math.round((opens.getTime() - today.getTime()) / 864e5);
+  const label = opens.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return { iso: isoDay(opens), label, at: b.at || '', days: b.days, daysAway, locked: date.locked };
 }

@@ -213,7 +213,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Editing a round's course or time keeps its pairings, and editing a place keeps who's booking it.
         if (opt.kind === 'round' && !('groups' in data) && Array.isArray(opt.data.groups)) data.groups = opt.data.groups;
         const raw = (b.data && typeof b.data === 'object' ? b.data : {}) as Record<string, unknown>;
-        for (const k of ['owner', 'booked', 'confirmation', 'rooms', 'dest'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
+        for (const k of ['owner', 'booked', 'confirmation', 'rooms', 'dest', 'notes', 'bookBy'] as const) if (!(k in raw) && opt.data[k] !== undefined) data[k] = opt.data[k];
         if ('dest' in raw && !data.dest) delete data.dest;
         if (opt.kind === 'lodging') await locateStay(data, opt.data, trip.id);
         const r = await db().from('options').update({ data }).eq('id', opt.id);
@@ -522,6 +522,24 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         const r = await db().from('options').update({ data: { ...d, rooms } }).eq('id', stay.id);
         if (r.error) throw r.error;
         if (op === 'auto') pings.push(['others', { title: trip.name, body: `${first(me.name)} assigned rooms at ${d.name}. See where you’re sleeping.`, url: url('stay'), tag: 'rooms' }, 0]);
+        break;
+      }
+      case 'round_note': {
+        // Notes on a round, and when its tee times open (for reminders). Anyone on the trip can edit.
+        const opt = await optionFor(trip.id, b.optionId);
+        if (opt.kind !== 'round') throw new HttpError(400, 'Notes go on rounds.');
+        const next = { ...opt.data } as Record<string, unknown>;
+        if ('notes' in b) { const n = String(b.notes ?? '').replace(/\r/g, '').trim().slice(0, 600); if (n) next.notes = n; else delete next.notes; }
+        if ('bookBy' in b) {
+          const bb = b.bookBy as { days?: unknown; at?: unknown } | null;
+          const days = bb ? Math.round(Number(bb.days)) : NaN;
+          if (bb && Number.isFinite(days) && days >= 0 && days <= 365) {
+            const at = str(bb.at, 12).toUpperCase().replace(/\s*(AM|PM)$/, ' $1');
+            next.bookBy = { days, ...(/^(1[0-2]|[1-9]):[0-5]\d (AM|PM)$/.test(at) ? { at } : {}), by: me.id };
+          } else delete next.bookBy;
+        }
+        const r = await db().from('options').update({ data: next }).eq('id', opt.id);
+        if (r.error) throw r.error;
         break;
       }
       case 'set_booking': {

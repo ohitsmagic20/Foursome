@@ -35,3 +35,17 @@ describe('places: stays and rounds per destination', () => {
     expect([priceTier(0), priceTier(45), priceTier(70), priceTier(71), priceTier(120), priceTier(121)]).toEqual([null, '$', '$', '$$', '$$', '$$$']);
   });
 });
+
+describe('when tee times open', () => {
+  it('counts back from the round’s day', async () => {
+    const { bookingOpens } = await import('@/lib/shared');
+    const date = opt('date', { start: '2027-01-15', nights: 2 }, true);
+    const round = opt('round', { course: 'TPC Sawgrass', day: 2, time: '8:00 AM', fee: 500, bookBy: { days: 7, at: '7:00 AM' } });
+    const t = trip(2, [date, round]);
+    const o = bookingOpens(t, round as never, new Date('2027-01-08T12:00:00'))!;
+    expect(o.iso).toBe('2027-01-09'); // day 2 is Jan 16, minus 7
+    expect(o.daysAway).toBe(1);
+    expect(o.at).toBe('7:00 AM');
+    expect(bookingOpens(t, opt('round', { course: 'X', day: 1, time: '9:00 AM', fee: 0 }) as never)).toBeNull();
+  });
+});
