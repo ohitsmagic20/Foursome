@@ -739,3 +739,5 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .cup-make { display: flex; flex-direction: column; gap: 10px; }
 .cup-make > .btn.primary { align-self: flex-start; }
 .cup-len .seg button { white-space: nowrap; padding-left: 10px; padding-right: 10px; }
+.share-onepager { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.share-onepager .hint { margin: 0; text-align: center; }
