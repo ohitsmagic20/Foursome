@@ -96,9 +96,9 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
 /* ---------- loading ---------- */
 const MEMBER_COLS = 'id,name,airport,budget,bed,is_organizer,flight_price,flight_summary,flight_arrive_at,flight_depart_at,venmo,cashapp';
 
-/** Trip columns added by later migrations (007 deadlines, 008 cup); each is skipped while the database
+/** Trip columns added by later migrations (007 deadlines, 008 cup, 009 cars); each is skipped while the database
  *  doesn't have it yet, and checked again every few minutes. */
-const OPTIONAL_TRIP_COLS = ['deadlines', 'cup'];
+const OPTIONAL_TRIP_COLS = ['deadlines', 'cup', 'cars'];
 const missingTripCols = new Map<string, number>();
 export async function tripByCode(code: string): Promise<Trip> {
   for (const [c, at] of missingTripCols) if (Date.now() - at > 5 * 60000) missingTripCols.delete(c);

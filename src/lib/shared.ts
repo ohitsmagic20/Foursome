@@ -14,6 +14,23 @@ export interface Trip {
   deadlines?: Partial<Record<'date' | 'destination' | 'lodging', string>>;
   /** The Cup (migration 008): null = not set up; missing = database not updated. */
   cup?: Cup | null;
+  /** Rental cars (migration 009): null = none; missing = database not updated. */
+  cars?: Car[] | null;
+}
+
+/** A rental car: its total split evenly between the people riding in it. */
+export interface Car {
+  id: string;
+  company: string;      // "Enterprise", or blank
+  total: number;        // the whole rental, with taxes and fees
+  riders: string[];     // member ids
+  booked?: boolean;
+  by: string;           // who added it
+}
+
+/** What one person pays toward rental cars: their share of each car they ride in. */
+export function carShare(state: TripState, m: Member): number {
+  return (state.trip.cars || []).reduce((s, c) => s + (c.riders.includes(m.id) && c.riders.length ? c.total / c.riders.length : 0), 0);
 }
 
 export interface Member {
@@ -254,7 +271,8 @@ export function costOf(state: TripState, m: Member) {
   const golf = plannedRounds(state).reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
   const flight = Number(m.flight_price) || 0;
   const food = state.trip.food || 0;
-  return { flight, stay, golf, food, total: flight + stay + golf + food };
+  const car = carShare(state, m);
+  return { flight, stay, golf, car, food, total: flight + stay + golf + car + food };
 }
 export const teeTimesNeeded = (n: number) => Math.max(1, Math.ceil(n / 4));
 

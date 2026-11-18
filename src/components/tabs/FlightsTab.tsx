@@ -6,6 +6,7 @@ import { addDays, andList, clockLabel, destAirports, firstTee, landsTooLate, LAN
 import { api, firstName } from '@/lib/client';
 import { Callout, Chip, useTrip } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
+import { RentalCars } from '../RentalCars';
 
 interface SearchResult {
   query: { origin: string; destination: string; outDate: string; backDate: string; datesLocked: boolean; destLocked: boolean };
@@ -137,6 +138,8 @@ export function FlightsTab() {
           </>
         )}
       </section>
+
+      <RentalCars />
 
       <section className="section">
         <h2>The group</h2>

@@ -373,7 +373,7 @@ function Money({ over, planning }: { over: Member[]; planning: boolean }) {
   const stay = pickOf<LodgingData>(state, 'lodging');
   const c = costOf(state, me);
   const left = me.budget > 0 ? me.budget - c.total : null;
-  const parts: [string, number, boolean][] = [['Flight', c.flight, me.flight_price !== null], ['Stay', c.stay, !!stay.option], ['Golf', c.golf, true], ['Food', c.food, true]];
+  const parts: [string, number, boolean][] = [['Flight', c.flight, me.flight_price !== null], ['Stay', c.stay, !!stay.option], ['Golf', c.golf, true], ...(state.trip.cars?.length ? [['Car', c.car, true] as [string, number, boolean]] : []), ['Food', c.food, true]];
   const showSettle = !planning || (state.expenses?.length || 0) > 0;
   return (
     <section className="section">
@@ -401,11 +401,12 @@ function Money({ over, planning }: { over: Member[]; planning: boolean }) {
 function CostTable() {
   const { state } = useTrip();
   const rows = state.members.map((m) => ({ m, c: costOf(state, m) }));
-  const sum = (k: 'flight' | 'stay' | 'golf' | 'food' | 'total') => rows.reduce((s, r) => s + r.c[k], 0);
+  const sum = (k: 'flight' | 'stay' | 'golf' | 'car' | 'food' | 'total') => rows.reduce((s, r) => s + r.c[k], 0);
+  const cars = !!state.trip.cars?.length;
   return (
     <div className="scroll">
       <table className="sc">
-        <thead><tr><th className="name">Golfer</th><th className="num">Flight</th><th className="num">Stay</th><th className="num">Golf</th><th className="num">Food</th><th className="num">Total</th><th className="num">Budget</th></tr></thead>
+        <thead><tr><th className="name">Golfer</th><th className="num">Flight</th><th className="num">Stay</th><th className="num">Golf</th>{cars && <th className="num">Car</th>}<th className="num">Food</th><th className="num">Total</th><th className="num">Budget</th></tr></thead>
         <tbody>
           {rows.map(({ m, c }) => {
             const diff = m.budget - c.total;
@@ -415,6 +416,7 @@ function CostTable() {
                 <td className="num">{m.flight_price === null ? <span className="row-meta">—</span> : money(c.flight)}</td>
                 <td className="num">{money(c.stay)}</td>
                 <td className="num">{money(c.golf)}</td>
+                {cars && <td className="num">{money(c.car)}</td>}
                 <td className="num">{money(c.food)}</td>
                 <td className="num"><strong>{money(c.total)}</strong></td>
                 <td className="num">{m.budget > 0 ? (diff >= 0 ? <Chip kind="good">{money(diff)} under</Chip> : <Chip kind="bad">{money(-diff)} over</Chip>) : <span className="row-meta">—</span>}</td>
@@ -422,7 +424,7 @@ function CostTable() {
             );
           })}
         </tbody>
-        <tfoot><tr><td className="name">Group</td><td className="num">{money(sum('flight'))}</td><td className="num">{money(sum('stay'))}</td><td className="num">{money(sum('golf'))}</td><td className="num">{money(sum('food'))}</td><td className="num">{money(sum('total'))}</td><td /></tr></tfoot>
+        <tfoot><tr><td className="name">Group</td><td className="num">{money(sum('flight'))}</td><td className="num">{money(sum('stay'))}</td><td className="num">{money(sum('golf'))}</td>{cars && <td className="num">{money(sum('car'))}</td>}<td className="num">{money(sum('food'))}</td><td className="num">{money(sum('total'))}</td><td /></tr></tfoot>
       </table>
     </div>
   );

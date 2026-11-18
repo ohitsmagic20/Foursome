@@ -367,7 +367,8 @@ tr.me .mark.none { border-color: var(--green); }
 .expenses summary { cursor: pointer; font-size: 14px; color: var(--muted); padding: 2px 0 10px; }
 .split-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .split-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; background: var(--card); }
-.split-item input { accent-color: var(--green); }
+.split-item input { accent-color: var(--green); width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; flex: none; }
+.form .split-item { margin: 0; font-weight: 500; color: var(--ink); }
 
 /* trip-day view */
 .today { display: flex; flex-direction: column; gap: 10px; }
@@ -423,7 +424,7 @@ tr.me .mark.none { border-color: var(--green); }
 .my-cost { display: flex; flex-direction: column; gap: 12px; }
 .my-cost-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .my-cost-total { font-family: var(--font-display), sans-serif; font-size: 34px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
-.my-cost-parts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.my-cost-parts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
 .my-cost-parts > div { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
 .subsection { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
 .subsection h3 { margin: 0; font-family: var(--font-body), sans-serif; font-size: 16px; font-weight: 700; }
@@ -889,3 +890,10 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .plan-course { display: block; font-weight: 600; }
 
 .wx-basis { font-size: 11px; color: var(--muted); margin-top: 2px; opacity: .85; }
+
+/* rental cars (Flights tab) */
+.car-list { margin-bottom: 12px; background: transparent; box-shadow: none; border: 0; border-radius: 0; }
+.car-list > .car-row { padding-left: 0; padding-right: 0; }
+.car-row { align-items: flex-start; }
+.car-row .row-title .chip { padding: 2px 8px; font-size: 11px; vertical-align: 2px; margin-left: 4px; }
+.car-actions { display: flex; gap: 6px; margin-top: 8px; }

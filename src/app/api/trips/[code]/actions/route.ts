@@ -1,5 +1,5 @@
 import { after } from 'next/server';
-import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
+import type { Car, Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, marginsFor, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
@@ -662,6 +662,46 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (!e) throw new HttpError(404, 'That expense was already removed.');
         if (e.paid_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who paid or the organizer can remove it.');
         const r = await db().from('expenses').delete().eq('id', e.id);
+        if (r.error) throw r.error;
+        break;
+      }
+      case 'car': {
+        // Rental cars: a total split between who rides in it. Whoever added a car, or the organizer, can change it.
+        if (trip.cars === undefined) {
+          await logError('server', 'Run supabase/009_cars.sql: trips.cars is missing', `/t/${trip.code}`);
+          throw new HttpError(503, 'Rental cars need a quick database update. The app owner has been told.');
+        }
+        const cars: Car[] = Array.isArray(trip.cars) ? trip.cars.slice() : [];
+        const op = str(b.op, 12);
+        const id = str(b.id, 40);
+        const i = id ? cars.findIndex((c) => c.id === id) : -1;
+        if (id && i < 0) throw new HttpError(404, 'That car was already removed.');
+        if (i >= 0 && cars[i].by !== me.id && !me.is_organizer && !(op === 'booked' && cars[i].riders.includes(me.id))) {
+          throw new HttpError(403, 'Only whoever added this car or the organizer can change it.');
+        }
+        if (op === 'delete') {
+          if (i < 0) throw new HttpError(400, 'Which car?');
+          cars.splice(i, 1);
+        } else if (op === 'booked') {
+          if (i < 0) throw new HttpError(400, 'Which car?');
+          cars[i] = { ...cars[i], booked: b.booked === true };
+        } else {
+          const total = Math.round(Number(b.total) * 100) / 100;
+          if (!(total > 0 && total < 100000)) throw new HttpError(400, 'Enter the total for the car.');
+          const { data: everyone } = await db().from('members').select('id').eq('trip_id', trip.id);
+          const ids = new Set((everyone || []).map((m) => m.id));
+          const riders = [...new Set((Array.isArray(b.riders) ? b.riders : []).map((x) => str(x, 40)).filter((x) => ids.has(x)))];
+          if (!riders.length) throw new HttpError(400, 'Pick who’s riding in it.');
+          const car: Car = { id: i >= 0 ? cars[i].id : crypto.randomUUID(), company: str(b.company, 40), total, riders, by: i >= 0 ? cars[i].by : me.id, ...(i >= 0 && cars[i].booked ? { booked: true } : {}) };
+          // Everyone rides in one car: picking someone here takes them out of any other.
+          for (let j = 0; j < cars.length; j++) if (j !== i) cars[j] = { ...cars[j], riders: cars[j].riders.filter((x) => !riders.includes(x)) };
+          if (i >= 0) cars[i] = car;
+          else {
+            if (cars.length >= 12) throw new HttpError(400, 'That’s a lot of cars already.');
+            cars.push(car);
+          }
+        }
+        const r = await db().from('trips').update({ cars: cars.length ? cars : null }).eq('id', trip.id);
         if (r.error) throw r.error;
         break;
       }

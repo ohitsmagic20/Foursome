@@ -114,7 +114,7 @@ export function planEmail(state: TripState, memberId: string): EmailBody {
   const me = state.members.find((m) => m.id === memberId);
   if (me) {
     const c = costOf(state, me);
-    lines.push(`Your estimated cost: ${money(c.total)} (flight ${c.flight ? money(c.flight) : 'not set'}, stay ${money(c.stay)}, golf ${money(c.golf)}${c.food ? `, food ${money(c.food)}` : ''})`);
+    lines.push(`Your estimated cost: ${money(c.total)} (flight ${c.flight ? money(c.flight) : 'not set'}, stay ${money(c.stay)}, golf ${money(c.golf)}${c.car ? `, car ${money(c.car)}` : ''}${c.food ? `, food ${money(c.food)}` : ''})`);
     lines.push(me.flight_summary ? `Your flight: ${me.flight_summary}` : 'You haven’t added a flight yet.');
   }
   lines.push(`Going: ${state.members.map((m) => m.name).join(', ')}`);

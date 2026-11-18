@@ -97,7 +97,7 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
 
   // Money: the average person's share so far.
   const costs = state.members.map((m) => costOf(state, m));
-  const avg = (k: 'stay' | 'golf' | 'food' | 'total') => (n ? costs.reduce((s, c) => s + c[k], 0) / n : 0);
+  const avg = (k: 'stay' | 'golf' | 'car' | 'food' | 'total') => (n ? costs.reduce((s, c) => s + c[k], 0) / n : 0);
   const flights = state.members.filter((m) => m.flight_price !== null).map((m) => Number(m.flight_price) || 0);
   const avgFlight = flights.length ? flights.reduce((a, b) => a + b, 0) / flights.length : 0;
   const lo = costs.length ? Math.min(...costs.map((c) => c.total)) : 0, hi = costs.length ? Math.max(...costs.map((c) => c.total)) : 0;
@@ -106,6 +106,7 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
     { label: 'Golf', value: avg('golf') ? money(avg('golf')) : '—' },
     { label: 'Food & drinks', value: avg('food') ? money(avg('food')) : '—' },
     { label: 'Flight', value: avgFlight ? money(avgFlight) : '—' },
+    ...(avg('car') ? [{ label: 'Rental car', value: money(avg('car')) }] : []),
   ];
   const costNote = flights.length < n ? `Flights: ${flights.length} of ${n} picked so far.` : '';
   const total = avg('stay') + avg('golf') + avg('food') + avgFlight;
