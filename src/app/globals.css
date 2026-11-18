@@ -921,3 +921,9 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .sc-clear { display: inline-flex; align-items: center; gap: 6px; color: var(--bad) !important; }
 .sc-reset { align-self: center; }
 .sc-btn.on small { font-weight: 700; }
+/* The plan card: each round with its booking status on the right */
+.plan-round { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.plan-round + .plan-round { margin-top: 6px; }
+.plan-round-text { min-width: 0; overflow-wrap: anywhere; }
+.plan-round .chip { margin-top: 1px; }
+.plan-course { display: block; font-weight: 600; }

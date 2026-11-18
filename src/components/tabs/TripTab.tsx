@@ -140,7 +140,17 @@ function TripPlan() {
           return (
             <div className="plan-row" key={d}>
               <span className="k">{dayLabel(start, d)}</span>
-              <span>{rs.length ? rs.map((r) => <span key={r.id} style={{ display: 'block' }}>{r.data.time} · {r.data.course}{!r.data.booked && <span className="chip warn plan-not-booked">Not booked</span>}{groupNames(state, r.data.groups).map((g, i) => <span key={i} className="row-meta" style={{ display: 'block' }}>{teeAfter(r.data.time, i)}: {g}</span>)}</span>) : <span className="row-meta">{d === 1 ? 'Travel in' : d === tripNights(state) + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
+              <span>{rs.length ? rs.map((r) => (
+                // The round on the left, its booking status lined up on the right.
+                <span key={r.id} className="plan-round">
+                  <span className="plan-round-text">
+                    <span className="plan-course">{r.data.course}</span>
+                    <span className="row-meta" style={{ display: 'block' }}>{r.data.time}</span>
+                    {groupNames(state, r.data.groups).map((g, i) => <span key={i} className="row-meta" style={{ display: 'block' }}>{teeAfter(r.data.time, i)}: {g}</span>)}
+                  </span>
+                  {r.data.booked ? <span className="chip good">Booked</span> : <span className="chip warn">Not booked</span>}
+                </span>
+              )) : <span className="row-meta">{d === 1 ? 'Travel in' : d === tripNights(state) + 1 ? 'Travel home' : 'No golf yet'}</span>}</span>
             </div>
           );
         })}
