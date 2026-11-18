@@ -328,34 +328,6 @@ function ownerSheet(ctx: TripCtx, option: Bookable) {
   ) });
 }
 
-export function BookingRow({ option }: { option: Option<{ owner?: string; booked?: boolean; confirmation?: string }> }) {
-  const ctx = useTrip();
-  const { state, me, act, toast } = ctx;
-  if (!option.locked || !me) return null;
-  const owner = state.members.find((m) => m.id === option.data.owner);
-  const booked = !!option.data.booked;
-  const canMark = me.is_organizer || owner?.id === me.id;
-  return (
-    <div className="booking">
-      <span className={booked ? 'booking-done' : 'booking-open'}>{booked ? 'Booked' : 'Not booked'}</span>
-      {booked && option.data.confirmation
-        ? <span className="row-meta">Conf. {option.data.confirmation}{owner ? ` · ${owner.id === me.id ? 'you' : firstName(owner.name)}` : ''}</span>
-        : me.is_organizer && !booked ? (
-          <select className="mini-select" aria-label="Who books it" value={owner?.id || ''} onChange={async (e) => {
-            if (await act('set_booking', { optionId: option.id, owner: e.target.value })) toast(e.target.value ? 'Assigned' : 'Unassigned');
-          }}>
-            <option value="">Who books it?</option>
-            {state.members.map((m) => <option key={m.id} value={m.id}>{m.id === me.id ? 'Me' : firstName(m.name)}</option>)}
-          </select>
-        ) : (
-          <span className="row-meta">{owner ? (owner.id === me.id ? (booked ? 'You booked it' : 'You’re booking it') : `${firstName(owner.name)} ${booked ? 'booked it' : 'is booking it'}`) : booked ? '' : 'Nobody assigned yet'}</span>
-        )}
-      {canMark && (booked
-        ? <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => act('set_booking', { optionId: option.id, booked: false })}>Not booked</button>
-        : <button className="btn small primary" style={{ marginLeft: 'auto' }} onClick={() => bookedSheet(ctx, option as Option<Record<string, unknown>>)}>Mark booked</button>)}
-    </div>
-  );
-}
 
 /** "Mark booked": confirmed time, confirmation number, and what was paid for the group (into settle up). */
 function BookedForm({ ctx, option }: { ctx: TripCtx; option: Option<Record<string, unknown>> }) {

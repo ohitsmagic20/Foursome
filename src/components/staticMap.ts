@@ -2,7 +2,7 @@
 
 // The trip map as a picture, for the one-pager: OpenStreetMap tiles on a canvas, the routes by road
 // (each day from the stay, course to course on a 36-hole day, and the airport to the stay), and the pins.
-import type { DateData, DestinationData, LodgingData, Option, RoundData, TripState } from '@/lib/shared';
+import type { DestinationData, LodgingData, Option, RoundData, TripState } from '@/lib/shared';
 import { destAirports, pickOf, plannedRounds, tally, teeMinutes } from '@/lib/shared';
 import { templateBySlug } from '@/data/templates';
 import { mapUrl, type MapData, type Stop } from './TripMap';

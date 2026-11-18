@@ -73,7 +73,7 @@ export function StayTab() {
     <section className="section">
       <PlaceSwitcher kind="lodging" />
       <div className="section-head"><h2>{choosing && where ? `Stays in ${where}` : 'Where we stay'}</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
-      <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. Need {need} beds.</p>
+      <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. Need {need} bed{need === 1 ? '' : 's'}.</p>
       <Deadline kind="lodging" />
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />

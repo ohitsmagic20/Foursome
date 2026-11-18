@@ -243,7 +243,7 @@ function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) 
           <input id="f-beds" name="beds" type="number" inputMode="numeric" min={0} value={beds} onChange={(e) => setBeds(e.target.value)} />
         </div>
       </div>
-      <p className="hint">{bedCount ? (bedCount >= need ? `Enough beds: the group needs ${need}.` : `Short on beds: the group needs ${need}.`) : `The group needs ${need} beds. Use the total for your dates, with fees.`}</p>
+      <p className="hint">{bedCount ? (bedCount >= need ? `Enough beds: the group needs ${need}.` : `Short on beds: the group needs ${need}.`) : `The group needs ${need} bed${need === 1 ? '' : 's'}. Use the total for your dates, with fees.`}</p>
     </SheetForm>
   );
 }

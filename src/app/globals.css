@@ -225,10 +225,6 @@ tr.me .mark.none { border-color: var(--green); }
 .tab { white-space: nowrap; }
 .price-hint { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--good-soft); }
 .price-tag { font-size: 12px; font-weight: 600; color: var(--good); }
-.your-turn { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--flag-soft); }
-.your-turn .list { border-color: transparent; }
-.your-turn-head { display: flex; align-items: center; gap: 12px; }
-.badge-big { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--flag); color: #1b1608; display: grid; place-items: center; font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 22px; }
 .btn.ghost.danger { border-color: transparent; }
 
 /* accounts */
@@ -250,7 +246,6 @@ tr.me .mark.none { border-color: var(--green); }
 
 /* notifications and updates */
 .notify { display: flex; flex-direction: column; gap: 10px; }
-.notify-row { display: flex; align-items: center; gap: 12px; }
 .update-banner { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 60; border: 0; border-radius: 999px; padding: 10px 16px; background: var(--ink); color: var(--paper); font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.2); max-width: calc(100% - 32px); }
 
 /* legal pages */
@@ -462,8 +457,6 @@ tr.me .mark.none { border-color: var(--green); }
 .more-fields { border-top: 1px solid var(--line); padding-top: 10px; }
 .more-fields summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 .more-fields[open] summary { margin-bottom: 10px; }
-.idea-rounds { display: flex; flex-direction: column; gap: 10px; }
-.idea-rounds .row-meta { overflow-wrap: anywhere; }
 .check-row { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; cursor: pointer; }
 .check-row input { width: 20px; height: 20px; accent-color: var(--green); }
 .warn-text { color: var(--warn); font-weight: 600; }
@@ -482,12 +475,6 @@ tr.me .mark.none { border-color: var(--green); }
 /* Rooms */
 .rooms-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .rooms-wrap h3 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 20px; font-weight: 700; }
-.rooms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.room { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); min-height: 92px; }
-.room.mine { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
-.room-name { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-.room-who { font-weight: 600; font-size: 15px; line-height: 1.3; }
-.room .link-btn { margin-top: auto; align-self: flex-start; font-size: 13px; }
 .pack { display: flex; flex-direction: column; gap: 6px; }
 .pack ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; line-height: 1.4; }
 
@@ -560,11 +547,8 @@ tr.me .mark.none { border-color: var(--green); }
 .pkg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
 .pkg-foot .btn { flex-shrink: 0; white-space: nowrap; }
 .pkg-est { font-size: 14px; font-weight: 600; color: var(--ink); }
-.state-jump { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
-.state-jump .chip-btn { padding: 4px 12px; min-height: 34px; text-decoration: none; }
 .resort-list { margin-top: 8px; }
 .resort-list .row { align-items: flex-start; }
-.state-h { margin: 0 0 8px; font-family: var(--font-display), sans-serif; font-size: 22px; font-weight: 700; }
 .resort-states { display: flex; flex-direction: column; gap: 8px; }
 .resort-state { padding: 0; }
 .resort-state summary { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; }
@@ -620,9 +604,7 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .plan .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .plan .btn-row > * { width: 100%; justify-content: center; text-align: center; }
 .plan .btn-row > :only-child, .plan .btn-row > :last-child:nth-child(odd) { grid-column: 1 / -1; }
-.plan-not-booked { margin-left: 6px; vertical-align: 1px; }
 
-.cup-link { display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid var(--line); font: inherit; color: inherit; cursor: pointer; }
 .margin-add { position: relative; align-self: flex-start; display: inline-block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: -4px; }
 .margin-add select { position: absolute; inset: 0; width: 100%; opacity: 0; font-size: 16px; cursor: pointer; }
 
@@ -713,16 +695,6 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .row-title .tier.inline { margin: 0 0 0 4px; }
 .course-hits .tier.inline { flex: none; }
 
-/* The Cup, folded into the Golf tab */
-.cup-drop { padding: 0; border-color: var(--flag); }
-.cup-drop > summary { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-.cup-drop > summary::before { display: none !important; }
-.cup-drop > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; flex: none; margin-right: 4px; }
-.cup-drop[open] > summary::after { transform: rotate(-135deg); }
-.cup-drop-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--flag-soft); color: var(--ink); flex: none; }
-.cup-drop-icon svg { width: 22px; height: 22px; }
-.cup-drop-body { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; border-top: 1px solid var(--line); padding-top: 14px; }
-.cup-drop-body .section { margin: 0; }
 .cup-preview { display: flex; flex-direction: column; gap: 10px; }
 .cup-preview .sub { margin: 0; }
 .cup-preview .cup-rosters { margin-top: 0; }
@@ -808,13 +780,6 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .thirtysix.on { border-style: solid; background: var(--soft); }
 
 /* Drive times from each stay */
-.stay-drives { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.drive-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 4px 9px; border-radius: 999px; background: var(--good-soft, var(--soft)); color: var(--ink); }
-.drive-chip::before { content: ""; width: 14px; height: 14px; flex: none; background: currentColor; opacity: .7;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 17h14l-1.5-6.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5Z'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3Ccircle cx='16' cy='17' r='2'/%3E%3C/svg%3E") center / contain no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 17h14l-1.5-6.5A2 2 0 0 0 15.6 9H8.4a2 2 0 0 0-1.9 1.5Z'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3Ccircle cx='16' cy='17' r='2'/%3E%3C/svg%3E") center / contain no-repeat; }
-.drive-chip.quiet { background: var(--soft); color: var(--muted); }
-.drive-chip.quiet::before { display: none; }
 .stay-drive b { font-weight: 700; color: var(--ink); }
 .stay-drive.best b, .stay-drive.best { color: var(--good); }
 

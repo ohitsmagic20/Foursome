@@ -508,7 +508,6 @@ export const CUP_FORMATS: Record<CupFormat, { label: string; per: number; blurb:
   bestball: { label: 'Best ball', per: 2, blurb: 'Everyone plays their own ball; the better score on each hole counts.' },
   singles: { label: 'Singles', per: 1, blurb: 'One on one. No one to hide behind.' },
 };
-export const CUP_MARGINS = ['1 up', '2 up', '2&1', '3&1', '3&2', '4&2', '4&3', '5&3', '5&4', '6&4', '6&5', '7&5', '7&6', '8&6', '8&7', '9&8', '10&8'];
 export interface CupTeam { name: string; captain: string; members: string[] }
 export type CupResult = 'a' | 'b' | 'half';
 /** Who won one hole of a match: side a, side b, or halved. null = not entered yet. */

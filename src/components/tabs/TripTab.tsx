@@ -62,7 +62,7 @@ export function TripTab() {
       <Decide />
       <ToBook />
 
-      {(countdown === null || countdown > 0) && <section className="section">
+      {(countdown === null || countdown > 0) && state.options.some((o) => o.kind === 'destination' || o.kind === 'date') && <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
         <div className="list">
           {steps.map((s) => (

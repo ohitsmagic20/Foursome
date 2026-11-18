@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
 import { CUP_FORMATS, DEFAULT_SI, HCP_RULE, matchStrokes, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
 import type { HoleWin } from '@/lib/shared';
@@ -11,10 +11,6 @@ import { ConfirmButton, Icon, useTrip, type TripCtx } from './ui';
 const TEAM_CLASS = ['team-a', 'team-b'] as const;
 
 /** Team match play for the trip, Internet Invitational style: captains, a draft, a point a match. */
-/** Whether the trip shows a Cup tab: once there's a cup, a group big enough for one (4+), or two people for match play. */
-export function hasCupTab(state: TripCtx['state']): boolean {
-  return !!state.trip.cup || state.members.length >= 4 || state.members.length === 2;
-}
 
 /** The Cup tab: set-up for the organizer, the draft, then the scoreboard and matches. */
 export function CupTab() {
@@ -52,63 +48,7 @@ export function CupTab() {
   );
 }
 
-/** On the Golf tab: a one-line score that opens the Cup tab. */
-export function CupLink() {
-  const { state, go } = useTrip();
-  const cup = state.trip.cup;
-  if (!cup) return null;
-  const score = cupScore(cup);
-  const live = cupLive(cup);
-  return (
-    <button className="card cup-link" onClick={() => go('cup')}>
-      <span className="grow" style={{ minWidth: 0, textAlign: 'left' }}>
-        <span className="eyebrow" style={{ display: 'block' }}>{cup.name}{live.live > 0 ? ` · ${live.live} live · projected ${pts(live.a)}–${pts(live.b)}` : ''}</span>
-        <span className="row-title">{cup.drafting ? 'The draft is on' : `${cup.teams[0].name} ${pts(score.a)} · ${pts(score.b)} ${cup.teams[1].name}`}</span>
-      </span>
-      {Icon.chev}
-    </button>
-  );
-}
 
-/**
- * On the Golf tab: the cup folded into one line, opening to the whole thing in place.
- * With no cup yet, it opens to a preview built from whoever has joined so far, with open spots for the rest.
- */
-export function CupDropdown() {
-  const ctx = useTrip();
-  const { state } = ctx;
-  const ref = useRef<HTMLDetailsElement>(null);
-  // Links to the cup (#cup, notifications) open it here and scroll to it.
-  useEffect(() => {
-    const show = () => { if (!ref.current) return; ref.current.open = true; ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-    if (window.location.hash === '#cup') setTimeout(show, 150);
-    window.addEventListener('foresome:cup', show);
-    return () => window.removeEventListener('foresome:cup', show);
-  }, []);
-  if (!('cup' in state.trip)) return null;
-  const cup = state.trip.cup;
-  const score = cup ? cupScore(cup) : null;
-  const live = cup ? cupLive(cup) : null;
-  const rec = cup?.duel ? duelRecord(cup) : null;
-  const line = !cup ? 'Not set up yet · see a preview'
-    : rec ? `${cup.teams[0].name} ${rec.w}–${rec.l}${rec.h ? `–${rec.h}` : ''} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`
-    : cup.drafting ? 'The draft is on'
-    : `${cup.teams[0].name} ${pts(score!.a)} · ${pts(score!.b)} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`;
-  return (
-    <details className="card cup-drop" id="cup" ref={ref}>
-      <summary>
-        <span className="cup-drop-icon" aria-hidden="true">{Icon.cup}</span>
-        <span className="grow" style={{ minWidth: 0 }}>
-          <span className="eyebrow" style={{ display: 'block' }}>{cup ? (cup.duel ? `Match play · ${cup.name}` : cup.name) : state.members.length === 2 ? 'Match play' : 'The Cup'}</span>
-          <span className="row-title">{line}</span>
-        </span>
-      </summary>
-      <div className="cup-drop-body">
-        {cup ? <CupSection /> : <CupPreview />}
-      </div>
-    </details>
-  );
-}
 
 /** What the cup would look like with the people on the trip now: two even teams, open spots, a match count per round. */
 function CupPreview() {
@@ -373,7 +313,7 @@ function Board({ cup }: { cup: CupT }) {
             <div key={i} className={`cup-side ${TEAM_CLASS[i]}${winner === i ? ' won' : ''}`}>
               <div className="cup-team-name">{rec ? name(t.captain) : t.name}</div>
               <div className="cup-pts">{rec ? (i ? rec.l : rec.w) : pts(i ? score.b : score.a)}</div>
-              {rec && <div className="cup-proj">{i ? `${rec.l}–${rec.w}` : `${rec.w}–${rec.l}`}{rec.h ? `–${rec.h}` : ''} · {i ? rec.holes.b : rec.holes.a} holes won</div>}
+              {rec && <div className="cup-proj">{i ? `${rec.l}–${rec.w}` : `${rec.w}–${rec.l}`}{rec.h ? `–${rec.h}` : ''}{rec.holes.a + rec.holes.b ? ` · ${i ? rec.holes.b : rec.holes.a} holes won` : ''}</div>}
               {live.live > 0 && <div className="cup-proj">Projected {pts(i ? live.b : live.a)}</div>}
             </div>
           ))}
@@ -386,7 +326,7 @@ function Board({ cup }: { cup: CupT }) {
             </div>
           </>
         )}
-        {rec && <div className="row-meta cup-status">Record is wins–losses{rec.h ? '–halves' : ''}. {rec.holes.half} hole{rec.holes.half === 1 ? '' : 's'} halved.</div>}
+        {rec && <div className="row-meta cup-status">Record is wins–losses{rec.h ? '–halves' : ''}.{rec.holes.a + rec.holes.b + rec.holes.half ? ` ${rec.holes.half} hole${rec.holes.half === 1 ? '' : 's'} halved.` : ''}</div>}
         {!rec && <details className="cup-teams">
           <summary>Teams</summary>
           <div className="cup-rosters">
@@ -397,8 +337,8 @@ function Board({ cup }: { cup: CupT }) {
 
       <button type="button" className="card hcp-card" onClick={() => hcpSheet(ctx)}>
         <span className="grow" style={{ minWidth: 0 }}>
-          <span className="row-title">{cup.net ? 'Playing off handicaps' : 'Playing straight up'}</span>
-          <span className="row-meta">{cup.hcp && Object.keys(cup.hcp).length ? cup.teams.flatMap((t) => t.members).filter((id) => cup.hcp![id] !== undefined).map((id) => `${name(id)} ${cup.hcp![id]}`).join(' · ') : 'Add handicaps to give strokes'}</span>
+          <span className="row-title" style={{ display: 'block' }}>{cup.net ? 'Playing off handicaps' : 'Playing straight up'}</span>
+          <span className="row-meta" style={{ display: 'block' }}>{cup.hcp && Object.keys(cup.hcp).length ? cup.teams.flatMap((t) => t.members).filter((id) => cup.hcp![id] !== undefined).map((id) => `${name(id)} ${cup.hcp![id]}`).join(' · ') : 'Add handicaps to give strokes'}</span>
         </span>
         <span className="link-btn">{me?.is_organizer ? 'Edit' : 'Set yours'}</span>
       </button>

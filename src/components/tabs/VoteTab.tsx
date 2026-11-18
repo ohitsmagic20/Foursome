@@ -13,10 +13,6 @@ import { PlacePackage } from '../Places';
 const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };
 const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
 
-export function VoteTab() {
-  return (<><Where /><When /></>);
-}
-
 export function When() {
   const ctx = useTrip();
   const { state, me, vote } = ctx;
