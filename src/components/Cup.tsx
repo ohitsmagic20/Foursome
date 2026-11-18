@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
-import { CUP_FORMATS, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
+import { CUP_FORMATS, DEFAULT_SI, HCP_RULE, matchStrokes, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
 import type { HoleWin } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
@@ -205,16 +205,29 @@ function DuelForm({ ctx, split: start }: { ctx: TripCtx; split: number }) {
   const [a, b] = state.members;
   const [name, setName] = useState(`${firstName(a.name)} vs ${firstName(b.name)}`);
   const [split, setSplit] = useState(start);
+  const [hcp, setHcp] = useState<Record<string, string>>({ [a.id]: '', [b.id]: '' });
   const [busy, setBusy] = useState(false);
   return (
     <form className="form" onSubmit={async (e) => {
       e.preventDefault();
       setBusy(true);
-      const ok = await ctx.act('cup', { op: 'setup', mode: 'duel', name, players: [me?.id === b.id ? b.id : a.id, me?.id === b.id ? a.id : b.id], split });
+      const ok = await ctx.act('cup', { op: 'setup', mode: 'duel', name, hcp, players: [me?.id === b.id ? b.id : a.id, me?.id === b.id ? a.id : b.id], split });
       setBusy(false);
       if (ok) { ctx.sheet(null); ctx.toast('Match play is on. Set each round’s matches on the Cup tab.'); }
     }}>
       <div className="field"><label htmlFor="duel-name">Name</label><input id="duel-name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="field">
+        <label>Handicaps (optional)</label>
+        <div className="hcp-list">
+          {[a, b].map((p) => (
+            <label key={p.id} className="hcp-row">
+              <span className="grow">{p.id === me?.id ? 'You' : p.name}</span>
+              <input type="number" inputMode="numeric" step={1} min={-10} max={54} placeholder="—" value={hcp[p.id]} onChange={(e) => setHcp((h) => ({ ...h, [p.id]: e.target.value }))} />
+            </label>
+          ))}
+        </div>
+        <p className="hint">With both filled in, the higher handicap gets strokes on the hardest holes, split across each match (half on a 9). Leave blank to play straight up; you can add them later.</p>
+      </div>
       <div className="field">
         <label>Each match is</label>
         <div className="seg">
@@ -379,6 +392,14 @@ function Board({ cup }: { cup: CupT }) {
         </details>}
       </div>
 
+      <button type="button" className="card hcp-card" onClick={() => hcpSheet(ctx)}>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="row-title">{cup.net ? 'Playing off handicaps' : 'Playing straight up'}</span>
+          <span className="row-meta">{cup.hcp && Object.keys(cup.hcp).length ? cup.teams.flatMap((t) => t.members).filter((id) => cup.hcp![id] !== undefined).map((id) => `${name(id)} ${cup.hcp![id]}`).join(' · ') : 'Add handicaps to give strokes'}</span>
+        </span>
+        <span className="link-btn">{me?.is_organizer ? 'Edit' : 'Set yours'}</span>
+      </button>
+
       {liveMatches.length > 0 && (
         <div className="card cup-live">
           <div className="cup-live-head"><span className="live-dot" aria-hidden="true" /> Live now <span className="row-meta">· {liveMatches.length} match{liveMatches.length === 1 ? '' : 'es'} on the course</span></div>
@@ -502,6 +523,7 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
         <span className="match-vs">vs</span>
         <div className={`match-side team-b${m.result === 'b' ? ' win' : ''}`}><span className="team-dot team-b" />{side(m.b)}</div>
       </div>
+      {cup.net && <StrokeLine cup={cup} m={m} name={name} />}
       {m.twice?.length ? <div className="row-meta">{andList(m.twice.map(name))} {m.twice.length > 1 ? 'play' : 'plays'} once; the same score counts in this match too (uneven teams).</div> : null}
       {st.started && <HoleStrip m={m} onClick={openCard} />}
       {done ? (
@@ -543,6 +565,91 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
   );
 }
 
+/** "Joe gets 3 strokes" under a match, when the cup plays off handicaps. */
+function StrokeLine({ cup, m, name }: { cup: CupT; m: CupMatch; name: (id: string) => string }) {
+  const st = matchStrokes(cup, m);
+  const sum = (v: number[]) => v.reduce((t, x) => t + x, 0);
+  const parts = Object.keys(st.players).length
+    ? Object.entries(st.players).filter(([, v]) => sum(v) > 0).map(([id, v]) => `${name(id)} ${name(id) === 'You' ? 'get' : 'gets'} ${sum(v)}`)
+    : [['a', m.a], ['b', m.b]].filter(([k]) => sum(st.sides[k as 'a' | 'b']) > 0).map(([k, ids]) => `${(ids as string[]).map(name).join(' & ')} get ${sum(st.sides[k as 'a' | 'b'])}`);
+  return <div className="row-meta stroke-line">{parts.length ? `Strokes: ${parts.join(', ')}` : 'No strokes: same handicap'}</div>;
+}
+
+/** Everyone's handicap, and whether the cup plays off them. Players can set their own; the organizer anyone's. */
+function HcpForm({ ctx }: { ctx: TripCtx }) {
+  const { state, me } = ctx;
+  const cup = state.trip.cup!;
+  const players = cup.teams.flatMap((t) => t.members);
+  const [vals, setVals] = useState<Record<string, string>>(Object.fromEntries(players.map((id) => [id, cup.hcp?.[id] !== undefined ? String(cup.hcp[id]) : ''])));
+  const [net, setNet] = useState(cup.net ?? true);
+  const [busy, setBusy] = useState(false);
+  const mine = (id: string) => id === me?.id || !!me?.is_organizer;
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault(); setBusy(true);
+      const values = Object.fromEntries(Object.entries(vals).filter(([id]) => mine(id)));
+      const ok = await ctx.act('cup', { op: 'hcp', values, ...(me?.is_organizer ? { net } : {}) });
+      setBusy(false); if (ok) ctx.sheet(null);
+    }}>
+      <p className="sub" style={{ margin: 0 }}>Course handicaps (whole numbers). The app works out who gets strokes on which holes; you still tap who won each hole after strokes.</p>
+      <div className="hcp-list">
+        {players.map((id) => {
+          const m = state.members.find((x) => x.id === id);
+          return (
+            <label key={id} className="hcp-row">
+              <span className="grow">{id === me?.id ? 'You' : m?.name || '?'}</span>
+              <input type="number" inputMode="numeric" step={1} min={-10} max={54} value={vals[id] ?? ''} disabled={!mine(id)} placeholder="—" onChange={(e) => setVals((v) => ({ ...v, [id]: e.target.value }))} />
+            </label>
+          );
+        })}
+      </div>
+      {me?.is_organizer && (
+        <label className="check-row"><input type="checkbox" checked={net} onChange={(e) => setNet(e.target.checked)} /> Play off handicaps (give strokes)</label>
+      )}
+      <details className="hint-more"><summary>How strokes work</summary>
+        <ul>{(Object.keys(HCP_RULE) as CupFormat[]).filter((f) => !cup.duel || f === 'singles').map((f) => <li key={f}><b>{CUP_FORMATS[f].label}:</b> {HCP_RULE[f]}</li>)}
+          <li>Shorter matches get their share: a 9-hole match gets half the strokes, a 6-hole match a third, on that stretch’s hardest holes.</li></ul>
+      </details>
+      <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Save handicaps'}</button>
+    </form>
+  );
+}
+function hcpSheet(ctx: TripCtx) { ctx.sheet({ title: 'Handicaps', body: <HcpForm ctx={ctx} /> }); }
+
+/** A course's stroke index, typed from its scorecard: which hole is hardest (1) to easiest (18). */
+function SiForm({ ctx, round }: { ctx: TripCtx; round: string }) {
+  const cup = ctx.state.trip.cup!;
+  const course = (ctx.state.options.find((o) => o.id === round)?.data as RoundData | undefined)?.course || 'this course';
+  const [vals, setVals] = useState<string[]>((cup.si?.[round] || Array(18).fill('')).map(String));
+  const [busy, setBusy] = useState(false);
+  const nums = vals.map((v) => Number(v));
+  const dupes = new Set(nums.filter((n, i) => n && nums.indexOf(n) !== i));
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault(); setBusy(true);
+      const ok = await ctx.act('cup', { op: 'si', round, si: nums });
+      setBusy(false); if (ok) ctx.sheet(null);
+    }}>
+      <p className="sub" style={{ margin: 0 }}>From the {course} scorecard: the “Handicap” or “HCP” row, holes 1 to 18. Each number 1 to 18 once.</p>
+      {[0, 9].map((start) => (
+        <div key={start} className="si-grid">
+          {vals.slice(start, start + 9).map((v, k) => (
+            <label key={k}><span>{start + k + 1}</span>
+              <input inputMode="numeric" value={v} maxLength={2} className={dupes.has(Number(v)) ? 'bad' : ''} onChange={(e) => setVals((all) => { const n = all.slice(); n[start + k] = e.target.value.replace(/\D/g, ''); return n; })} />
+            </label>
+          ))}
+        </div>
+      ))}
+      {dupes.size > 0 && <p className="hint" style={{ color: 'var(--bad, #b3261e)' }}>{[...dupes].join(', ')} {dupes.size === 1 ? 'is' : 'are'} in there twice.</p>}
+      <div className="btn-row">
+        <button className="btn primary" disabled={busy || dupes.size > 0 || nums.some((n) => !n || n > 18)}>{busy ? <span className="spinner" /> : 'Save'}</button>
+        {cup.si?.[round] && <button type="button" className="btn ghost" onClick={async () => { if (await ctx.act('cup', { op: 'si', round, si: [] })) ctx.sheet(null); }}>Use the standard order</button>}
+      </div>
+    </form>
+  );
+}
+function siSheet(ctx: TripCtx, round: string) { ctx.sheet({ title: 'Stroke index', body: <SiForm ctx={ctx} round={round} /> }); }
+
 /** A row of little squares, one per hole, colored by who won it. */
 function HoleStrip({ m, onClick }: { m: CupMatch; onClick?: () => void }) {
   return (
@@ -557,7 +664,8 @@ function HoleStrip({ m, onClick }: { m: CupMatch; onClick?: () => void }) {
 
 /** The scorecard sheet: tap who won the hole, and it moves to the next one. Any hole can be corrected. */
 function Scorecard({ matchId }: { matchId: string }) {
-  const { state, me, act } = useTrip();
+  const ctx = useTrip();
+  const { state, me, act } = ctx;
   const cup = state.trip.cup;
   const m0 = cup?.matches.find((x) => x.id === matchId);
   // Taps show at once; the saved card catches up a moment later.
@@ -592,6 +700,17 @@ function Scorecard({ matchId }: { matchId: string }) {
     if (!ok) setPending((p) => { const n = { ...p }; delete n[i]; return n; });
   };
   const leadClass = st.lead > 0 ? 'team-a-text' : st.lead < 0 ? 'team-b-text' : '';
+  const strokes = matchStrokes(cup, m);
+  // Who gets a stroke on the hole being entered, in words: "Joe gets a stroke" / "Joe gets 2".
+  const strokeNote = (i: number) => {
+    if (!cup.net) return '';
+    const who = Object.entries(strokes.players).filter(([, v]) => v[i] > 0).map(([id, v]) => `${nm(id)}${v[i] > 1 ? ` (${v[i]})` : ''}`);
+    if (who.length) return `Stroke: ${who.join(', ')}`;
+    if (strokes.sides.a[i]) return `Stroke: ${sa}${strokes.sides.a[i] > 1 ? ` (${strokes.sides.a[i]})` : ''}`;
+    if (strokes.sides.b[i]) return `Stroke: ${sb}${strokes.sides.b[i] > 1 ? ` (${strokes.sides.b[i]})` : ''}`;
+    return 'No strokes on this hole';
+  };
+  const ownSi = cup.si?.[m.round]?.length === 18;
   return (
     <div className="scorecard">
       <div className="sc-sides">
@@ -603,6 +722,7 @@ function Scorecard({ matchId }: { matchId: string }) {
       {!st.decided || sel !== null ? (
         <div className="sc-entry">
           <div className="sc-hole"><span>Hole</span><b>{hole + off}</b>{play[hole] && <small>Change this hole</small>}</div>
+          {cup.net && <div className={`sc-stroke${strokeNote(hole).startsWith('Stroke') ? ' on' : ''}`}>{strokeNote(hole)}<small> · SI {(ownSi ? cup.si![m.round] : DEFAULT_SI)[hole + off - 1]}</small></div>}
           <div className="sc-buttons">
             <button type="button" className={`sc-btn team-a-fill${play[hole] === 'a' ? ' on' : ''}`} onClick={() => save('a')}>{sa}<small>won the hole</small></button>
             <button type="button" className={`sc-btn half${play[hole] === 'half' ? ' on' : ''}`} onClick={() => save('half')}>Halved</button>
@@ -619,10 +739,19 @@ function Scorecard({ matchId }: { matchId: string }) {
         {play.map((h, i) => (
           <button key={i} type="button" aria-pressed={i === hole && (!st.decided || sel !== null)} className={`sc-cell ${h === 'a' ? 'ha' : h === 'b' ? 'hb' : h === 'half' ? 'hh' : ''}`} onClick={() => setSel(i)}>
             <span>{i + off}</span><b>{h === 'a' ? 'W' : h === 'b' ? 'L' : h === 'half' ? '½' : ''}</b>
+            {cup.net && (strokes.sides.a[i] > 0 || strokes.sides.b[i] > 0) && (
+              <i className="sc-dots" aria-label="strokes">{Array.from({ length: strokes.sides.a[i] }, (_, k) => <em key={`a${k}`} className="team-a" />)}{Array.from({ length: strokes.sides.b[i] }, (_, k) => <em key={`b${k}`} className="team-b" />)}</i>
+            )}
           </button>
         ))}
       </div>
-      <p className="hint">W and L are from {cup.duel ? sa : cup.teams[0].name}’s side. Everyone on the trip sees each hole as it’s entered.</p>
+      <p className="hint">W and L are from {cup.duel ? (sa === 'You' ? 'your' : `${sa}’s`) : `${cup.teams[0].name}’s`} side.{cup.net ? ' Dots mark strokes; tap who won the hole after strokes.' : ''} Everyone on the trip sees each hole as it’s entered.</p>
+      {cup.net && (
+        <p className="hint">
+          {ownSi ? 'Strokes follow this course’s stroke index.' : 'Strokes follow a standard stroke-index order.'}{' '}
+          <button type="button" className="link-btn" onClick={() => siSheet(ctx, m.round)}>{ownSi ? 'Edit the stroke index' : 'Enter it from the scorecard'}</button>
+        </p>
+      )}
     </div>
   );
 }

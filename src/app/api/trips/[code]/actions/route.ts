@@ -356,7 +356,10 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           if (two.length !== 2 || two[0] === two[1] || !two.every((c) => ids.has(c))) throw new HttpError(400, 'Pick the two players.');
           const split = [18, 9, 6].includes(Number(b.split)) ? Number(b.split) : 18;
           const teams = two.map((c) => ({ name: nameOf(c), captain: c, members: [c] })) as Cup['teams'];
-          cup = { name: str(b.name, 40) || `${nameOf(two[0])} vs ${nameOf(two[1])}`, teams, drafting: false, matches: [], sitting: {}, duel: true, split };
+          const hcp: Record<string, number> = {};
+          const given = (b.hcp && typeof b.hcp === 'object' ? b.hcp : {}) as Record<string, unknown>;
+          for (const id of two) { const n = Number(given[id]); if (given[id] !== '' && given[id] != null && Number.isFinite(n)) hcp[id] = Math.max(-10, Math.min(54, Math.round(n))); }
+          cup = { name: str(b.name, 40) || `${nameOf(two[0])} vs ${nameOf(two[1])}`, teams, drafting: false, matches: [], sitting: {}, duel: true, split, hcp, net: Object.keys(hcp).length === 2 && b.net !== false };
           pings.push(['others', { title: trip.name, body: `${cup.name} is on. Every ${split === 18 ? 'round' : `${split} holes`} is a match.`, url: url('cup'), tag: 'cup' }, 0]);
         } else if (op === 'setup') {
           mustOrganize(me);
@@ -460,6 +463,27 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
               fresh = row.cup as Cup;
             }
             saved = true;
+          } else if (op === 'hcp') {
+            // Handicaps: the organizer sets anyone's; everyone else can set their own.
+            const vals = (b.values && typeof b.values === 'object' ? b.values : {}) as Record<string, unknown>;
+            const hcp = { ...(cup.hcp || {}) };
+            for (const [id, v] of Object.entries(vals)) {
+              if (!ids.has(id)) continue;
+              if (id !== me.id && !me.is_organizer) throw new HttpError(403, 'You can only set your own handicap.');
+              const n = Number(v);
+              if (v === '' || v === null || !Number.isFinite(n)) delete hcp[id];
+              else hcp[id] = Math.max(-10, Math.min(54, Math.round(n)));
+            }
+            cup.hcp = hcp;
+            if (typeof b.net === 'boolean') { mustOrganize(me); cup.net = b.net; }
+          } else if (op === 'si') {
+            // A course's stroke index (each hole's difficulty rank), from its scorecard. Empty resets it.
+            const round = str(b.round, 40);
+            const list = Array.isArray(b.si) ? b.si.map(Number) : [];
+            const ok = list.length === 18 && new Set(list).size === 18 && list.every((x) => Number.isInteger(x) && x >= 1 && x <= 18);
+            if (list.length && !ok) throw new HttpError(400, 'Enter each number 1 to 18 once, in hole order.');
+            cup.si = { ...(cup.si || {}) };
+            if (ok) cup.si[round] = list; else delete cup.si[round];
           } else if (op === 'delete') {
             mustOrganize(me);
             cup = null;
@@ -530,6 +554,14 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             if (conf) next.confirmation = conf; else delete next.confirmation;
             const time = str(b.time, 12).toUpperCase().replace(/\s*(AM|PM)$/, ' $1');
             if (opt.kind === 'round' && /^(1[0-2]|[1-9]):[0-5]\d (AM|PM)$/.test(time)) next.time = time;
+            // The price actually paid per player: it replaces an estimate and becomes a report for other groups.
+            const fee = Math.round(Number(b.fee));
+            if (opt.kind === 'round' && Number.isFinite(fee) && fee > 0 && fee <= 5000) {
+              next.fee = fee;
+              delete next.estimate;
+              next.checked = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
+              next.checkedAt = new Date().toISOString();
+            }
             paid = Math.round(Number(b.paid) * 100) / 100;
             if (!(paid > 0 && paid < 1000000)) paid = 0;
           }

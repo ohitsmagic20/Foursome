@@ -526,6 +526,63 @@ export interface Cup {
   duel?: boolean;
   /** The usual match length in holes (18, 9 or 6), the default when setting a round's matches. */
   split?: number;
+  /** Play off handicaps: each player's course handicap, and whether strokes are on. */
+  hcp?: Record<string, number>;
+  net?: boolean;
+  /** Stroke index (hole ranking 1–18) per round, from the course's scorecard. */
+  si?: Record<string, number[]>;
+}
+
+/** A common stroke-index order: used until someone enters the course's own from its scorecard. */
+export const DEFAULT_SI = [7, 15, 3, 11, 1, 17, 9, 13, 5, 8, 16, 4, 12, 2, 18, 10, 14, 6];
+
+/** How each format turns handicaps into strokes (USGA-style allowances). */
+export const HCP_RULE: Record<CupFormat, string> = {
+  singles: 'The higher handicap gets the full difference.',
+  bestball: 'Everyone plays off the lowest handicap in the match, at 90% of the difference.',
+  alt: 'Each side is half its combined handicap; the higher side gets the difference.',
+  scramble: 'Each side is 35% of its low handicap plus 15% of its high; the higher side gets the difference.',
+};
+
+/**
+ * Strokes in a match, hole by hole (index 0 is the match's first hole). A full-18 difference is scaled
+ * to the match's length (a 9-hole match gets half), then given on that stretch's hardest holes by stroke index.
+ * For singles and best ball the strokes belong to players; for alternate shot and scramble, to the side.
+ */
+export function matchStrokes(cup: Cup, m: CupMatch): { players: Record<string, number[]>; sides: { a: number[]; b: number[] } } {
+  const none = () => Array.from({ length: m.holes }, () => 0);
+  const out = { players: {} as Record<string, number[]>, sides: { a: none(), b: none() } };
+  if (!cup.net || !cup.hcp) return out;
+  const h = (id: string) => Number(cup.hcp?.[id]) || 0;
+  const si = (cup.si?.[m.round]?.length === 18 ? cup.si[m.round] : DEFAULT_SI);
+  const from = (m.from || 1) - 1;
+  // This stretch's holes, hardest first.
+  const order = Array.from({ length: m.holes }, (_, i) => i).sort((x, y) => (si[from + x] || 99) - (si[from + y] || 99));
+  const spread = (full: number) => {
+    const n = Math.max(0, Math.round((full * m.holes) / 18));
+    const holes = none();
+    for (let k = 0; k < n; k++) holes[order[k % m.holes]]++;
+    return holes;
+  };
+  if (m.format === 'singles' || m.format === 'bestball') {
+    const all = [...m.a, ...m.b];
+    if (!all.length) return out;
+    const low = Math.min(...all.map(h));
+    const pct = m.format === 'bestball' ? 0.9 : 1;
+    for (const id of all) out.players[id] = spread((h(id) - low) * pct);
+    // A side "has" a stroke on a hole when any of its players does (for the dots on the card).
+    for (const [side, ids] of [['a', m.a], ['b', m.b]] as const) out.sides[side] = none().map((_, i) => Math.max(0, ...ids.map((id) => out.players[id][i])));
+    return out;
+  }
+  const team = (ids: string[]) => {
+    const hs = ids.map(h).sort((x, y) => x - y);
+    if (!hs.length) return 0;
+    if (m.format === 'alt') return hs.reduce((t, x) => t + x, 0) / 2;
+    return hs.length > 1 ? 0.35 * hs[0] + 0.15 * hs[hs.length - 1] : hs[0];
+  };
+  const ta = team(m.a), tb = team(m.b);
+  if (ta > tb) out.sides.a = spread(ta - tb); else if (tb > ta) out.sides.b = spread(tb - ta);
+  return out;
 }
 
 /** "Front 9", "Back 9", "Holes 7–12", or '' for a full 18. */

@@ -12,18 +12,42 @@ const fileName = (name: string) => `${name.replace(/[^\w\s-]/g, '').trim().repla
  */
 export function OnePagerButton() {
   const { state, toast } = useTrip();
-  const [busy, setBusy] = useState(false);
-  const make = async () => {
-    setBusy(true);
+  const [busy, setBusy] = useState<'' | 'pdf' | 'image'>('');
+
+  /** The one-pager as a PDF file, built in the browser. Heavy libraries load only now. */
+  const buildPdf = async () => {
+    const origin = window.location.origin;
+    const url = `${origin}/t/${state.trip.code}`;
+    const [{ pdf }, { OnePagerDoc, registerFonts }, QR] = await Promise.all([import('@react-pdf/renderer'), import('./OnePagerDoc'), import('qrcode')]);
+    registerFonts(origin);
+    const qr = await QR.toDataURL(url, { margin: 0, width: 240, color: { dark: '#1e5a3b', light: '#ffffff' } }).catch(() => '');
+    const blob = await pdf(<OnePagerDoc d={buildOnePager(state)} url={url} qr={qr} />).toBlob();
+    return { blob, url };
+  };
+
+  /** The same page as a PNG: group chats show images right in the thread. */
+  const toImage = async (pdfBlob: Blob) => {
+    const pdfjs = await import('pdfjs-dist');
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs';
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await pdfBlob.arrayBuffer()) }).promise;
+    const page = await doc.getPage(1);
+    const viewport = page.getViewport({ scale: 2 }); // 1224 x 1584: sharp on phones, small enough to send
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    const g = canvas.getContext('2d')!;
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: g, viewport }).promise;
+    doc.destroy();
+    return await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('No image'))), 'image/png'));
+  };
+
+  const share = async (kind: 'pdf' | 'image') => {
+    setBusy(kind);
     try {
-      const origin = window.location.origin;
-      const url = `${origin}/t/${state.trip.code}`;
-      // Heavy libraries load only now.
-      const [{ pdf }, { OnePagerDoc, registerFonts }, QR] = await Promise.all([import('@react-pdf/renderer'), import('./OnePagerDoc'), import('qrcode')]);
-      registerFonts(origin);
-      const qr = await QR.toDataURL(url, { margin: 0, width: 240, color: { dark: '#1e5a3b', light: '#ffffff' } }).catch(() => '');
-      const blob = await pdf(<OnePagerDoc d={buildOnePager(state)} url={url} qr={qr} />).toBlob();
-      const file = new File([blob], fileName(state.trip.name), { type: 'application/pdf' });
+      const { blob: pdfBlob, url } = await buildPdf();
+      const blob = kind === 'pdf' ? pdfBlob : await toImage(pdfBlob);
+      const name = fileName(state.trip.name).replace(/\.pdf$/, kind === 'pdf' ? '.pdf' : '.png');
+      const file = new File([blob], name, { type: kind === 'pdf' ? 'application/pdf' : 'image/png' });
       const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
       if (nav.canShare?.({ files: [file] }) && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) {
         try { await nav.share({ files: [file], title: state.trip.name, text: `${state.trip.name}: where things stand. Vote and add ideas: ${url}` }); return; }
@@ -34,26 +58,37 @@ export function OnePagerButton() {
       a.download = file.name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 30000);
-      toast('One-pager downloaded. Drop it in the group chat.');
+      toast(kind === 'pdf' ? 'One-pager downloaded. Drop it in the group chat.' : 'Image downloaded. It shows right in the group chat.');
     } catch (e) {
       console.error(e);
-      toast('Couldn’t make the PDF. Try again in a moment.');
-    } finally { setBusy(false); }
+      toast(kind === 'pdf' ? 'Couldn’t make the PDF. Try again in a moment.' : 'Couldn’t make the image. Try the PDF instead.');
+    } finally { setBusy(''); }
   };
+
   return (
-    <button type="button" className={`onepager-card${busy ? ' busy' : ''}`} onClick={make} disabled={busy} aria-label="Make the trip one-pager PDF and share it">
-      <MiniPage />
-      <span className="onepager-text">
-        <span className="onepager-eyebrow">PDF · one page</span>
-        <span className="onepager-title">{busy ? 'Making your one-pager…' : 'Share the trip one-pager'}</span>
-        <span className="onepager-sub">Where things stand and what’s left, ready for the group chat</span>
-      </span>
-      <span className="onepager-go" aria-hidden="true">
-        {busy ? <span className="spinner" /> : (
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+    <div className="onepager">
+      <button type="button" className={`onepager-card${busy === 'pdf' ? ' busy' : ''}`} onClick={() => share('pdf')} disabled={!!busy} aria-label="Make the trip one-pager PDF and share it">
+        <MiniPage />
+        <span className="onepager-text">
+          <span className="onepager-eyebrow">PDF · one page</span>
+          <span className="onepager-title">{busy === 'pdf' ? 'Making your one-pager…' : 'Share the trip one-pager'}</span>
+          <span className="onepager-sub">Where things stand and what’s left, ready for the group chat</span>
+        </span>
+        <span className="onepager-go" aria-hidden="true">
+          {busy === 'pdf' ? <span className="spinner" /> : (
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3" /><path d="m7 8 5-5 5 5" /><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+          )}
+        </span>
+      </button>
+      <button type="button" className="onepager-alt" onClick={() => share('image')} disabled={!!busy}>
+        {busy === 'image' ? <><span className="spinner" /> Making the image…</> : (
+          <>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.6" /><path d="m21 15-5-5L5 21" /></svg>
+            <span>Or share as an image</span>
+          </>
         )}
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 

@@ -24,6 +24,23 @@ export const Icon = {
   lock: <svg width="14" height="14" viewBox="0 0 24 24" {...sv} strokeWidth={2.2}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>,
 };
 
+/** A section folded into one line; its contents mount only once opened (so they don't load until wanted). */
+export function Fold({ title, meta, icon, children, id }: { title: string; meta?: string; icon?: React.ReactNode; children: React.ReactNode; id?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="card fold" id={id} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary>
+        {icon && <span className="fold-icon" aria-hidden="true">{icon}</span>}
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="row-title">{title}</span>
+          {meta && <span className="row-meta">{meta}</span>}
+        </span>
+      </summary>
+      {open && <div className="fold-body">{children}</div>}
+    </details>
+  );
+}
+
 /** How pricey a round is: $ up to $70, $$ up to $120, $$$ above. Nothing when there's no price. */
 export function Tier({ fee, inline = false }: { fee: number | null | undefined; inline?: boolean }) {
   const t = priceTier(fee);
@@ -264,6 +281,9 @@ function BookedForm({ ctx, option }: { ctx: TripCtx; option: Option<Record<strin
   const n = ctx.state.members.length;
   const expected = round ? (Number(option.data.fee) || 0) * n : Number(option.data.total) || 0;
   const [time, setTime] = useState(String(option.data.time || ''));
+  // What each player actually paid: replaces an estimate or "Price TBD", and teaches other groups the price.
+  const known = round && Number(option.data.fee) > 0 && !option.data.estimate;
+  const [fee, setFee] = useState(known ? String(option.data.fee) : '');
   const [conf, setConf] = useState('');
   const [prepaid, setPrepaid] = useState(!round);
   const [paid, setPaid] = useState(expected ? String(expected) : '');
@@ -272,7 +292,7 @@ function BookedForm({ ctx, option }: { ctx: TripCtx; option: Option<Record<strin
     <form className="form" onSubmit={async (e) => {
       e.preventDefault();
       setBusy(true);
-      const ok = await ctx.act('set_booking', { optionId: option.id, booked: true, confirmation: conf, time: round ? time : undefined, paid: prepaid ? Number(paid) || 0 : 0 });
+      const ok = await ctx.act('set_booking', { optionId: option.id, booked: true, confirmation: conf, time: round ? time : undefined, ...(round && Number(fee) > 0 ? { fee: Number(fee) } : {}), paid: prepaid ? Number(paid) || 0 : 0 });
       setBusy(false);
       if (ok) { ctx.sheet(null); ctx.toast(prepaid && Number(paid) ? 'Booked, and added to settle up' : 'Marked booked. The group’s been told.'); }
     }}>
@@ -282,12 +302,20 @@ function BookedForm({ ctx, option }: { ctx: TripCtx; option: Option<Record<strin
           <input id="bk-time" value={time} onChange={(e) => setTime(e.target.value)} placeholder="1:10 PM" />
         </div>
       )}
+      {round && (
+        <div className={`field${known ? '' : ' ask-price'}`}>
+          <label htmlFor="bk-fee">What did each player pay? ($)</label>
+          <input id="bk-fee" type="number" inputMode="decimal" min={0} step="any" value={fee} placeholder={option.data.fee ? `About ${option.data.fee}` : 'Greens fee per player'}
+            onChange={(e) => { setFee(e.target.value); if (prepaid && Number(e.target.value)) setPaid(String(Number(e.target.value) * n)); }} />
+          <p className="hint">{known ? 'Change it if the price was different.' : 'This round had no confirmed price. Adding it fixes the trip’s cost and helps other groups going there.'}</p>
+        </div>
+      )}
       <div className="field">
         <label htmlFor="bk-conf">Confirmation number <span style={{ fontWeight: 400 }}>(optional)</span></label>
         <input id="bk-conf" value={conf} onChange={(e) => setConf(e.target.value)} maxLength={40} autoComplete="off" />
       </div>
       <label className="check-row">
-        <input type="checkbox" checked={prepaid} onChange={(e) => setPrepaid(e.target.checked)} />
+        <input type="checkbox" checked={prepaid} onChange={(e) => { setPrepaid(e.target.checked); if (e.target.checked && round && Number(fee)) setPaid(String(Number(fee) * n)); }} />
         <span>{round ? 'I paid for everyone up front' : 'I paid for the stay'}</span>
       </label>
       {prepaid && (

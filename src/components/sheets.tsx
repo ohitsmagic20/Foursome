@@ -279,6 +279,8 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
   const [course, setCourse] = useState(d?.course ?? prefillCourse ?? '');
   const [url, setUrl] = useState(d?.url ?? prefillUrl ?? '');
   const [day, setDay] = useState(Math.min(d?.day || startDay, days));
+  const [twice, setTwice] = useState(false);
+  const [pm, setPm] = useState('');
   const [fee, setFee] = useState(d?.fee ? String(d.fee) : '');
   const [prices, setPrices] = useState<CoursePrices | null>(null);
   // The course picked from the database (keeps its id, location and type). Typing a new name clears it.
@@ -365,7 +367,16 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
             where: picked.city ? `${picked.city}, ${picked.state}` : d?.where || '',
           } : {}),
         };
-        return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
+        if (opt) return save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved');
+        if (!twice) return save(ctx, 'add_option', { kind: 'round', data }, 'Round added to the vote');
+        // 36 holes: the afternoon round goes in alongside, same day (same course unless another is named).
+        return (async () => {
+          if (!(await ctx.act('add_option', { kind: 'round', data }))) return;
+          const pmCourse = pm.trim() || course.trim();
+          const same = pmCourse.toLowerCase() === course.trim().toLowerCase();
+          const second = { ...data, course: pmCourse, time: fd.time2 || '1:30 PM', url: same ? url : '', courseId: same ? (data as { courseId?: string }).courseId : undefined, fee: same ? data.fee : 0, ...(same ? {} : { estimate: true, checked: '', checkedAt: '' }) };
+          if (await ctx.act('add_option', { kind: 'round', data: second })) { ctx.sheet(null); ctx.toast('Both rounds added: 36 holes that day'); }
+        })();
       }}
       extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
       <PlaceField ctx={ctx} opt={opt} />
@@ -404,6 +415,21 @@ function RoundForm({ ctx, opt, day: startDay, prefillCourse, prefillUrl }: { ctx
         </select>
       </div>
       <TimeField name="time" label="First tee time" defaultValue={d?.time} hint={state.members.length > 4 ? `${Math.ceil(state.members.length / 4)} tee times in a row` : undefined} />
+      {!opt && (
+        <div className={`thirtysix${twice ? ' on' : ''}`}>
+          <label className="check-row"><input type="checkbox" checked={twice} onChange={(e) => setTwice(e.target.checked)} /> Playing 36 this day</label>
+          {twice && (
+            <>
+              <div className="field">
+                <label htmlFor="f-pm">Afternoon course</label>
+                <input id="f-pm" value={pm} onChange={(e) => setPm(e.target.value)} placeholder={course.trim() ? `${course.trim()} again` : 'Same course, or another'} autoComplete="off" />
+              </div>
+              <TimeField name="time2" label="Afternoon tee time" defaultValue="1:30 PM" />
+              <p className="hint">Both go in the vote as rounds on {dayName || `day ${day}`}. In the cup, each round gets its own matches.</p>
+            </>
+          )}
+        </div>
+      )}
       <div className="field">
         <label htmlFor="f-fee">Greens fee per player ($)</label>
         <input id="f-fee" name="fee" type="number" inputMode="decimal" min={0} step="any" value={fee} onChange={(e) => setFee(e.target.value)} placeholder={range ? `Leave blank to use ~$${range.median}` : 'Optional: add it once you know'} />

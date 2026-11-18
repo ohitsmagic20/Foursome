@@ -6,7 +6,7 @@ import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
 import { PlaceSwitcher, usePlaces } from '../Places';
-import { BookingRow, Callout, Chip, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip } from '../ui';
+import { BookingRow, Callout, Chip, Fold, Icon, LockButton, Tally, Tier, VoteControl, canEdit, useTrip } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
 import { CupDropdown } from '../Cup';
@@ -55,7 +55,6 @@ export function GolfTab() {
       )}
       <div className="section-head"><h2>{choosing && where ? `Rounds in ${where}` : 'Rounds'}</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
-      <IdeaRounds />
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const rs = rounds.filter((r) => r.data.day === d).sort((a, b) => Number(b.locked) - Number(a.locked) || teeMinutes(a.data.time) - teeMinutes(b.data.time));
         const planned = plan.filter((r) => r.data.day === d).length;
@@ -76,8 +75,10 @@ export function GolfTab() {
         </section>
       )}
       {wx.data && <WeatherCredit />}
+      {/* Finding more courses: folded away so the rounds stay near the top. */}
+      <IdeaRounds />
       {destOpt
-        ? <CoursesNearby dest={destOpt.data.name} />
+        ? <Fold title={`Find courses near ${where || destOpt.data.name.split(',')[0]}`} meta="Nearby courses with prices, ratings and type" icon={Icon.golf}><CoursesNearby dest={destOpt.data.name} bare /></Fold>
         : <p className="hint">Pick a destination to see courses nearby.</p>}
     </>
   );
@@ -96,8 +97,7 @@ function IdeaRounds() {
   const missing = idea.rounds.filter((r) => !have.has(r.course.toLowerCase()));
   if (missing.length < 2) return null;
   return (
-    <div className="card idea-rounds">
-      <div className="row-title">Courses from our {idea.name} trip idea</div>
+    <Fold title={`Courses from our ${idea.name} trip idea`} meta={`${missing.length} courses not in the vote yet`} icon={Icon.trip}>
       <div className="list">
         {missing.map((r) => (
           <div className="row" key={r.course}>
@@ -110,7 +110,7 @@ function IdeaRounds() {
         <button className="btn primary" onClick={async () => { if (await act('add_idea_rounds', { slug: idea.slug, dest: place.id })) toast(`Added ${missing.length} rounds to the vote`); }}>Add all {missing.length} to the vote</button>
         <a className="btn" href={`/ideas/${idea.slug}`} target="_blank" rel="noopener noreferrer">See the trip idea</a>
       </div>
-    </div>
+    </Fold>
   );
 }
 

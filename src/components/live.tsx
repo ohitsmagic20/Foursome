@@ -131,7 +131,7 @@ function googleFor(c: NearbyCourse, places: GooglePlace[]): GooglePlace | null {
   return best;
 }
 
-export function CoursesNearby({ dest }: { dest: string }) {
+export function CoursesNearby({ dest, bare = false }: { dest: string; bare?: boolean }) {
   const ctx = useTrip();
   const [radius, setRadius] = useState(30);
   const [showPrivate, setShowPrivate] = useState(false);
@@ -150,7 +150,7 @@ export function CoursesNearby({ dest }: { dest: string }) {
 
   return (
     <section className="section">
-      <div className="section-head"><h2>Courses near {dest.split(',')[0]}</h2>
+      <div className="section-head">{bare ? <span className="row-meta">Public and resort courses by distance</span> : <h2>Courses near {dest.split(',')[0]}</h2>}
         <select aria-label="Distance" value={radius} onChange={(e) => { setRadius(Number(e.target.value)); setLimit(8); }} className="mini-select">
           <option value={15}>15 mi</option><option value={30}>30 mi</option><option value={50}>50 mi</option>
         </select>
