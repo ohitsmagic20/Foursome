@@ -16,7 +16,7 @@ function useCourseStops(dest: Option<DestinationData> | null) {
   const rounds = dest ? inPlace<RoundData>(state, 'round', dest.id) : [];
   const planned = rounds.filter((r) => r.locked);
   const use = (planned.length ? planned : rounds).slice().sort((a, b) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time));
-  const stops: Stop[] = use.map((r, i) => ({ name: r.data.course, label: String(i + 1), courseId: r.data.courseId }));
+  const stops: Stop[] = use.map((r, i) => ({ name: r.data.course, label: String(i + 1), courseId: r.data.courseId, day: r.data.day }));
   const airport = dest ? destAirports(dest.data)[0] : undefined;
   const map = useTripCourses(dest?.data.name, airport, stops);
   return { stops, map, planned: planned.length > 0, airport };
@@ -80,9 +80,9 @@ export function StayMap({ dest, stays }: { dest: Option<DestinationData>; stays:
     <div className="card stay-map">
       <div className="row-title">Where the stays are</div>
       <div className="row-meta" style={{ marginBottom: 8 }}>
-        {stops.length ? `Houses are the stays; numbers are the ${planned ? 'rounds in the plan' : 'suggested rounds'}, in order.` : 'Add rounds on the Golf tab to see how far each stay is from the courses.'}
+        {stops.length ? `Houses are the stays, with the route from the airport to each; numbers are the ${planned ? 'rounds in the plan' : 'suggested rounds'}.` : 'Houses are the stays, with the route from the airport. Add rounds on the Golf tab to see drives to the courses.'}
       </div>
-      <TripMap place={dest.data.name} airport={airport} stops={stops} data={map.data} homes={homes} legs={false} />
+      <TripMap place={dest.data.name} airport={airport} stops={stops} data={map.data} homes={homes} legs={false} lines="airport" />
       <ol className="stay-map-list">
         {placed.map((o) => {
           const d = dist.get(o.id)!;

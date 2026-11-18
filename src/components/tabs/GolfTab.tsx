@@ -34,7 +34,7 @@ export function GolfTab() {
   const unpriced = (plan.length ? plan : rounds).filter((r) => !Number(r.data.fee)).length;
   // Every round's course, looked up once for the map and the cards.
   const stopOf = (r: Option<RoundData>, label: string): Stop => ({
-    name: r.data.course, label, courseId: r.data.courseId,
+    name: r.data.course, label, courseId: r.data.courseId, day: r.data.day,
     search: r.data.fromTemplate ? templateBySlug(r.data.fromTemplate)?.rounds.find((x) => x.course === r.data.course)?.mapAs : undefined,
   });
   const byTime = (a: Option<RoundData>, b: Option<RoundData>) => a.data.day - b.data.day || teeMinutes(a.data.time) - teeMinutes(b.data.time);
@@ -44,16 +44,33 @@ export function GolfTab() {
   const known = useKnownPrices(rounds);
   // Where the group sleeps, as a house pin on the course map.
   const stay = pickOf<LodgingData>(state, 'lodging', ctx.place).option;
-  // Drive from the stay to each course on the map.
+  // Each round's drive, the way the day goes: the day's first round from the stay, a second (36 holes)
+  // from the morning's course. Built from the same rounds as the map: the plan, else every suggestion.
   const stayPt = stay?.data.lat && stay.data.lon ? { lat: stay.data.lat, lon: stay.data.lon } : null;
   const courseList = all.data?.courses || [];
-  const drives = useDriveTable(stayPt ? [stayPt] : [], stayPt ? courseList.map((c) => ({ lat: c.lat, lon: c.lon })) : []);
+  const at = (r: Option<RoundData>) => courseList.find((c) => c.name === r.data.course);
+  const seq = (plan.length ? plan : rounds).slice().sort(byTime);
+  const chain = new Map<string, { from: { lat: number; lon: number }; to: { lat: number; lon: number }; fromName: string | null }>();
+  seq.forEach((r, i) => {
+    const to = at(r);
+    if (!to) return;
+    const prev = i > 0 && seq[i - 1].data.day === r.data.day ? seq[i - 1] : null;
+    const prevAt = prev ? at(prev) : null;
+    if (prev && prevAt) chain.set(r.id, { from: prevAt, to, fromName: prev.data.course });
+    else if (stayPt) chain.set(r.id, { from: stayPt, to, fromName: null });
+  });
+  const chainList = [...chain.entries()];
+  const drives = useDriveTable(chainList.map(([, c]) => c.from), chainList.map(([, c]) => c.to));
+  const stayShort = stay ? stay.data.name.split(/[,(·]/)[0].trim() : '';
   const fromStay = (r: Option<RoundData>) => {
-    const i = courseList.findIndex((c) => c.name === r.data.course);
-    if (!stayPt || i < 0) return undefined;
-    const l = legOf(drives, 0, i, stayPt, courseList[i]);
-    const short = stay!.data.name.split(/[,(·]/)[0].trim();
-    return `${l.est ? '~' : ''}${driveLabel(l.min)} from ${short.length <= 14 ? short : 'the stay'}`;
+    const k = chainList.findIndex(([id]) => id === r.id);
+    if (k < 0) return undefined;
+    const c = chainList[k][1];
+    if (c.fromName && c.fromName === r.data.course) return 'Same course, second round';
+    const l = legOf(drives, k, k, c.from, c.to);
+    const course = c.fromName ? c.fromName.split('(')[0].trim() : '';
+    const from = c.fromName ? (course.length <= 20 ? course : 'the morning course') : stayShort.length <= 14 ? stayShort : 'the stay';
+    return `${l.est ? '~' : ''}${driveLabel(l.min)} from ${from}`;
   };
 
   return (
