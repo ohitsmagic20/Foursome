@@ -18,10 +18,14 @@ export function OnePagerButton() {
   const buildPdf = async () => {
     const origin = window.location.origin;
     const url = `${origin}/t/${state.trip.code}`;
-    const [{ pdf }, { OnePagerDoc, registerFonts }, QR] = await Promise.all([import('@react-pdf/renderer'), import('./OnePagerDoc'), import('qrcode')]);
+    const [{ pdf }, { OnePagerDoc, registerFonts }, QR, { tripMapImage }] = await Promise.all([import('@react-pdf/renderer'), import('./OnePagerDoc'), import('qrcode'), import('./staticMap')]);
+    // The trip map (airport, stay, courses and the drives between them), drawn here as a picture.
+    // A shorter map while places are still being compared (that table needs the room).
+    const open = !state.options.some((o) => o.kind === 'destination' && o.locked) && state.options.filter((o) => o.kind === 'destination').length > 1;
+    const map = await tripMapImage(state, 1088, open ? 270 : 360).catch(() => null);
     registerFonts(origin);
     const qr = await QR.toDataURL(url, { margin: 0, width: 240, color: { dark: '#1e5a3b', light: '#ffffff' } }).catch(() => '');
-    const blob = await pdf(<OnePagerDoc d={buildOnePager(state)} url={url} qr={qr} />).toBlob();
+    const blob = await pdf(<OnePagerDoc d={buildOnePager(state, new Date(), !!map)} url={url} qr={qr} map={map} />).toBlob();
     return { blob, url };
   };
 

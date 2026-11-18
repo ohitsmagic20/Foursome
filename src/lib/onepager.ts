@@ -30,7 +30,8 @@ export interface OnePager {
 const first = (n: string) => n.trim().split(/\s+/)[0] || n;
 const short = (place: string) => place.split(',')[0];
 
-export function buildOnePager(state: TripState, now = new Date()): OnePager {
+/** `withMap`: the page also carries the trip map, so the lists are shorter to stay on one page. */
+export function buildOnePager(state: TripState, now = new Date(), withMap = false): OnePager {
   const n = state.members.length;
   const date = pickOf<DateData>(state, 'date');
   const dest = pickOf<DestinationData>(state, 'destination');
@@ -70,7 +71,7 @@ export function buildOnePager(state: TripState, now = new Date()): OnePager {
   const byDay = new Map<number, Option<RoundData>[]>();
   for (const r of rounds) byDay.set(r.data.day, [...(byDay.get(r.data.day) || []), r]);
   // Room for about 8 rounds on the page; a longer trip shows the first ones and says how many more.
-  let room = !dest.locked && dests.length > 1 ? 6 : 8;
+  let room = (!dest.locked && dests.length > 1 ? 6 : 8) - (withMap ? 3 : 0);
   const days: PlanDay[] = [...byDay.entries()].filter(([, all]) => all.length > 0).map(([d, all]) => { const rs = all.slice(0, Math.min(3, room)); room -= rs.length; return [d, rs] as const; }).map(([d, rs]) => ({
     label: date.option ? dayLabel(date.option.data.start, d) : `Day ${d}`,
     rounds: rs.map((r) => ({
@@ -210,6 +211,6 @@ export function buildOnePager(state: TripState, now = new Date()): OnePager {
     asOf: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     facts, checklist, places, days, daysNote, stay: stayInfo, cost, costNote, crew, cup,
     highlights: highlights.slice(0, 4),
-    todo: todo.slice(0, 6),
+    todo: todo.slice(0, withMap ? 5 : 6),
   };
 }

@@ -40,6 +40,11 @@ const s = StyleSheet.create({
   factV: { fontFamily: 'Barlow', fontWeight: 700, fontSize: 17, marginTop: 3, lineHeight: 1.05 },
   factN: { fontSize: 7.5, color: C.muted, marginTop: 2 },
   cols: { flexDirection: 'row' },
+  mapBox: { marginBottom: 10 },
+  mapKey: { marginTop: 4, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  keyMark: { width: 7, height: 7, marginRight: 3 },
+  keyLine: { width: 12, height: 2, marginRight: 3 },
+  keyText: { fontSize: 7, color: C.muted, marginRight: 10 },
   costStrip: { flexDirection: 'row', alignItems: 'center', marginTop: -4, marginBottom: 10, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: C.line, borderRadius: 8 },
   left: { flex: 1.55, marginRight: 16 },
   right: { flex: 1 },
@@ -79,7 +84,7 @@ function Facts({ facts }: { facts: OnePager['facts'] }) {
   );
 }
 
-export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: string }) {
+export function OnePagerDoc({ d, url, qr, map }: { d: OnePager; url: string; qr: string; map?: { src: string; w: number; h: number } | null }) {
   return (
     <Document title={`${d.title} · trip one-pager`} author="Foresome" creator="Foresome">
       {/* One page: every list is capped (see buildOnePager) so a full trip still fits. */}
@@ -106,10 +111,22 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
             <Text style={[s.meta, { flex: 1, textAlign: 'right', fontSize: 7 }]}>{d.costNote || 'Averages; the stay splits by bed.'}</Text>
           </View>
 
-          {d.highlights.length > 0 && (
+          {d.highlights.length > 0 && !map && (
             <View style={s.hl}>
               <Text style={[s.factK, { color: C.warn, marginBottom: 3 }]}>Highlights</Text>
               <Text style={{ fontSize: 9.5, fontWeight: 600 }}>{d.highlights.join('   ·   ')}</Text>
+            </View>
+          )}
+
+          {map && (
+            <View style={s.mapBox}>
+              <Image src={map.src} style={{ width: 544, height: (544 * map.h) / map.w, borderRadius: 8 }} />
+              <View style={s.mapKey}>
+                <View style={[s.keyMark, { backgroundColor: '#b0412c', borderRadius: 2 }]} /><Text style={s.keyText}>Where we stay</Text>
+                <View style={[s.keyMark, { backgroundColor: C.green, borderRadius: 4 }]} /><Text style={s.keyText}>Rounds, numbered in order</Text>
+                <View style={[s.keyLine, { backgroundColor: C.green }]} /><Text style={s.keyText}>Each day’s drive: from the stay, then course to course</Text>
+                <View style={[s.keyLine, { backgroundColor: '#5b6a61', height: 1.2 }]} /><Text style={s.keyText}>From the airport</Text>
+              </View>
             </View>
           )}
 
@@ -170,9 +187,17 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
                 ) : <Text style={s.meta}>No houses or hotels suggested yet.</Text>}
               </View>
 
+              {d.cup && map && (
+                <View style={[s.card, { backgroundColor: C.flagSoft, borderColor: C.flag, flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }]}>
+                  <Text style={[s.factK, { color: C.warn, marginRight: 8 }]}>{d.cup.title}</Text>
+                  <Text style={{ fontFamily: 'Barlow', fontWeight: 700, fontSize: 11, flex: 1 }}>{d.cup.line}</Text>
+                </View>
+              )}
             </View>
 
             <View style={s.right}>
+{!map && (
+<>
               <Text style={s.h}>Where things stand</Text>
               <View style={s.card}>
                 {d.checklist.map((c) => (
@@ -186,6 +211,8 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
                 ))}
               </View>
 
+</>
+)}
               <Text style={s.h}>Still to work on</Text>
               <View style={[s.card, { backgroundColor: C.warnSoft, borderColor: C.warnSoft }]}>
                 {d.todo.length === 0 && <Text style={{ fontWeight: 600, color: C.good }}>Nothing left. Just show up and play.</Text>}
@@ -194,7 +221,27 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
                 ))}
               </View>
 
-              {d.cup && (
+              {map && (
+                <>
+          <View>
+                    <Text style={s.h}>The crew · {d.crew.length}</Text>
+                    <Text style={[s.meta, { fontSize: 7 }]}>Green: flight picked.{d.crew.some((p) => p.organizer) ? ` Organizer: ${d.crew.find((p) => p.organizer)!.full}.` : ''}</Text>
+                  </View>
+                  <View style={s.card}>
+                    {/* One flowing line of names: it fits any crew size. Green: flight picked. */}
+                    <Text style={{ fontSize: 8.5, lineHeight: 1.5 }}>
+                      {d.crew.map((p, k) => (
+                        <Text key={p.full}>
+                          <Text style={{ fontWeight: 700, color: p.flight ? C.good : C.ink }}>{p.name}</Text>
+                          
+                          {k < d.crew.length - 1 ? <Text style={{ color: C.line }}>{'   ·   '}</Text> : null}
+                        </Text>
+                      ))}
+                    </Text>
+                  </View>
+                </>
+              )}
+              {d.cup && !map && (
                 <View style={[s.card, { backgroundColor: C.flagSoft, borderColor: C.flag }]}>
                   <Text style={[s.factK, { color: C.warn }]}>{d.cup.title}</Text>
                   <Text style={{ fontFamily: 'Barlow', fontWeight: 700, fontSize: 14, marginTop: 2 }}>{d.cup.line}</Text>
@@ -202,6 +249,8 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
               )}
             </View>
           </View>
+{!map && (
+<>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <Text style={s.h}>The crew · {d.crew.length}</Text>
             <Text style={[s.meta, { fontSize: 7 }]}>Green: flight picked.{d.crew.some((p) => p.organizer) ? ` Organizer: ${d.crew.find((p) => p.organizer)!.full}.` : ''}</Text>
@@ -211,13 +260,15 @@ export function OnePagerDoc({ d, url, qr }: { d: OnePager; url: string; qr: stri
             <Text style={{ fontSize: 8.5, lineHeight: 1.5 }}>
               {d.crew.map((p, k) => (
                 <Text key={p.full}>
-                  <Text style={{ fontWeight: 700, color: p.flight ? C.good : C.ink }}>{p.name.replace(/ /g, '\u00a0')}</Text>
+                  <Text style={{ fontWeight: 700, color: p.flight ? C.good : C.ink }}>{p.name}</Text>
                   {p.from && d.crew.length <= 16 ? <Text style={s.meta}>{'\u00a0'}{p.from}</Text> : null}
                   {k < d.crew.length - 1 ? <Text style={{ color: C.line }}>{'   ·   '}</Text> : null}
                 </Text>
               ))}
             </Text>
           </View>
+</>
+)}
         </View>
 
         <View style={s.footer} fixed>

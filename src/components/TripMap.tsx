@@ -11,11 +11,11 @@ export interface Stop { name: string; label: string; search?: string; courseId?:
 /** A place to stay, drawn as a house pin (not joined to the route). */
 export interface Home { label: string; name: string; lat: number; lon: number }
 export type MapCourse = Partial<Omit<CourseInfo, 'name' | 'lat' | 'lon'>> & { name: string; lat: number; lon: number };
-interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: MapCourse[] }
+export interface MapData { center: { lat: number; lon: number }; airport: { code: string; lat: number; lon: number } | null; courses: MapCourse[] }
 
 /* One request per trip for the map and the round cards: the answer is shared and kept for the visit. */
 const cache = new Map<string, Promise<MapData>>();
-function mapUrl(place: string, airport: string | undefined, stops: Stop[]) {
+export function mapUrl(place: string, airport: string | undefined, stops: Stop[]) {
   const q = new URLSearchParams({ place });
   if (airport) q.set('airport', airport);
   const names = [...new Set(stops.map((s) => (s.courseId ? `${s.name}::id:${s.courseId}` : s.search ? `${s.name}::${s.search}` : s.name)))];
