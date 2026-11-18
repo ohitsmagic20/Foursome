@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import type { Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, CUP_MARGINS, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, marginsFor, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { findStay, geocode } from '@/lib/geo';
 import { notify, type PushMessage } from '@/lib/push';
@@ -349,7 +349,16 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (cup) cup = { ...cup, teams: cup.teams.map((t) => ({ ...t, members: t.members.filter((id) => ids.has(id)) })) as Cup['teams'] };
         const onTeam = (id: string) => (cup ? cup.teams.findIndex((t) => t.members.includes(id)) : -1);
         let saved = false;
-        if (op === 'setup') {
+        if (op === 'setup' && b.mode === 'duel') {
+          // Two people, one on one: each is their own side, and every match goes on the record.
+          mustOrganize(me);
+          const two = (Array.isArray(b.players) ? b.players : []).map(String);
+          if (two.length !== 2 || two[0] === two[1] || !two.every((c) => ids.has(c))) throw new HttpError(400, 'Pick the two players.');
+          const split = [18, 9, 6].includes(Number(b.split)) ? Number(b.split) : 18;
+          const teams = two.map((c) => ({ name: nameOf(c), captain: c, members: [c] })) as Cup['teams'];
+          cup = { name: str(b.name, 40) || `${nameOf(two[0])} vs ${nameOf(two[1])}`, teams, drafting: false, matches: [], sitting: {}, duel: true, split };
+          pings.push(['others', { title: trip.name, body: `${cup.name} is on. Every ${split === 18 ? 'round' : `${split} holes`} is a match.`, url: url('cup'), tag: 'cup' }, 0]);
+        } else if (op === 'setup') {
           mustOrganize(me);
           const caps = (Array.isArray(b.captains) ? b.captains : []).map(String);
           if (caps.length !== 2 || caps[0] === caps[1] || !caps.every((c) => ids.has(c))) throw new HttpError(400, 'Pick two different captains.');
@@ -386,16 +395,19 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
             const roundId = str(b.round, 40);
             const { data: round } = await db().from('options').select('id,data,locked').eq('id', roundId).eq('trip_id', trip.id).eq('kind', 'round').maybeSingle();
             if (!round || !round.locked) throw new HttpError(400, 'Add the round to the plan first.');
-            const format = (Object.keys(CUP_FORMATS).includes(String(b.format)) ? b.format : 'scramble') as CupFormat;
+            const format = (cup.duel ? 'singles' : Object.keys(CUP_FORMATS).includes(String(b.format)) ? b.format : 'scramble') as CupFormat;
             const holes = Number(b.holes) === 9 ? 9 : 18;
+            // Each match can be the whole round or a piece of it: 9 holes, 6 holes, any length from 3 up.
+            const split = Math.min(holes, Math.max(3, int(b.split, 3, 18, holes)));
             if (cup.matches.some((m) => m.round === roundId && m.result) && b.force !== true) throw new HttpError(409, 'Results are already in for this round. Clear them first.');
-            const built = buildMatches(cup, roundId, format, holes, Number(b.seed) || Date.now() % 100000);
+            const built = buildMatches(cup, roundId, format, holes, Number(b.seed) || Date.now() % 100000, split);
             if (!built.matches.length) throw new HttpError(400, `Each team needs at least ${CUP_FORMATS[format].per} players for ${CUP_FORMATS[format].label.toLowerCase()}.`);
             cup.matches = [...cup.matches.filter((m) => m.round !== roundId), ...built.matches];
             cup.sitting = { ...(cup.sitting || {}), [roundId]: built.sitting };
             // The matches are the tee-time groups.
             await db().from('options').update({ data: { ...(round.data as object), groups: groupsFromMatches(built.matches, built.sitting) } }).eq('id', roundId);
-            pings.push(['others', { title: cup.name, body: `Matches are set for ${String((round.data as { course?: string }).course)}: ${CUP_FORMATS[format].label.toLowerCase()}, ${holes} holes.`, url: url('cup'), tag: 'cup' }, 0]);
+            const each = split < holes ? `${Math.ceil(holes / split)} matches of ${split} holes` : `${holes} holes`;
+            pings.push(['others', { title: cup.name, body: `Matches are set for ${String((round.data as { course?: string }).course)}: ${cup.duel ? each : `${CUP_FORMATS[format].label.toLowerCase()}, ${each}`}.`, url: url('cup'), tag: 'cup' }, 0]);
           } else if (op === 'clear_round') {
             mustOrganize(me);
             const roundId = str(b.round, 40);
@@ -422,7 +434,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
               } else {
                 const r = b.result === 'a' || b.result === 'b' || b.result === 'half' ? b.result : null;
                 m.result = r;
-                m.margin = r && r !== 'half' && CUP_MARGINS.includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
+                m.margin = r && r !== 'half' && marginsFor(m.holes).includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
                 m.auto = false;
               }
               fresh.v = v + 1;

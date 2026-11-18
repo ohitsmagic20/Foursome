@@ -731,3 +731,11 @@ details[open]:not(.resort-state) > summary::before { transform: rotate(45deg); m
 .cup-preview-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--line); font-weight: 600; }
 .cup-preview-total b { font-family: var(--font-display), sans-serif; font-size: 18px; }
 .cup-preview .btn.primary { align-self: flex-start; }
+
+/* Match play: one on one, matches can be pieces of a round */
+.duel-vs { display: flex; align-items: baseline; justify-content: center; gap: 12px; font-family: var(--font-display), sans-serif; font-size: 26px; font-weight: 700; }
+.match-seg { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.cup-len { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cup-make { display: flex; flex-direction: column; gap: 10px; }
+.cup-make > .btn.primary { align-self: flex-start; }
+.cup-len .seg button { white-space: nowrap; padding-left: 10px; padding-right: 10px; }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
-import { CUP_FORMATS, CUP_MARGINS, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
+import { CUP_FORMATS, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
 import type { HoleWin } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
@@ -11,9 +11,9 @@ import { Icon, useTrip, type TripCtx } from './ui';
 const TEAM_CLASS = ['team-a', 'team-b'] as const;
 
 /** Team match play for the trip, Internet Invitational style: captains, a draft, a point a match. */
-/** Whether the trip shows a Cup tab: once there's a cup, or a group big enough for one (4+). */
+/** Whether the trip shows a Cup tab: once there's a cup, a group big enough for one (4+), or two people for match play. */
 export function hasCupTab(state: TripCtx['state']): boolean {
-  return !!state.trip.cup || state.members.length >= 4;
+  return !!state.trip.cup || state.members.length >= 4 || state.members.length === 2;
 }
 
 /** The Cup tab: set-up for the organizer, the draft, then the scoreboard and matches. */
@@ -78,7 +78,9 @@ export function CupDropdown() {
   const cup = state.trip.cup;
   const score = cup ? cupScore(cup) : null;
   const live = cup ? cupLive(cup) : null;
+  const rec = cup?.duel ? duelRecord(cup) : null;
   const line = !cup ? 'Not set up yet · see a preview'
+    : rec ? `${cup.teams[0].name} ${rec.w}–${rec.l}${rec.h ? `–${rec.h}` : ''} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`
     : cup.drafting ? 'The draft is on'
     : `${cup.teams[0].name} ${pts(score!.a)} · ${pts(score!.b)} ${cup.teams[1].name}${live!.live ? ` · ${live!.live} live` : ''}`;
   return (
@@ -86,7 +88,7 @@ export function CupDropdown() {
       <summary>
         <span className="cup-drop-icon" aria-hidden="true">{Icon.cup}</span>
         <span className="grow" style={{ minWidth: 0 }}>
-          <span className="eyebrow" style={{ display: 'block' }}>{cup ? cup.name : 'The Cup'}</span>
+          <span className="eyebrow" style={{ display: 'block' }}>{cup ? (cup.duel ? `Match play · ${cup.name}` : cup.name) : state.members.length === 2 ? 'Match play' : 'The Cup'}</span>
           <span className="row-title">{line}</span>
         </span>
       </summary>
@@ -103,6 +105,7 @@ function CupPreview() {
   const ctx = useTrip();
   const { state, me } = ctx;
   const n = state.members.length;
+  if (n === 2) return <DuelPreview />;
   // Fill out to foursomes: an even number of players, in groups of four.
   const seats = Math.max(4, Math.ceil(n / 4) * 4);
   const perTeam = seats / 2;
@@ -153,6 +156,71 @@ function CupPreview() {
   );
 }
 
+/** Match play for two: who plays whom, and how many matches the planned rounds make at 18, 9 or 6 holes each. */
+function DuelPreview() {
+  const ctx = useTrip();
+  const { state, me } = ctx;
+  const [split, setSplit] = useState(9);
+  const [a, b] = state.members;
+  const nm = (id: string) => (id === me?.id ? 'You' : firstName(state.members.find((m) => m.id === id)?.name || ''));
+  const rounds = plannedRounds(state, ctx.place).slice().sort((x, y) => x.data.day - y.data.day || teeMinutes(x.data.time) - teeMinutes(y.data.time));
+  const date = pickOf<DateData>(state, 'date').option?.data.start;
+  const per = Math.ceil(18 / split);
+  const total = rounds.length * per;
+  return (
+    <div className="cup-preview">
+      <div className="duel-vs"><span className="team-a-text">{nm(a.id)}</span><span className="match-vs">vs</span><span className="team-b-text">{nm(b.id)}</span></div>
+      <p className="sub">One on one match play, kept as a running record. Each match is a point; pick how long a match is.</p>
+      <div className="seg seg-small" role="group" aria-label="Match length">
+        {[18, 9, 6].map((x) => <button key={x} type="button" aria-pressed={split === x} onClick={() => setSplit(x)}>{x === 18 ? 'Full 18' : `Every ${x}`}</button>)}
+      </div>
+      {rounds.length > 0 ? (
+        <div className="cup-preview-rounds">
+          {rounds.map((r) => (
+            <div className="row" key={r.id}>
+              <div className="grow">
+                <div className="row-title">{date ? dayLabel(date, r.data.day) : `Day ${r.data.day}`}{r.data.time ? ` · ${r.data.time}` : ''} · {r.data.course}</div>
+                <div className="row-meta">{per === 1 ? 'One 18-hole match' : split === 9 ? 'Front 9 and back 9' : `${per} matches: ${Array.from({ length: per }, (_, k) => `${k * split + 1}–${Math.min(18, (k + 1) * split)}`).join(', ')}`}</div>
+              </div>
+              <span className="chip plain">{per} {per === 1 ? 'match' : 'matches'}</span>
+            </div>
+          ))}
+          <div className="cup-preview-total"><span>{total} matches on the trip</span><b>{pts(total / 2 + 0.5)} to win</b></div>
+        </div>
+      ) : <p className="hint">Add rounds to the plan and each one shows up here. Playing 36 in a day? Add a morning and an afternoon round.</p>}
+      {me?.is_organizer && <button className="btn primary" onClick={() => duelSheet(ctx, split)}>Start match play</button>}
+    </div>
+  );
+}
+
+function DuelForm({ ctx, split: start }: { ctx: TripCtx; split: number }) {
+  const { state, me } = ctx;
+  const [a, b] = state.members;
+  const [name, setName] = useState(`${firstName(a.name)} vs ${firstName(b.name)}`);
+  const [split, setSplit] = useState(start);
+  const [busy, setBusy] = useState(false);
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault();
+      setBusy(true);
+      const ok = await ctx.act('cup', { op: 'setup', mode: 'duel', name, players: [me?.id === b.id ? b.id : a.id, me?.id === b.id ? a.id : b.id], split });
+      setBusy(false);
+      if (ok) { ctx.sheet(null); ctx.toast('Match play is on. Set each round’s matches on the Cup tab.'); }
+    }}>
+      <div className="field"><label htmlFor="duel-name">Name</label><input id="duel-name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="field">
+        <label>Each match is</label>
+        <div className="seg">
+          {[18, 9, 6].map((x) => <button key={x} type="button" aria-pressed={split === x} onClick={() => setSplit(x)}>{x === 18 ? '18 holes' : `${x} holes`}</button>)}
+        </div>
+        <p className="hint">{split === 18 ? 'One match a round.' : split === 9 ? 'Front 9 and back 9 are separate matches: two a round, four on a 36-hole day.' : 'Three matches a round: holes 1–6, 7–12 and 13–18.'} You can change it for any round.</p>
+      </div>
+      <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Start match play'}</button>
+    </form>
+  );
+}
+function duelSheet(ctx: TripCtx, split = 9) { ctx.sheet({ title: 'Match play', body: <DuelForm ctx={ctx} split={split} /> }); }
+
 export function CupSection() {
   const ctx = useTrip();
   const { state, me } = ctx;
@@ -161,6 +229,7 @@ export function CupSection() {
   const raw = state.trip.cup;
   // Drop anyone who has left the trip.
   const cup = raw ? { ...raw, teams: raw.teams.map((t) => ({ ...t, members: t.members.filter((id) => ids.has(id)) })) as CupT['teams'] } : null;
+  if (!cup && state.members.length === 2) return <DuelPreview />;
   if (!cup) {
     if (!me.is_organizer || state.members.length < 4) return null;
     return (
@@ -269,17 +338,19 @@ function Board({ cup }: { cup: CupT }) {
   const unassigned = state.members.filter((m) => !cup.teams.some((t) => t.members.includes(m.id)));
   const players = cupPlayerPoints(cup);
   const leaders = [...players.entries()].sort((a, b) => b[1].pts - a[1].pts || a[1].played - b[1].played).slice(0, 5);
+  const rec = cup.duel ? duelRecord(cup) : null;
   const pctA = score.total ? (score.a / score.total) * 100 : 0;
   const pctB = score.total ? (score.b / score.total) * 100 : 0;
   return (
     <section className="section cup">
       <div className="cup-board">
-        <div className="eyebrow">{cup.name}{myTeam >= 0 ? ` · you’re on ${cup.teams[myTeam].name}` : ''}</div>
+        <div className="eyebrow">{cup.duel ? `Match play · ${cup.name}` : `${cup.name}${myTeam >= 0 ? ` · you’re on ${cup.teams[myTeam].name}` : ''}`}</div>
         <div className="cup-score">
           {cup.teams.map((t, i) => (
             <div key={i} className={`cup-side ${TEAM_CLASS[i]}${winner === i ? ' won' : ''}`}>
-              <div className="cup-team-name">{t.name}</div>
-              <div className="cup-pts">{pts(i ? score.b : score.a)}</div>
+              <div className="cup-team-name">{rec ? name(t.captain) : t.name}</div>
+              <div className="cup-pts">{rec ? (i ? rec.l : rec.w) : pts(i ? score.b : score.a)}</div>
+              {rec && <div className="cup-proj">{i ? `${rec.l}–${rec.w}` : `${rec.w}–${rec.l}`}{rec.h ? `–${rec.h}` : ''} · {i ? rec.holes.b : rec.holes.a} holes won</div>}
               {live.live > 0 && <div className="cup-proj">Projected {pts(i ? live.b : live.a)}</div>}
             </div>
           ))}
@@ -288,16 +359,17 @@ function Board({ cup }: { cup: CupT }) {
           <>
             <div className="cup-bar" aria-hidden="true"><span className="team-a" style={{ width: `${pctA}%` }} /><span className="team-b" style={{ width: `${pctB}%` }} />{!unpaired && <i style={{ left: `${(score.toWin / score.total) * 100}%` }} />}</div>
             <div className="row-meta cup-status">
-              {winner !== null ? `${cup.teams[winner].name} wins the cup.` : unpaired ? [score.left - liveMatches.length > 0 ? `${score.left - liveMatches.length} match${score.left - liveMatches.length === 1 ? '' : 'es'} still to play` : '', liveMatches.length ? `${liveMatches.length} on the course` : '', `${unpaired} round${unpaired === 1 ? '' : 's'} still to pair`].filter(Boolean).join(' · ') : `${pts(score.toWin)} to win · ${score.left} match${score.left === 1 ? '' : 'es'} left`}
+              {winner !== null ? (rec ? `${name(cup.teams[winner].captain)} ${name(cup.teams[winner].captain) === 'You' ? 'win' : 'wins'} the trip.` : `${cup.teams[winner].name} wins the cup.`) : unpaired ? [score.left - liveMatches.length > 0 ? `${score.left - liveMatches.length} match${score.left - liveMatches.length === 1 ? '' : 'es'} still to play` : '', liveMatches.length ? `${liveMatches.length} on the course` : '', `${unpaired} round${unpaired === 1 ? '' : 's'} still to pair`].filter(Boolean).join(' · ') : `${pts(score.toWin)} to win · ${score.left} match${score.left === 1 ? '' : 'es'} left`}
             </div>
           </>
         )}
-        <details className="cup-teams">
+        {rec && <div className="row-meta cup-status">Record is wins–losses{rec.h ? '–halves' : ''}. {rec.holes.half} hole{rec.holes.half === 1 ? '' : 's'} halved.</div>}
+        {!rec && <details className="cup-teams">
           <summary>Teams</summary>
           <div className="cup-rosters">
             {cup.teams.map((t, i) => <div key={i} className={`cup-roster ${TEAM_CLASS[i]}`}><div className="cup-team-name">{t.name}</div><div className="row-meta">{andList(t.members.map((id) => (id === t.captain ? `${name(id)} (C)` : name(id))))}</div></div>)}
           </div>
-        </details>
+        </details>}
       </div>
 
       {liveMatches.length > 0 && (
@@ -310,7 +382,7 @@ function Board({ cup }: { cup: CupT }) {
               <button key={m.id} type="button" className="cup-live-row" onClick={() => ctx.sheet({ title: 'Scorecard', body: <Scorecard matchId={m.id} /> })}>
                 <span className="grow" style={{ minWidth: 0 }}>
                   <span className="cup-live-sides"><span className={st.lead > 0 ? 'team-a-text' : ''}>{sa}</span> <span className="match-vs">vs</span> <span className={st.lead < 0 ? 'team-b-text' : ''}>{sb}</span></span>
-                  <span className={`row-meta ${st.lead > 0 ? 'team-a-text' : st.lead < 0 ? 'team-b-text' : ''}`}>{st.lead === 0 ? `All square thru ${st.thru}` : `${st.lead > 0 ? cup.teams[0].name : cup.teams[1].name} ${Math.abs(st.lead)} UP thru ${st.thru}${st.dormie ? ' · dormie' : ''}`}</span>
+                  <span className={`row-meta ${st.lead > 0 ? 'team-a-text' : st.lead < 0 ? 'team-b-text' : ''}`}>{segLabel(m) ? `${segLabel(m)} · ` : ''}{statusLabel(m, rec ? name(cup.teams[0].captain) : cup.teams[0].name, rec ? name(cup.teams[1].captain) : cup.teams[1].name)}</span>
                 </span>
                 <HoleStrip m={m} />
               </button>
@@ -331,7 +403,7 @@ function Board({ cup }: { cup: CupT }) {
       {rounds.length === 0 && <p className="hint">Add rounds to the plan, then set matches for each one here.</p>}
       {rounds.map((r) => <RoundMatches key={r.id} cup={cup} round={r} label={`${start ? dayLabel(start, r.data.day) : `Day ${r.data.day}`} · ${r.data.course}`} name={name} />)}
 
-      {leaders.length > 0 && (
+      {!rec && leaders.length > 0 && (
         <div className="card">
           <div className="row-title">Top points</div>
           {leaders.map(([id, p]) => {
@@ -340,7 +412,7 @@ function Board({ cup }: { cup: CupT }) {
           })}
         </div>
       )}
-      {me?.is_organizer && <button className="link-btn" onClick={() => { if (confirm('End the cup and delete all matches and results?')) act('cup', { op: 'delete' }); }}>Delete the cup</button>}
+      {me?.is_organizer && <button className="link-btn" onClick={() => { if (confirm(rec ? 'Delete the match play record and all results?' : 'End the cup and delete all matches and results?')) act('cup', { op: 'delete' }); }}>{rec ? 'Delete match play' : 'Delete the cup'}</button>}
     </section>
   );
 }
@@ -349,28 +421,43 @@ function RoundMatches({ cup, round, label, name }: { cup: CupT; round: Option<Ro
   const { me, act, toast } = useTrip();
   const matches = cup.matches.filter((m) => m.round === round.id);
   const [format, setFormat] = useState<CupFormat>(matches[0]?.format || 'scramble');
-  const [holes, setHoles] = useState<9 | 18>(matches[0]?.holes || 18);
+  const roundHoles = (h: CupMatch[]) => h.reduce((t, m) => Math.max(t, (m.from || 1) + m.holes - 1), 0);
+  const [holes, setHoles] = useState<9 | 18>(matches.length ? (roundHoles(matches) <= 9 ? 9 : 18) : 18);
+  const [split, setSplit] = useState<number>(matches[0]?.holes || cup.split || 18);
+  const len = Math.min(split, holes);
+  const lengths = holes === 18 ? [18, 9, 6] : [9, 3];
   const sitting = cup.sitting?.[round.id] || [];
   const any = matches.some((m) => m.result);
   const roundPts = matches.reduce((s, m) => { if (m.result === 'a') s[0]++; else if (m.result === 'b') s[1]++; else if (m.result === 'half') { s[0] += .5; s[1] += .5; } return s; }, [0, 0]);
-  const make = async (seed: number) => { if (await act('cup', { op: 'matches', round: round.id, format, holes, seed })) toast('Matches set. They’re also the tee-time groups.'); };
+  const make = async (seed: number) => { if (await act('cup', { op: 'matches', round: round.id, format: cup.duel ? 'singles' : format, holes, split: len, seed })) toast(cup.duel ? 'Matches set.' : 'Matches set. They’re also the tee-time groups.'); };
+  const segs = matches.length ? new Set(matches.map((m) => m.from || 1)).size : 1;
   return (
     <div className="card cup-round">
       <div className="cup-round-head">
-        <div><div className="row-title">{label}</div>{matches.length > 0 && <div className="row-meta">{CUP_FORMATS[matches[0].format].label} · {matches[0].holes} holes · {matches.length} match{matches.length > 1 ? 'es' : ''}</div>}</div>
+        <div><div className="row-title">{label}</div>{matches.length > 0 && <div className="row-meta">{[cup.duel ? '' : CUP_FORMATS[matches[0].format].label, segs > 1 ? `${segs} matches of ${matches[0].holes} holes` : `${matches[0].holes} holes`, !cup.duel && segs === 1 ? `${matches.length} match${matches.length > 1 ? 'es' : ''}` : ''].filter(Boolean).join(' · ')}</div>}</div>
         {any && <div className="cup-round-pts"><span className="team-a-text">{pts(roundPts[0])}</span>–<span className="team-b-text">{pts(roundPts[1])}</span></div>}
       </div>
       {matches.length === 0 ? (
         me?.is_organizer ? (
           <div className="cup-make">
-            <div className="cup-formats">
-              {(Object.keys(CUP_FORMATS) as CupFormat[]).map((f) => <button key={f} type="button" className="chip-btn" aria-pressed={format === f} onClick={() => setFormat(f)}>{CUP_FORMATS[f].label}</button>)}
-            </div>
-            <p className="hint">{CUP_FORMATS[format].blurb}</p>
-            <div className="btn-row">
+            {!cup.duel && (
+              <>
+                <div className="cup-formats">
+                  {(Object.keys(CUP_FORMATS) as CupFormat[]).map((f) => <button key={f} type="button" className="chip-btn" aria-pressed={format === f} onClick={() => setFormat(f)}>{CUP_FORMATS[f].label}</button>)}
+                </div>
+                <p className="hint">{CUP_FORMATS[format].blurb}</p>
+              </>
+            )}
+            <div className="cup-len">
+              <span className="row-meta">Playing</span>
               <div className="seg seg-small"><button type="button" aria-pressed={holes === 9} onClick={() => setHoles(9)}>9 holes</button><button type="button" aria-pressed={holes === 18} onClick={() => setHoles(18)}>18 holes</button></div>
-              <button className="btn primary" onClick={() => make(Date.now() % 100000)}>Make matches</button>
             </div>
+            <div className="cup-len">
+              <span className="row-meta">Each match</span>
+              <div className="seg seg-small">{lengths.map((x) => <button key={x} type="button" aria-pressed={len === x} onClick={() => setSplit(x)}>{x === holes ? `All ${x}` : `${x} holes`}</button>)}</div>
+            </div>
+            <p className="hint">{len >= holes ? `One match for the ${holes}.` : `${Math.ceil(holes / len)} matches: ${Array.from({ length: Math.ceil(holes / len) }, (_, k) => `holes ${k * len + 1}–${Math.min(holes, (k + 1) * len)}`).join(', ')}. Each is worth a point.`}</p>
+            <button className="btn primary" onClick={() => make(Date.now() % 100000)}>Make matches</button>
           </div>
         ) : <p className="hint">The organizer hasn’t set matches for this round yet.</p>
       ) : (
@@ -379,8 +466,8 @@ function RoundMatches({ cup, round, label, name }: { cup: CupT; round: Option<Ro
           {sitting.length > 0 && <p className="hint">Sitting out: {andList(sitting.map(name))}. They play first next round.</p>}
           {me?.is_organizer && (
             <div className="btn-row">
-              {!any && <button className="btn small" onClick={() => make(Date.now() % 100000)}>Shuffle partners</button>}
-              <button className="btn small ghost" onClick={() => { if (!any || confirm('Clear this round’s matches and results?')) act('cup', { op: 'clear_round', round: round.id }); }}>Change format</button>
+              {!any && !cup.duel && <button className="btn small" onClick={() => make(Date.now() % 100000)}>Shuffle partners</button>}
+              <button className="btn small ghost" onClick={() => { if (!any || confirm('Clear this round’s matches and results?')) act('cup', { op: 'clear_round', round: round.id }); }}>{cup.duel ? 'Change match length' : 'Change format'}</button>
             </div>
           )}
         </>
@@ -402,6 +489,7 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
   const leadClass = st.lead > 0 ? 'team-a-text' : st.lead < 0 ? 'team-b-text' : '';
   return (
     <div className={`match${done ? ' done' : ''}${st.started && !m.result ? ' live' : ''}`}>
+      {segLabel(m) && <div className="match-seg">{segLabel(m)}</div>}
       <div className="match-sides">
         <div className={`match-side team-a${m.result === 'a' ? ' win' : ''}`}><span className="team-dot team-a" />{side(m.a)}</div>
         <span className="match-vs">vs</span>
@@ -411,13 +499,13 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
       {st.started && <HoleStrip m={m} onClick={openCard} />}
       {done ? (
         <div className="match-result">
-          <span>{m.result === 'half' ? 'Halved' : `${cup.teams[m.result === 'a' ? 0 : 1].name} won${m.margin ? `, ${m.margin}` : ''}`}</span>
+          <span>{m.result === 'half' ? 'Halved' : `${cup.duel ? side(m.result === 'a' ? m.a : m.b) : cup.teams[m.result === 'a' ? 0 : 1].name} won${m.margin ? `, ${m.margin}` : ''}`}</span>
           {m.auto ? <button className="link-btn" onClick={openCard}>Scorecard</button> : <button className="link-btn" onClick={() => setEditing(true)}>Change</button>}
         </div>
       ) : st.started && !quick ? (
         <div className="match-live">
           <span className={`match-status ${leadClass}`}><span className="live-dot" aria-hidden="true" />{statusLabel(m, side(m.a), side(m.b))}</span>
-          <button className="btn small primary" onClick={openCard}>Score hole {Math.min(m.holes, st.last + 1)}</button>
+          <button className="btn small primary" onClick={openCard}>Score hole {Math.min(m.holes, st.last + 1) + (m.from || 1) - 1}</button>
         </div>
       ) : !quick && !editing ? (
         <div className="match-start">
@@ -440,7 +528,7 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
           + Add the margin
           <select aria-label="By how much" value="" onChange={(e) => set(m.result!, e.target.value)}>
             <option value="">By how much?</option>
-            {CUP_MARGINS.filter((x) => m.holes === 18 || Number(x.split(/[& ]/)[0]) <= 5).map((x) => <option key={x} value={x}>{x}</option>)}
+            {marginsFor(m.holes).map((x) => <option key={x} value={x}>{x}</option>)}
           </select>
         </label>
       )}
@@ -451,7 +539,7 @@ function MatchRow({ m, cup, name }: { m: CupMatch; cup: CupT; name: (id: string)
 /** A row of little squares, one per hole, colored by who won it. */
 function HoleStrip({ m, onClick }: { m: CupMatch; onClick?: () => void }) {
   return (
-    <button type="button" className={`hole-strip h${m.holes}`} onClick={onClick} aria-label="Open the scorecard">
+    <button type="button" className="hole-strip" style={{ gridTemplateColumns: `repeat(${m.holes}, 1fr)` }} onClick={onClick} aria-label="Open the scorecard">
       {Array.from({ length: m.holes }, (_, i) => {
         const h = m.play?.[i];
         return <span key={i} className={h === 'a' ? 'ha' : h === 'b' ? 'hb' : h === 'half' ? 'hh' : ''} />;
@@ -482,6 +570,7 @@ function Scorecard({ matchId }: { matchId: string }) {
   if (!cup || !m0) return <p className="sub">This match isn’t in the cup anymore.</p>;
   const m: CupMatch = { ...m0, play };
   const st = matchStatus(m);
+  const off = m.from || 1; // the course's hole number for card position 0
   const hole = sel ?? (firstOpen < 0 ? m.holes - 1 : firstOpen);
   const nm = (id: string) => (id === me?.id ? 'You' : firstName(state.members.find((x) => x.id === id)?.name || '?'));
   const sa = m.a.map(nm).join(' & '), sb = m.b.map(nm).join(' & ');
@@ -499,33 +588,34 @@ function Scorecard({ matchId }: { matchId: string }) {
   return (
     <div className="scorecard">
       <div className="sc-sides">
-        <div className="sc-side team-a"><span className="team-dot team-a" />{sa}<small>{cup.teams[0].name}</small></div>
-        <div className="sc-side team-b"><span className="team-dot team-b" />{sb}<small>{cup.teams[1].name}</small></div>
+        <div className="sc-side team-a"><span className="team-dot team-a" />{sa}{!cup.duel && <small>{cup.teams[0].name}</small>}</div>
+        <div className="sc-side team-b"><span className="team-dot team-b" />{sb}{!cup.duel && <small>{cup.teams[1].name}</small>}</div>
       </div>
       <div className={`sc-status ${leadClass}`}>{statusLabel(m, sa, sb)}</div>
 
       {!st.decided || sel !== null ? (
         <div className="sc-entry">
-          <div className="sc-hole"><span>Hole</span><b>{hole + 1}</b>{play[hole] && <small>Change this hole</small>}</div>
+          <div className="sc-hole"><span>Hole</span><b>{hole + off}</b>{play[hole] && <small>Change this hole</small>}</div>
           <div className="sc-buttons">
             <button type="button" className={`sc-btn team-a-fill${play[hole] === 'a' ? ' on' : ''}`} onClick={() => save('a')}>{sa}<small>won the hole</small></button>
             <button type="button" className={`sc-btn half${play[hole] === 'half' ? ' on' : ''}`} onClick={() => save('half')}>Halved</button>
             <button type="button" className={`sc-btn team-b-fill${play[hole] === 'b' ? ' on' : ''}`} onClick={() => save('b')}>{sb}<small>won the hole</small></button>
           </div>
-          {play[hole] && <button type="button" className="link-btn" onClick={() => save(null)}>Clear hole {hole + 1}</button>}
+          {play[hole] && <button type="button" className="link-btn" onClick={() => save(null)}>Clear hole {hole + off}</button>}
         </div>
       ) : (
         <p className="sub">Match over. Tap any hole below to fix it.</p>
       )}
 
-      <div className={`sc-grid h${m.holes}`} role="group" aria-label="Holes">
+      {segLabel(m) && <div className="match-seg" style={{ textAlign: 'center' }}>{segLabel(m)}</div>}
+      <div className="sc-grid" style={{ gridTemplateColumns: `repeat(${Math.min(9, m.holes)}, 1fr)` }} role="group" aria-label="Holes">
         {play.map((h, i) => (
           <button key={i} type="button" aria-pressed={i === hole && (!st.decided || sel !== null)} className={`sc-cell ${h === 'a' ? 'ha' : h === 'b' ? 'hb' : h === 'half' ? 'hh' : ''}`} onClick={() => setSel(i)}>
-            <span>{i + 1}</span><b>{h === 'a' ? 'W' : h === 'b' ? 'L' : h === 'half' ? '½' : ''}</b>
+            <span>{i + off}</span><b>{h === 'a' ? 'W' : h === 'b' ? 'L' : h === 'half' ? '½' : ''}</b>
           </button>
         ))}
       </div>
-      <p className="hint">W and L are from {cup.teams[0].name}’s side. Everyone on the trip sees each hole as it’s entered.</p>
+      <p className="hint">W and L are from {cup.duel ? sa : cup.teams[0].name}’s side. Everyone on the trip sees each hole as it’s entered.</p>
     </div>
   );
 }

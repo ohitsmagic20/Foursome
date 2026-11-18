@@ -510,14 +510,48 @@ export type CupResult = 'a' | 'b' | 'half';
 /** Who won one hole of a match: side a, side b, or halved. null = not entered yet. */
 export type HoleWin = CupResult | null;
 export interface CupMatch {
-  id: string; round: string; format: CupFormat; holes: 9 | 18; a: string[]; b: string[]; result?: CupResult | null; margin?: string; twice?: string[];
+  id: string; round: string; format: CupFormat;
+  /** How many holes this match is (18, 9, 6…), starting at hole `from` (1 if missing): a round can hold several matches. */
+  holes: number; from?: number;
+  a: string[]; b: string[]; result?: CupResult | null; margin?: string; twice?: string[];
   /** Hole-by-hole: index 0 is hole 1. */
   play?: HoleWin[];
   /** True when the result came from the hole-by-hole scorecard (so editing a hole can reopen the match). */
   auto?: boolean;
 }
 /** `v` counts changes, so two phones saving at once can't overwrite each other. */
-export interface Cup { name: string; teams: [CupTeam, CupTeam]; drafting: boolean; matches: CupMatch[]; sitting?: Record<string, string[]>; v?: number }
+export interface Cup {
+  name: string; teams: [CupTeam, CupTeam]; drafting: boolean; matches: CupMatch[]; sitting?: Record<string, string[]>; v?: number;
+  /** Two people, one on one: a running match play record instead of a team cup. */
+  duel?: boolean;
+  /** The usual match length in holes (18, 9 or 6), the default when setting a round's matches. */
+  split?: number;
+}
+
+/** "Front 9", "Back 9", "Holes 7–12", or '' for a full 18. */
+export function segLabel(m: CupMatch, roundHoles = 18): string {
+  const from = m.from || 1, to = from + m.holes - 1;
+  if (m.holes >= roundHoles) return '';
+  if (m.holes === 9 && roundHoles === 18) return from === 1 ? 'Front 9' : from === 10 ? 'Back 9' : `Holes ${from}–${to}`;
+  return `Holes ${from}–${to}`;
+}
+
+/** Margins that can happen in a match of this many holes: 1 up, 2 up, then n&r with r holes left. */
+export function marginsFor(holes: number): string[] {
+  const out = ['1 up', '2 up'];
+  for (let r = 1; r < holes; r++) for (let n = r + 1; n + r <= holes && n <= r + 2; n++) out.push(`${n}&${r}`);
+  return out.sort((x, y) => parseInt(x) - parseInt(y) || x.localeCompare(y));
+}
+
+/** One-on-one record: matches won, lost and halved from player a's side, plus holes won each. */
+export function duelRecord(cup: Cup) {
+  let w = 0, l = 0, h = 0, ha = 0, hb = 0, hh = 0;
+  for (const m of cup.matches) {
+    if (m.result === 'a') w++; else if (m.result === 'b') l++; else if (m.result === 'half') h++;
+    for (const x of m.play || []) { if (x === 'a') ha++; else if (x === 'b') hb++; else if (x === 'half') hh++; }
+  }
+  return { w, l, h, holes: { a: ha, b: hb, half: hh } };
+}
 
 /** Where a match stands from its hole-by-hole card: holes up (positive = side a), holes entered, and whether it's over. */
 export function matchStatus(m: CupMatch) {
@@ -543,9 +577,11 @@ export function statusLabel(m: CupMatch, sideA: string, sideB: string): string {
   const s = matchStatus(m);
   if (!s.started) return 'Not started';
   if (s.decided) return s.result === 'half' ? 'Halved' : `${s.result === 'a' ? sideA : sideB} won, ${s.margin}`;
-  if (s.lead === 0) return `All square thru ${s.thru}`;
+  // "thru" names the course's hole, so a back-nine match reads "thru 13", not "thru 4".
+  const thru = s.last + (m.from || 1) - 1;
+  if (s.lead === 0) return `All square thru ${thru}`;
   const who = s.lead > 0 ? sideA : sideB;
-  return s.dormie ? `${who} dormie, ${Math.abs(s.lead)} UP with ${s.remaining} to play` : `${who} ${Math.abs(s.lead)} UP thru ${s.thru}`;
+  return s.dormie ? `${who} dormie, ${Math.abs(s.lead)} UP with ${s.remaining} to play` : `${who} ${Math.abs(s.lead)} UP thru ${thru}`;
 }
 
 /** Points if every match in progress ended now: the leader takes the point, all square splits it. */
@@ -606,7 +642,7 @@ export function seededShuffle<T>(list: T[], seed: number): T[] {
 /** Matches for one round: each team split into sides of 1 or 2, side i of A against side i of B.
  *  The bigger team sets the number of matches; on the smaller team, players fill the extra slots by
  *  playing a second match (listed in `twice`). An odd player out on a team sits and plays first next time. */
-export function buildMatches(cup: Cup, round: string, format: CupFormat, holes: 9 | 18, seed: number): { matches: CupMatch[]; sitting: string[] } {
+export function buildMatches(cup: Cup, round: string, format: CupFormat, holes: number, seed: number, split = holes): { matches: CupMatch[]; sitting: string[] } {
   const per = CUP_FORMATS[format].per;
   const [ta, tb] = cup.teams.map((t, i) => seededShuffle(t.members, seed + i * 7919));
   const sat = new Set(Object.values(cup.sitting || {}).flat());
@@ -630,12 +666,22 @@ export function buildMatches(cup: Cup, round: string, format: CupFormat, holes: 
   };
   const fa = fill(a), fb = fill(b);
   const seen = new Set<string>();
-  const matches: CupMatch[] = Array.from({ length: n }, (_, i) => {
+  // A round split into shorter matches (each 9, each 6…): the same pairings play every segment.
+  const len = Math.max(1, Math.min(holes, Math.round(split) || holes));
+  const segs = Math.ceil(holes / len);
+  const matches: CupMatch[] = [];
+  for (let i = 0; i < n; i++) {
     const sa = fa.slots.slice(i * per, i * per + per), sb = fb.slots.slice(i * per, i * per + per);
     const twice = [...sa, ...sb].filter((id) => seen.has(id));
     [...sa, ...sb].forEach((id) => seen.add(id));
-    return { id: `${round.slice(0, 8)}-${seed.toString(36)}-${i}`, round, format, holes, a: sa, b: sb, result: null, ...(twice.length ? { twice } : {}) };
-  });
+    for (let k = 0; k < segs; k++) {
+      const from = k * len + 1;
+      matches.push({
+        id: `${round.slice(0, 8)}-${seed.toString(36)}-${i}${segs > 1 ? `-${k}` : ''}`, round, format, holes: Math.min(len, holes - k * len),
+        ...(from > 1 ? { from } : {}), a: sa, b: sb, result: null, ...(twice.length ? { twice } : {}),
+      });
+    }
+  }
   return { matches, sitting: [...fa.left, ...fb.left] };
 }
 
@@ -645,6 +691,7 @@ export function groupsFromMatches(matches: CupMatch[], sitting: string[] = []): 
   const placed = new Set<string>();
   for (const m of matches) {
     const players = [...m.a, ...m.b].filter((id) => !placed.has(id));
+    if (!players.length) continue; // the same pairing's next segment
     players.forEach((id) => placed.add(id));
     const last = groups[groups.length - 1];
     if (last && last.length + players.length <= 4) last.push(...players); else groups.push(players);
