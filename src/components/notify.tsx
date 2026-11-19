@@ -17,7 +17,13 @@ const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.p
 const standalone = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
 export function registerServiceWorker() {
-  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // Hand the worker this page and the app code it already loaded, so the trip opens with no signal later.
+  navigator.serviceWorker.ready.then((reg) => {
+    const urls = [location.pathname, ...performance.getEntriesByType('resource').map((r) => r.name).filter((u) => u.includes('/_next/static/'))];
+    reg.active?.postMessage({ type: 'cache', urls });
+  }).catch(() => {});
 }
 
 export function NotifyCard() {

@@ -16,6 +16,100 @@ export interface Trip {
   cup?: Cup | null;
   /** Rental cars (migration 009): null = none; missing = database not updated. */
   cars?: Car[] | null;
+  /** Side games (migration 010): null = none; missing = database not updated. */
+  games?: Games | null;
+}
+
+/* ---------- side games: skins, closest to the pin, long drive, Nassau ---------- */
+export type GameKind = 'skins' | 'ctp' | 'long' | 'nassau';
+export type NassauBet = 'front' | 'back' | 'total';
+export interface SideGame {
+  id: string;
+  kind: GameKind;
+  round: string | null;          // the round it's played in (option id), if any
+  stake: number;                 // dollars: per skin, per prize, or per Nassau bet, from each player who loses it
+  players: string[];
+  by: string;
+  holes?: number;                // skins: 9 or 18
+  carry?: boolean;               // skins: a tied hole carries its skin to the next one
+  skins?: (string | null)[];     // skins, per hole: winner id, 'tie', or null (not played yet)
+  prizes?: { label: string; winner: string | null }[]; // closest to the pin / long drive
+  sides?: [string[], string[]];  // Nassau
+  nassau?: Partial<Record<NassauBet, CupResult | null>>;
+}
+export interface Games { v: number; list: SideGame[] }
+
+export const GAME_NAMES: Record<GameKind, string> = { skins: 'Skins', ctp: 'Closest to the pin', long: 'Long drive', nassau: 'Nassau' };
+export const NASSAU_BETS: { k: NassauBet; label: string }[] = [{ k: 'front', label: 'Front 9' }, { k: 'back', label: 'Back 9' }, { k: 'total', label: 'Overall' }];
+
+/** Skins as they stand: what each hole is worth (carryovers included) and who won it. */
+export function skinsTable(g: SideGame): { won: { hole: number; who: string; worth: number }[]; carrying: number } {
+  const won: { hole: number; who: string; worth: number }[] = [];
+  let carry = 0;
+  (g.skins || []).forEach((r, i) => {
+    if (!r) return;
+    if (r === 'tie') { if (g.carry) carry++; return; }
+    if (!g.players.includes(r)) return;
+    won.push({ hole: i + 1, who: r, worth: 1 + carry });
+    carry = 0;
+  });
+  return { won, carrying: carry };
+}
+
+/** Each player's winnings (+) or losses (−) in cents for one game. Everyone in the game pays whoever wins each part. */
+export function gameNet(g: SideGame): Map<string, number> {
+  const net = new Map(g.players.map((id) => [id, 0]));
+  const stake = Math.round(g.stake * 100);
+  const n = g.players.length;
+  const pay = (winners: string[], losers: string[], each: number) => {
+    // Each loser pays `each`; the winners split it (odd cents to the first).
+    const pot = each * losers.length;
+    for (const id of losers) net.set(id, net.get(id)! - each);
+    const share = Math.floor(pot / winners.length);
+    let rest = pot - share * winners.length;
+    for (const id of winners) { net.set(id, net.get(id)! + share + (rest > 0 ? 1 : 0)); if (rest > 0) rest--; }
+  };
+  if (n < 2 || !(stake > 0)) return net;
+  if (g.kind === 'skins') {
+    for (const s of skinsTable(g).won) pay([s.who], g.players.filter((id) => id !== s.who), stake * s.worth);
+  } else if (g.kind === 'ctp' || g.kind === 'long') {
+    for (const p of g.prizes || []) if (p.winner && net.has(p.winner)) pay([p.winner], g.players.filter((id) => id !== p.winner), stake);
+  } else if (g.kind === 'nassau' && g.sides) {
+    const [a, b] = g.sides.map((side) => side.filter((id) => net.has(id)));
+    if (a.length && b.length) for (const { k } of NASSAU_BETS) {
+      const r = g.nassau?.[k];
+      if (r === 'a') pay(a, b, stake); else if (r === 'b') pay(b, a, stake);
+    }
+  }
+  return net;
+}
+
+/** Everyone's side-game total in cents, across every game on the trip. */
+export function gamesNet(state: TripState): Map<string, number> {
+  const all = new Map<string, number>();
+  for (const g of state.trip.games?.list || []) for (const [id, c] of gameNet(g)) all.set(id, (all.get(id) || 0) + c);
+  return all;
+}
+
+/** Record one result in a game, in place: a skin, a prize, or a Nassau bet. Used by the server and for taps waiting for signal. */
+export function applyGameScore(g: SideGame, a: { op: string; hole?: unknown; index?: unknown; bet?: unknown; winner?: unknown; result?: unknown }) {
+  if (a.op === 'skin' && g.kind === 'skins') {
+    const n = g.holes || 18;
+    const i = Math.round(Number(a.hole)) - 1;
+    if (!(i >= 0 && i < n)) return;
+    const w = a.winner === 'tie' || (typeof a.winner === 'string' && g.players.includes(a.winner)) ? a.winner as string : null;
+    g.skins = Array.from({ length: n }, (_, k) => (k === i ? w : g.skins?.[k] ?? null));
+  } else if (a.op === 'prize' && g.prizes) {
+    const i = Math.round(Number(a.index));
+    if (!(i >= 0 && i < g.prizes.length)) return;
+    const w = typeof a.winner === 'string' && g.players.includes(a.winner) ? a.winner : null;
+    g.prizes = g.prizes.map((p, k) => (k === i ? { ...p, winner: w } : p));
+  } else if (a.op === 'bet' && g.kind === 'nassau') {
+    const k = NASSAU_BETS.find((x) => x.k === a.bet)?.k;
+    if (!k) return;
+    const r = a.result === 'a' || a.result === 'b' || a.result === 'half' ? a.result : null;
+    g.nassau = { ...(g.nassau || {}), [k]: r };
+  }
 }
 
 /** A rental car: its total split evenly between the people riding in it. */
@@ -290,6 +384,9 @@ export function settleUp(state: TripState) {
     cents.set(e.paid_by, cents.get(e.paid_by)! + total);
     for (const id of among) { cents.set(id, cents.get(id)! - share - (rest > 0 ? 1 : 0)); if (rest > 0) rest--; }
   }
+  // Side games: winnings and losses go straight into the same balances.
+  const games = gamesNet(state);
+  for (const [id, c] of games) if (cents.has(id)) cents.set(id, cents.get(id)! + c);
   const owed = [...cents].filter(([, c]) => c > 0).map(([id, c]) => ({ id, c })).sort((a, b) => b.c - a.c);
   const owes = [...cents].filter(([, c]) => c < 0).map(([id, c]) => ({ id, c: -c })).sort((a, b) => b.c - a.c);
   const payments: { from: string; to: string; amount: number }[] = [];
@@ -302,7 +399,7 @@ export function settleUp(state: TripState) {
     if (!b.c) owed.shift();
   }
   const total = (state.expenses || []).reduce((s, e) => s + Number(e.amount), 0);
-  return { balance: new Map([...cents].map(([id, c]) => [id, c / 100])), payments, total };
+  return { balance: new Map([...cents].map(([id, c]) => [id, c / 100])), payments, total, games: new Map([...games].map(([id, c]) => [id, c / 100])) };
 }
 /** Pay links that open Venmo or Cash App with the amount filled in. */
 export const venmoLink = (handle: string, amount: number, note: string) =>
@@ -643,6 +740,48 @@ export function duelRecord(cup: Cup) {
 }
 
 /** Where a match stands from its hole-by-hole card: holes up (positive = side a), holes entered, and whether it's over. */
+/** Apply one score action to a match, in place: a hole tap, a whole-match result, or clearing it.
+ *  The server saves with this; the phone uses it to show taps still waiting for signal. */
+export function applyScore(m: CupMatch, a: { op: string; hole?: unknown; winner?: unknown; result?: unknown; margin?: string }) {
+  if (a.op === 'clear_match') {
+    m.play = [];
+    m.result = null; m.margin = undefined; m.auto = false;
+  } else if (a.op === 'hole') {
+    const i = Math.round(Number(a.hole)) - 1;
+    if (!(i >= 0 && i < m.holes)) return;
+    const w: HoleWin = a.winner === 'a' || a.winner === 'b' || a.winner === 'half' ? a.winner : null;
+    m.play = Array.from({ length: m.holes }, (_, k) => (k === i ? w : m.play?.[k] ?? null));
+    const st = matchStatus(m);
+    if (st.decided) { m.result = st.result; m.margin = st.margin; m.auto = true; }
+    else if (m.auto) { m.result = null; m.margin = undefined; m.auto = false; }
+  } else if (a.op === 'result') {
+    const r = a.result === 'a' || a.result === 'b' || a.result === 'half' ? a.result : null;
+    m.result = r;
+    m.margin = r && r !== 'half' && a.margin && marginsFor(m.holes).includes(a.margin) ? a.margin : undefined;
+    m.auto = false;
+  }
+}
+
+/** The trip as this phone should show it: saved state plus score taps still waiting for signal. */
+export function withQueuedScores(state: TripState, queued: { body: Record<string, unknown> }[]): TripState {
+  if (!queued.length) return state;
+  const gq = queued.filter((q) => q.body.type === 'game');
+  if (gq.length && state.trip.games) {
+    const list = state.trip.games.list.map((g) => ({ ...g }));
+    for (const { body } of gq) { const g = list.find((x) => x.id === body.id); if (g) applyGameScore(g, body as Parameters<typeof applyGameScore>[1]); }
+    state = { ...state, trip: { ...state.trip, games: { ...state.trip.games, list } } };
+  }
+  queued = queued.filter((q) => q.body.type !== 'game');
+  const cup = state.trip.cup;
+  if (!cup || !queued.length) return state;
+  const matches = cup.matches.map((m) => ({ ...m, play: m.play ? m.play.slice() : m.play }));
+  for (const { body } of queued) {
+    const m = matches.find((x) => x.id === body.match);
+    if (m) applyScore(m, { op: String(body.op), hole: body.hole, winner: body.winner, result: body.result, margin: typeof body.margin === 'string' ? body.margin : undefined });
+  }
+  return { ...state, trip: { ...state.trip, cup: { ...cup, matches } } };
+}
+
 export function matchStatus(m: CupMatch) {
   // Walk the holes in order and stop the moment it's decided (a 10&8 rout doesn't keep counting).
   let lead = 0, thru = 0, last = 0, decided = false;

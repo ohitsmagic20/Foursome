@@ -47,19 +47,31 @@ export function clearSession() {
   try { localStorage.removeItem(SESSION_KEY); } catch { /* storage blocked */ }
 }
 
+/** The request never reached the server: no signal, or it dropped. */
+export class OfflineError extends Error {
+  constructor() { super('No connection right now.'); this.name = 'OfflineError'; }
+}
+
 export async function api<T = unknown>(path: string, opts: { code?: string; body?: unknown; method?: string } = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const token = opts.code ? getToken(opts.code) : null;
   if (token) headers['x-member-token'] = token;
   const session = getSession();
   if (session) headers['x-session'] = session;
-  const res = await fetch(path, {
-    method: opts.method || (opts.body !== undefined ? 'POST' : 'GET'),
-    headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-    cache: 'no-store',
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: opts.method || (opts.body !== undefined ? 'POST' : 'GET'),
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      cache: 'no-store',
+    });
+  } catch {
+    throw new OfflineError();
+  }
   const json = await res.json().catch(() => ({}));
+  // A gateway timeout with no message from the app is a weak signal, not a real error.
+  if ((res.status === 502 || res.status === 504) && !json?.error) throw new OfflineError();
   if (!res.ok) throw new Error(json?.error || `Request failed (${res.status}).`);
   return json as T;
 }

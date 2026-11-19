@@ -41,6 +41,19 @@ export function openItems(state: TripState): OpenItem[] {
   for (const m of state.members.filter((x) => x.flight_price !== null && x.flight_summary !== 'Driving' && x.flight_booked === false)) {
     items.push({ text: `${first(m.name)} picked a flight but hasn’t marked it booked.`, who: [m.id], tab: 'flights', mine: 'You picked a flight but haven’t marked it booked.' });
   }
+  // Rental cars: each one booked, and nobody flying in left without a ride.
+  const cars = state.trip.cars || [];
+  cars.forEach((c, i) => {
+    if (c.booked) return;
+    const what = c.company ? `The ${c.company} rental` : cars.length > 1 ? `Rental car ${i + 1}` : 'The rental car';
+    const riders = c.riders.map(name).filter(Boolean);
+    items.push({ text: `${what}${riders.length ? ` (${andList(riders)})` : ''} isn’t marked booked.`, who: [c.by], tab: 'flights', mine: `You added ${what.replace(/^The/, 'the')}. Mark it booked once it’s reserved.` });
+  });
+  if (cars.length) {
+    const inCar = new Set(cars.flatMap((c) => c.riders));
+    const left = state.members.filter((m) => !inCar.has(m.id) && m.flight_summary !== 'Driving');
+    if (left.length) items.push({ text: `${andList(left.map((m) => first(m.name)))} ${left.length === 1 ? 'isn’t' : 'aren’t'} in a rental car.`, who: [], tab: 'flights' });
+  }
   return items;
 }
 

@@ -897,3 +897,42 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .car-row { align-items: flex-start; }
 .car-row .row-title .chip { padding: 2px 8px; font-size: 11px; vertical-align: 2px; margin-left: 4px; }
 .car-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+.share-what { display: grid; gap: 10px; }
+.share-what > div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-size: 14px; }
+.share-what b { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+/* no signal / syncing */
+.offline-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--warn, #b7791f) 14%, var(--card)); color: var(--ink); border: 1px solid color-mix(in srgb, var(--warn, #b7791f) 35%, transparent); }
+.offline-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn, #b7791f); flex: none; }
+.offline-bar.syncing { background: color-mix(in srgb, var(--green) 12%, var(--card)); border-color: color-mix(in srgb, var(--green) 30%, transparent); }
+.offline-bar.syncing .dot { background: var(--green); animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .35; } to { opacity: 1; } }
+
+/* side games (Cup tab) */
+.games { display: grid; gap: 10px; }
+.game { padding: 12px 14px; }
+.game-head { display: flex; align-items: flex-start; gap: 6px; }
+.game-toggle { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; display: grid; gap: 3px; cursor: pointer; }
+.game-toggle .row-title, .game-toggle .row-meta { display: block; }
+.game-stake { font-weight: 500; color: var(--muted); font-size: 13px; margin-left: 4px; }
+.game-board { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.game-board .up { color: var(--good); }
+.game-board .down { color: var(--bad); }
+.game-open { margin-top: 8px; font-size: 13px; }
+.game-body { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 12px; }
+.skin-cell.won { background: var(--green); color: var(--green-ink, #fff); border-color: transparent; }
+.skin-cell.tie { background: var(--soft); }
+.skin-x { font-style: normal; font-size: 9px; font-weight: 800; margin-left: 1px; vertical-align: 3px; }
+.skin-pick { display: grid; gap: 8px; }
+.pick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-row .btn.on { background: var(--soft); border-color: var(--ink); }
+.prize-list { display: grid; gap: 8px; }
+.prize { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.prize select { max-width: 55%; min-height: 38px; }
+.prize.nassau { display: grid; gap: 6px; justify-content: stretch; }
+.game-kinds button { font-size: 12px; }
+.side-list { display: grid; gap: 6px; }
+.side-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.side-row .seg-small { min-width: 210px; }
+.prize.nassau .seg { width: 100%; min-width: 0; }

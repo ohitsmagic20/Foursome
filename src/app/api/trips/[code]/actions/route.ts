@@ -1,7 +1,7 @@
 import { after } from 'next/server';
-import type { Car, Cup, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
+import type { Car, Cup, GameKind, Games, SideGame, CupFormat, Kind, LodgingData, Member, Trip } from '@/lib/shared';
 import type { DateData } from '@/lib/shared';
-import { autoRooms, lockedOf, buildMatches, CUP_FORMATS, marginsFor, cupScore, matchStatus, type HoleWin, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
+import { applyGameScore, applyScore, autoRooms, lockedOf, buildMatches, CUP_FORMATS, cupScore, draftTurn, groupsFromMatches, pts, seededShuffle, nightsOf, openVotes, payHandle, rangeLabel } from '@/lib/shared';
 import { airport, bed, body, db, handle, HttpError, int, loadState, logError, memberFromRequest, firstIn, rateLimit, str, tripByCode } from '@/lib/server';
 import { findStay, geocode } from '@/lib/geo';
 import { notify, type PushMessage } from '@/lib/push';
@@ -426,24 +426,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
               if (!m) throw new HttpError(404, 'That match isn’t in the cup anymore.');
               const before = cupScore(fresh);
               const wasDone = m.result || null;
-              if (op === 'clear_match') {
-                // Start the match over: every hole and the result.
-                m.play = [];
-                m.result = null; m.margin = undefined; m.auto = false;
-              } else if (op === 'hole') {
-                const i = int(b.hole, 1, m.holes, 0) - 1;
-                if (i < 0) throw new HttpError(400, 'Which hole?');
-                const w: HoleWin = b.winner === 'a' || b.winner === 'b' || b.winner === 'half' ? b.winner : null;
-                m.play = Array.from({ length: m.holes }, (_, k) => (k === i ? w : m.play?.[k] ?? null));
-                const st = matchStatus(m);
-                if (st.decided) { m.result = st.result; m.margin = st.margin; m.auto = true; }
-                else if (m.auto) { m.result = null; m.margin = undefined; m.auto = false; }
-              } else {
-                const r = b.result === 'a' || b.result === 'b' || b.result === 'half' ? b.result : null;
-                m.result = r;
-                m.margin = r && r !== 'half' && marginsFor(m.holes).includes(str(b.margin, 8)) ? str(b.margin, 8) : undefined;
-                m.auto = false;
-              }
+              if (op === 'hole' && !(int(b.hole, 1, m.holes, 0) > 0)) throw new HttpError(400, 'Which hole?');
+              applyScore(m, { op, hole: b.hole, winner: b.winner, result: b.result, margin: str(b.margin, 8) });
               fresh.v = v + 1;
               const base = db().from('trips').update({ cup: fresh }).eq('id', trip.id);
               const { data: saved, error: saveErr } = await (v ? base.eq('cup->>v', String(v)) : base.is('cup->v', null)).select('id');
@@ -663,6 +647,76 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         if (e.paid_by !== me.id && !me.is_organizer) throw new HttpError(403, 'Only the person who paid or the organizer can remove it.');
         const r = await db().from('expenses').delete().eq('id', e.id);
         if (r.error) throw r.error;
+        break;
+      }
+      case 'game': {
+        // Side games. Anyone on the trip can add one or enter results; whoever added it or the organizer can change or delete it.
+        // Results come in from several phones, so save only if nobody else saved since we read (a few tries).
+        if (trip.games === undefined) {
+          await logError('server', 'Run supabase/010_games.sql: trips.games is missing', `/t/${trip.code}`);
+          throw new HttpError(503, 'Side games need a quick database update. The app owner has been told.');
+        }
+        const op = str(b.op, 12);
+        const { data: everyone } = await db().from('members').select('id').eq('trip_id', trip.id);
+        const ids = new Set((everyone || []).map((m) => m.id));
+        let fresh: Games = trip.games && Array.isArray(trip.games.list) ? trip.games : { v: 0, list: [] };
+        for (let attempt = 0; ; attempt++) {
+          const v = fresh.v || 0;
+          const list: SideGame[] = fresh.list.map((g) => ({ ...g }));
+          const id = str(b.id, 40);
+          const i = id ? list.findIndex((g) => g.id === id) : -1;
+          if (id && i < 0) throw new HttpError(404, 'That game was already removed.');
+          const mayEdit = i < 0 || list[i].by === me.id || me.is_organizer;
+          if (op === 'delete') {
+            if (i < 0) throw new HttpError(400, 'Which game?');
+            if (!mayEdit) throw new HttpError(403, 'Only whoever added this game or the organizer can delete it.');
+            list.splice(i, 1);
+          } else if (op === 'save') {
+            if (!mayEdit) throw new HttpError(403, 'Only whoever added this game or the organizer can change it.');
+            const kind = (['skins', 'ctp', 'long', 'nassau'] as GameKind[]).find((k) => k === b.kind);
+            if (!kind) throw new HttpError(400, 'Pick a game.');
+            const stake = Math.round(Number(b.stake) * 100) / 100;
+            if (!(stake > 0 && stake <= 1000)) throw new HttpError(400, 'Enter the stake.');
+            const clean = (x: unknown) => [...new Set((Array.isArray(x) ? x : []).map((y) => str(y, 40)).filter((y) => ids.has(y)))];
+            const old = i >= 0 ? list[i] : null;
+            const g: SideGame = { id: old?.id || crypto.randomUUID(), kind, round: str(b.round, 60) || null, stake, players: [], by: old?.by || me.id };
+            if (kind === 'nassau') {
+              const sides = (Array.isArray(b.sides) ? b.sides : []) as unknown[];
+              const a = clean(sides[0]), c = clean(sides[1]).filter((x) => !a.includes(x));
+              if (!a.length || !c.length) throw new HttpError(400, 'Put at least one player on each side.');
+              g.sides = [a, c]; g.players = [...a, ...c];
+              g.nassau = old?.kind === 'nassau' ? old.nassau : {};
+            } else {
+              g.players = clean(b.players);
+              if (g.players.length < 2) throw new HttpError(400, 'Pick at least two players.');
+              if (kind === 'skins') {
+                g.holes = Number(b.holes) === 9 ? 9 : 18;
+                g.carry = b.carry !== false;
+                g.skins = old?.kind === 'skins' ? (old.skins || []).slice(0, g.holes) : [];
+              } else {
+                const labels = (Array.isArray(b.prizes) ? b.prizes : []).map((x) => str(x, 24)).filter(Boolean).slice(0, 8);
+                if (!labels.length) labels.push(kind === 'ctp' ? 'Closest' : 'Longest');
+                g.prizes = labels.map((label, k) => ({ label, winner: old?.kind === kind && old.prizes?.[k]?.winner && g.players.includes(old.prizes[k].winner!) ? old.prizes[k].winner : null }));
+              }
+            }
+            if (i >= 0) list[i] = g;
+            else {
+              if (list.length >= 40) throw new HttpError(400, 'That’s a lot of side games already.');
+              list.push(g);
+            }
+          } else if (op === 'skin' || op === 'prize' || op === 'bet') {
+            if (i < 0) throw new HttpError(400, 'Which game?');
+            applyGameScore(list[i], { op, hole: b.hole, index: b.index, bet: b.bet, winner: b.winner, result: b.result });
+          } else throw new HttpError(400, 'Unknown game action.');
+          const next: Games | null = list.length ? { v: v + 1, list } : null;
+          const base = db().from('trips').update({ games: next }).eq('id', trip.id);
+          const { data: saved, error: saveErr } = await (v ? base.eq('games->>v', String(v)) : base.is('games->v', null)).select('id');
+          if (saveErr) throw saveErr;
+          if (saved && saved.length) break;
+          if (attempt >= 4) throw new HttpError(409, 'Lots of scores coming in at once. Try that again.');
+          const { data: again } = await db().from('trips').select('games').eq('id', trip.id).maybeSingle();
+          fresh = (again?.games as Games | null) || { v: 0, list: [] };
+        }
         break;
       }
       case 'car': {

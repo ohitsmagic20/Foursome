@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TripState, VoteValue, DestinationData, DateData } from '@/lib/shared';
-import { openVotes, pickOf, rangeLabel, nightsOf, tripPlace } from '@/lib/shared';
-import { api, rememberTrip, setToken, initials } from '@/lib/client';
+import { openVotes, withQueuedScores, pickOf, rangeLabel, nightsOf, tripPlace } from '@/lib/shared';
+import { api, OfflineError, rememberTrip, setToken, initials } from '@/lib/client';
 import { GuestFields, ProfileForm, SignIn, useMe } from './account';
 import { Ctx, Icon, Sheet, type SheetSpec, type TabId, type TripCtx } from './ui';
 import { TripTab } from './tabs/TripTab';
@@ -13,6 +13,7 @@ import { GolfTab } from './tabs/GolfTab';
 import { FlightsTab } from './tabs/FlightsTab';
 import { tripSheet } from './sheets';
 import { registerServiceWorker } from './notify';
+import { enqueue, onOutboxChange, queueKey, readOutbox, removeFromOutbox, type OutboxItem } from '@/lib/outbox';
 import { SwitcherSheet } from './TripSwitcher';
 
 // Plan (dates and destination votes) lives on Home now; the Cup sits in the middle of the bar.
@@ -36,11 +37,42 @@ export default function TripApp({ code }: { code: string }) {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(0);
 
+  const [outbox, setOutbox] = useState<OutboxItem[]>([]);
+  const [offline, setOffline] = useState(false);
+  const flushing = useRef(false);
+  useEffect(() => { setOutbox(readOutbox(code)); return onOutboxChange(() => setOutbox(readOutbox(code))); }, [code]);
+
+  /** Send queued score taps, oldest first. Stops at the first one that still can't get through. */
+  const flush = useCallback(async () => {
+    if (flushing.current) return;
+    flushing.current = true;
+    let sent = 0;
+    try {
+      for (const item of readOutbox(code)) {
+        try {
+          await api(`/api/trips/${code}/actions`, { code, body: item.body });
+          sent++;
+        } catch (e) {
+          if (e instanceof OfflineError) { setOffline(true); break; }
+          // The server said no (the match was deleted, say): drop it so the queue doesn't stick.
+          setToast(`A score from earlier didn’t save: ${e instanceof Error ? e.message : 'unknown error'}`);
+        }
+        removeFromOutbox(code, item.key, item.at);
+      }
+    } finally {
+      flushing.current = false;
+    }
+    return sent;
+  }, [code]);
+
   const load = useCallback(async () => {
     try {
+      if (readOutbox(code).length && await flush()) {/* synced; the fresh state below includes them */}
       const s = await api<TripState>(`/api/trips/${code}`, { code });
       if (pending.current === 0) setState(s); // don't overwrite a vote that's still saving
       setError('');
+      setOffline(false);
+      try { localStorage.setItem(`foresome:state:${code}`, JSON.stringify(s)); } catch { /* full or private */ }
       if (s.meId) {
         // Remember what this trip looks like so the trip switcher can show its dates and place.
         const d = pickOf<DateData>(s, 'date'), p = pickOf<DestinationData>(s, 'destination');
@@ -50,9 +82,28 @@ export default function TripApp({ code }: { code: string }) {
         });
       }
     } catch (e) {
+      if (e instanceof OfflineError) {
+        setOffline(true);
+        // No signal: show the last copy this phone saw, so scoring still works.
+        setState((cur) => {
+          if (cur) return cur;
+          try { const c = localStorage.getItem(`foresome:state:${code}`); return c ? JSON.parse(c) as TripState : cur; } catch { return cur; }
+        });
+        setError((cur) => cur || 'No connection right now.');
+        return;
+      }
       setError(e instanceof Error ? e.message : 'Could not load the trip.');
     }
-  }, [code]);
+  }, [code, flush]);
+
+  useEffect(() => {
+    const up = () => { setOffline(false); load(); };
+    const down = () => setOffline(true);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    if (!navigator.onLine) setOffline(true);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, [load]);
 
   // Keep everyone in sync: refresh every few seconds while the app is on screen.
   useEffect(() => {
@@ -78,11 +129,28 @@ export default function TripApp({ code }: { code: string }) {
   }, []);
 
   const act = useCallback(async (type: string, payload: Record<string, unknown> = {}) => {
+    const key = queueKey(type, payload);
+    const body = { type, ...payload };
+    // Score taps keep their order: if earlier ones are still waiting for signal, this one waits behind them.
+    if (key && readOutbox(code).length) {
+      enqueue(code, key, body);
+      flush().then((n) => { if (n) load(); });
+      return true;
+    }
     try {
       pending.current++;
-      await api(`/api/trips/${code}/actions`, { code, body: { type, ...payload } });
+      await api(`/api/trips/${code}/actions`, { code, body });
       return true;
     } catch (e) {
+      if (key && e instanceof OfflineError) {
+        enqueue(code, key, body);
+        setOffline(true);
+        return true;
+      }
+      if (e instanceof OfflineError) {
+        toast('No signal. That didn’t save. Try again when you’re back online.');
+        return false;
+      }
       toast(e instanceof Error ? e.message : 'That did not save. Try again.');
       return false;
     } finally {
@@ -125,8 +193,12 @@ export default function TripApp({ code }: { code: string }) {
   }, [state, chosen]);
   const view = useCallback((id: string, t?: TabId) => { setChosen(id); if (t) go(t); }, [go]);
   const me = useMemo(() => state?.members.find((m) => m.id === state.meId) || null, [state]);
-  const ctx: TripCtx | null = useMemo(() => state ? { state, me, act, vote, toast, sheet: setSheet, go, place, view } : null, [state, me, act, vote, toast, go, place, view]);
+  const shown = useMemo(() => state ? withQueuedScores(state, outbox) : null, [state, outbox]);
+  const ctx: TripCtx | null = useMemo(() => shown ? { state: shown, me, act, outbox, vote, toast, sheet: setSheet, go, place, view } : null, [shown, me, act, outbox, vote, toast, go, place, view]);
 
+  if (error && !state && offline) {
+    return <div className="app no-tabs"><div className="hero"><h1>No signal</h1><p>This trip hasn’t been opened on this phone with a connection yet. It’ll load as soon as you’re back online.</p><button className="btn primary" onClick={() => load()}>Try again</button></div></div>;
+  }
   if (error && !state) {
     return <div className="app no-tabs"><div className="hero"><h1>Trip not found</h1><p>{error}</p><a className="btn primary" href="/">Go to Foresome</a></div></div>;
   }
@@ -159,6 +231,16 @@ export default function TripApp({ code }: { code: string }) {
             <a className="avatar-btn" href={`/profile?back=/t/${code}`} aria-label="Your profile">{initials(me?.name || '?')}</a>
           </div>
         </header>
+        {(offline || outbox.length > 0) && (
+          <div className={`offline-bar${offline ? '' : ' syncing'}`} role="status">
+            <span className="dot" />
+            {offline
+              ? outbox.length
+                ? `No signal. ${outbox.length} score${outbox.length === 1 ? '' : 's'} saved on this phone. ${outbox.length === 1 ? 'It' : 'They'}’ll sync on their own.`
+                : 'No signal. Showing the last update; scores you enter will save on this phone.'
+              : `Back online. Syncing ${outbox.length} score${outbox.length === 1 ? '' : 's'}…`}
+          </div>
+        )}
         <main className="stack">
           {tab === 'trip' && <TripTab />}
           {tab === 'cup' && <CupTab />}

@@ -14,7 +14,9 @@ export function SettleUp({ embedded = false }: { embedded?: boolean }) {
   const ctx = useTrip();
   const { state, me, act } = ctx;
   const expenses = state.expenses || [];
-  const { payments, balance, total } = settleUp(state);
+  const { payments, balance, total, games } = settleUp(state);
+  const gameMoney = [...games.values()].some((c) => Math.abs(c) > 0.004);
+  const myGames = me ? games.get(me.id) || 0 : 0;
   const name = (id: string) => firstName(state.members.find((m) => m.id === id)?.name || 'Someone');
   const member = (id: string) => state.members.find((m) => m.id === id);
   const mine = me ? balance.get(me.id) || 0 : 0;
@@ -26,7 +28,7 @@ export function SettleUp({ embedded = false }: { embedded?: boolean }) {
         <button className="btn small" onClick={() => expenseSheet(ctx)}>{Icon.plus} Expense</button>
       </div>
 
-      {expenses.length === 0 ? (
+      {expenses.length === 0 && !gameMoney ? (
         <button className="card empty dashed" onClick={() => expenseSheet(ctx)}>Log what people paid for the group, like the house or a dinner.</button>
       ) : (
         <>
@@ -51,12 +53,13 @@ export function SettleUp({ embedded = false }: { embedded?: boolean }) {
             </div>
           ) : <p className="sub">Everyone’s even.</p>}
 
-          <details className="expenses">
+          {gameMoney && <p className="hint">Includes side games: {myGames > 0.004 ? `you’re up ${cents(myGames)}` : myGames < -0.004 ? `you’re down ${cents(-myGames)}` : 'you’re even'}. <button className="link-btn" onClick={() => ctx.go('cup')}>See the games</button></p>}
+          {expenses.length > 0 && <details className="expenses">
             <summary>{expenses.length} expense{expenses.length > 1 ? 's' : ''} · {cents(total)} total{me ? ` · ${mine > 0.004 ? `you’re owed ${cents(mine)}` : mine < -0.004 ? `you owe ${cents(-mine)}` : 'you’re even'}` : ''}</summary>
             <div className="list">
               {expenses.slice().reverse().map((e) => <ExpenseRow key={e.id} e={e} />)}
             </div>
-          </details>
+          </details>}
           {me && !me.venmo && !me.cashapp && (
             <p className="hint">Add your Venmo or Cash App so people can pay you back in one tap. <button className="link-btn" onClick={() => meSheet(ctx)}>Add it</button></p>
           )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { SideGames } from './SideGames';
 import { useEffect, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
 import { CUP_FORMATS, DEFAULT_SI, HCP_RULE, matchStrokes, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
@@ -44,6 +45,7 @@ export function CupTab() {
           ? 'The Cup needs a one-time database update before it can save teams and results. Run supabase/008_cup.sql in the Supabase SQL Editor, then come back.'
           : 'The Cup isn’t switched on for this trip yet.'}</div>
       ) : cup ? <CupSection /> : <section className="section"><div className="card"><CupPreview /></div></section>}
+      <SideGames />
     </>
   );
 }
@@ -313,7 +315,7 @@ function Board({ cup }: { cup: CupT }) {
             <div key={i} className={`cup-side ${TEAM_CLASS[i]}${winner === i ? ' won' : ''}`}>
               <div className="cup-team-name">{rec ? name(t.captain) : t.name}</div>
               <div className="cup-pts">{rec ? (i ? rec.l : rec.w) : pts(i ? score.b : score.a)}</div>
-              {rec && <div className="cup-proj">{i ? `${rec.l}–${rec.w}` : `${rec.w}–${rec.l}`}{rec.h ? `–${rec.h}` : ''}{rec.holes.a + rec.holes.b ? ` · ${i ? rec.holes.b : rec.holes.a} holes won` : ''}</div>}
+              {rec && <div className="cup-proj">{i ? `${rec.l}–${rec.w}` : `${rec.w}–${rec.l}`}{rec.h ? `–${rec.h}` : ''}{rec.holes.a + rec.holes.b ? ` · ${i ? rec.holes.b : rec.holes.a} hole${(i ? rec.holes.b : rec.holes.a) === 1 ? '' : 's'} won` : ''}</div>}
               {live.live > 0 && <div className="cup-proj">Projected {pts(i ? live.b : live.a)}</div>}
             </div>
           ))}

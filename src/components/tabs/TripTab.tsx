@@ -374,7 +374,7 @@ function Money({ over, planning }: { over: Member[]; planning: boolean }) {
   const c = costOf(state, me);
   const left = me.budget > 0 ? me.budget - c.total : null;
   const parts: [string, number, boolean][] = [['Flight', c.flight, me.flight_price !== null], ['Stay', c.stay, !!stay.option], ['Golf', c.golf, true], ...(state.trip.cars?.length ? [['Car', c.car, true] as [string, number, boolean]] : []), ['Food', c.food, true]];
-  const showSettle = !planning || (state.expenses?.length || 0) > 0;
+  const showSettle = !planning || (state.expenses?.length || 0) > 0 || (state.trip.games?.list.length || 0) > 0;
   return (
     <section className="section">
       <div className="section-head"><h2>Money</h2>{!stay.option && <span className="sub">Stay not picked yet</span>}</div>
@@ -596,10 +596,12 @@ function ToBook() {
   const date = pickOf<DateData>(state, 'date').option;
   const items = state.options.filter((o) => o.locked && (o.kind === 'lodging' || o.kind === 'round'))
     .filter((o) => { const d = o.data as { owner?: string; booked?: boolean }; return d.owner === me.id && !d.booked; });
-  if (!items.length) return null;
+  const cars = (state.trip.cars || []).filter((c) => c.by === me.id && !c.booked);
+  const total = items.length + cars.length;
+  if (!total) return null;
   return (
     <section className="section">
-      <div className="section-head"><h2>To book</h2><span className="sub">{items.length} on you</span></div>
+      <div className="section-head"><h2>To book</h2><span className="sub">{total} on you</span></div>
       <div className="list">
         {items.map((o) => {
           const r = o.data as { course?: string; time?: string; day?: number; name?: string };
@@ -613,29 +615,54 @@ function ToBook() {
             </button>
           );
         })}
+        {cars.map((c) => (
+          <button key={c.id} className="row" onClick={() => go('flights')}>
+            <div className="grow">
+              <div className="row-title">{c.company ? `${c.company} rental car` : 'Rental car'}</div>
+              <div className="row-meta">{money(c.total)} · {c.riders.length} rider{c.riders.length === 1 ? '' : 's'}</div>
+            </div>
+            {Icon.chev}
+          </button>
+        ))}
       </div>
     </section>
   );
 }
 
 /** Organizer: share the trip's courses and prices (no names) as a trip idea for other groups. */
-function ShareIdea() {
-  const { state, act, toast } = useTrip();
+function IdeaConfirm() {
+  const { act, toast, sheet } = useTrip();
   const [busy, setBusy] = useState(false);
+  return (
+    <div className="form">
+      <p className="sub">Posts this trip on the public <a href="/ideas" target="_blank" rel="noreferrer">Trip ideas</a> page, so any group can use it as a starting point. Anyone with the link can see it.</p>
+      <div className="share-what">
+        <div><b>Shown</b><span>Destination and airports, nights and month, group size, each round’s day, tee time, course and greens fee, and the stay’s price per person per night.</span></div>
+        <div><b>Not shown</b><span>Names, the stay itself, flights, votes, scores, or anything else about your group. Nobody can see or join your trip from it.</span></div>
+      </div>
+      <div className="btn-row">
+        <button className="btn primary" style={{ flex: 1 }} disabled={busy} onClick={async () => {
+          setBusy(true);
+          if (await act('share_idea')) { sheet(null); toast('Posted to Trip ideas'); }
+          setBusy(false);
+        }}>{busy ? <span className="spinner" /> : 'Post it publicly'}</button>
+      </div>
+    </div>
+  );
+}
+
+function ShareIdea() {
+  const { state, act, toast, sheet } = useTrip();
   if (plannedRounds(state).length < 2) return null;
   if (state.sharedIdea) {
     return (
       <>
-        <a className="btn small" href={`/ideas/g-${state.sharedIdea}`}>View shared idea</a>
-        <ConfirmButton className="btn small ghost" label="Stop sharing" confirmLabel="Tap to stop sharing" onConfirm={async () => { if (await act('unshare_idea')) toast('No longer shared'); }} />
+        <a className="btn small" href={`/ideas/g-${state.sharedIdea}`}>View public trip idea</a>
+        <ConfirmButton className="btn small ghost" label="Take it down" confirmLabel="Tap to take it down" onConfirm={async () => { if (await act('unshare_idea')) toast('Removed from Trip ideas'); }} />
       </>
     );
   }
   return (
-    <button className="btn small" disabled={busy} onClick={async () => {
-      setBusy(true);
-      if (await act('share_idea')) toast('Shared as a trip idea. Only the courses, tee times and prices are shown.');
-      setBusy(false);
-    }}>{busy ? <span className="spinner" /> : 'Share as a trip idea'}</button>
+    <button className="btn small ghost" onClick={() => sheet({ title: 'Post as a public trip idea?', body: <IdeaConfirm /> })}>Post as a public trip idea</button>
   );
 }

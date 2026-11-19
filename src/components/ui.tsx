@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import type { OutboxItem } from '@/lib/outbox';
 import type { Member, Option, TripState, VoteValue } from '@/lib/shared';
 import { andList, formatTee, parseTee, votesFor , TIER_HINT, priceTier } from '@/lib/shared';
 import { firstName, initials } from '@/lib/client';
@@ -60,6 +61,8 @@ export interface TripCtx {
   state: TripState;
   me: Member | null;
   act: (type: string, payload?: Record<string, unknown>) => Promise<boolean>;
+  /** Score taps waiting for signal (see lib/outbox). */
+  outbox: OutboxItem[];
   vote: (optionId: string, value: VoteValue | null) => void;
   toast: (msg: string) => void;
   sheet: (s: SheetSpec | null) => void;
