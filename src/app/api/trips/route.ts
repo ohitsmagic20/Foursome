@@ -30,12 +30,12 @@ export function POST(req: Request) {
     const m = await db().from('members').insert({ trip_id: trip.id, token, is_organizer: true, ...person }).select('id').single();
     if (m.error) throw m.error;
 
-    // Started from a trip idea: add its destination and rounds as suggestions (not locked), with the organizer's yes.
+    // Started from a trip idea: its destination is set (the organizer decides where), and its rounds come in as suggestions.
     const tpl = b.template ? await ideaBySlug(str(b.template, 60)) : null;
     if (tpl) {
       const days = int(b.nights, 1, 10, 3) + 1;
       const rows = [
-        { kind: 'destination', data: { name: tpl.destination, airport: tpl.airports[0], airports: tpl.airports } },
+        { kind: 'destination', locked: true, data: { name: tpl.destination, airport: tpl.airports[0], airports: tpl.airports } },
         ...tpl.rounds.map((r) => ({
           kind: 'round',
           data: {

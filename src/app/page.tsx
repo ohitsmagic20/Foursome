@@ -43,7 +43,7 @@ export default function Home() {
     <div className="hero">
       <div className="eyebrow">Foresome</div>
       <h1>Plan the golf trip without the 200-message group text.</h1>
-      <p>Everyone votes on the dates, the destination, where you stay and where you play. Then line up flights so you all land in time for the first tee.</p>
+      <p>You set the place and the dates. The group weighs in on where to stay and where to play, and everyone lines up flights that land in time for the first tee.</p>
     </div>
   );
 
@@ -186,8 +186,8 @@ function HowItWorks() {
       <h2>How it works</h2>
       <div className="steps">
         <div className="step"><b>1</b><div><div className="row-title">Send one link</div><div className="row-meta">Friends join with their name and home city. No app to download, no password.</div></div></div>
-        <div className="step"><b>2</b><div><div className="row-title">The group votes</div><div className="row-meta">Dates, destination, rentals and tee times. You see who’s in and who hasn’t answered.</div></div></div>
-        <div className="step"><b>3</b><div><div className="row-title">Lock it and book</div><div className="row-meta">The organizer locks the winners. Costs split automatically and flights line up with the first tee time.</div></div></div>
+        <div className="step"><b>2</b><div><div className="row-title">You set where and when</div><div className="row-meta">The organizer decides the place and dates. The group weighs in on rentals and tee times.</div></div></div>
+        <div className="step"><b>3</b><div><div className="row-title">Lock it and book</div><div className="row-meta">Costs split automatically and flights line up with the first tee time.</div></div></div>
       </div>
     </section>
   );

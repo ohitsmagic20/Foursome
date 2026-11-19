@@ -16,7 +16,7 @@ import { registerServiceWorker } from './notify';
 import { enqueue, onOutboxChange, queueKey, readOutbox, removeFromOutbox, type OutboxItem } from '@/lib/outbox';
 import { SwitcherSheet } from './TripSwitcher';
 
-// Plan (dates and destination votes) lives on Home now; the Cup sits in the middle of the bar.
+// Where and when live on Home; the Cup sits in the middle of the bar.
 const TABS: { id: TabId; label: string }[] = [
   { id: 'trip', label: 'Home' },
   { id: 'stay', label: 'Stay' },
@@ -24,7 +24,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'golf', label: 'Golf' },
   { id: 'flights', label: 'Flights' },
 ];
-/** Scroll Home to the dates and destination votes (old #vote links and checklist rows land here). */
+/** Scroll Home to where and when (old #vote links and checklist rows land here). */
 const toDecide = () => setTimeout(() => document.getElementById('decide')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
 const POLL_MS = 5000;
 
@@ -212,8 +212,8 @@ export default function TripApp({ code }: { code: string }) {
   const date = pickOf<DateData>(state, 'date');
   const dest = pickOf<DestinationData>(state, 'destination');
   const eyebrow = [
-    dest.option ? dest.option.data.name + (dest.locked ? '' : '?') : 'Destination TBD',
-    date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) + (date.locked ? '' : '?') : `${state.trip.nights} nights`,
+    dest.locked && dest.option ? dest.option.data.name : 'Destination TBD',
+    date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : `${state.trip.nights} nights`,
   ].join(' · ');
 
   return (
@@ -268,17 +268,17 @@ export default function TripApp({ code }: { code: string }) {
 /** How many open options on a tab still need my vote. */
 function unvoted(state: TripState, tab: TabId): number {
   const o = openVotes(state);
-  return tab === 'trip' || tab === 'vote' ? o.date + o.destination : tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
+  return tab === 'stay' ? o.lodging : tab === 'golf' ? o.round : 0;
 }
 
-/** On the invite page: who's already in, and what's settled or still up for a vote. */
+/** On the invite page: who's already in, and where and when, if the organizer has set them. */
 function InvitePreview({ state }: { state: TripState }) {
   const p = state.preview;
   if (!p) return null;
   const names = p.names || [];
   const facts: [string, string][] = [
-    ['Where', p.place || (p.placeOptions ? `${p.placeOptions} place${p.placeOptions > 1 ? 's' : ''} suggested. Your vote counts.` : 'Not picked yet. Suggest one after you join.')],
-    ['When', p.dates || (p.dateOptions ? `${p.dateOptions} date option${p.dateOptions > 1 ? 's' : ''} so far` : 'Not picked yet. Suggest dates after you join.')],
+    ['Where', p.place || 'The organizer is still picking'],
+    ['When', p.dates || 'The organizer is still picking'],
   ];
   return (
     <div className="card invite-preview">
@@ -322,7 +322,7 @@ function JoinScreen({ state, code, onJoined }: { state: TripState; code: string;
       <div className="hero">
         <div className="eyebrow">You’re invited</div>
         <h1>{state.trip.name}</h1>
-        <p>{org ? `${org} is organizing` : 'A golf trip'} with {count} {count === 1 ? 'person' : 'people'} so far. Join to vote on dates, where to stay and where to play.</p>
+        <p>{org ? `${org} is organizing` : 'A golf trip'} with {count} {count === 1 ? 'person' : 'people'} so far. Join to pick where to stay and where to play, and line up your flight.</p>
       </div>
       <InvitePreview state={state} />
       {me === undefined && <div className="empty"><span className="spinner" style={{ display: 'inline-block' }} /></div>}

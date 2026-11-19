@@ -47,8 +47,8 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
 
     const date = pickOf<DateData>(state, 'date').option;
     const dest = pickOf<DestinationData>(state, 'destination').option;
-    if (!date) throw new HttpError(400, 'Add date options first so there are dates to search.');
-    if (!dest?.data.airport) throw new HttpError(400, 'The destination needs an airport code, like MYR for Myrtle Beach. Edit it on the Vote tab.');
+    if (!date) throw new HttpError(400, 'The organizer hasn’t set the dates yet, so there’s nothing to search.');
+    if (!dest?.data.airport) throw new HttpError(400, 'The destination needs an airport code, like MYR for Myrtle Beach. The organizer can change it on Home.');
     const origin = airport(b.origin) || me.airport;
     const destAirports = dest.data.airports?.length ? dest.data.airports : [dest.data.airport];
     const wanted = airport(b.destination);

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   // Absolute URLs for link-preview images.
   metadataBase: new URL(process.env.APP_URL || 'https://www.foresomes.net'),
   title: 'Foresome',
-  description: 'Plan a golf trip with your group. Vote on dates, destination, lodging and tee times, and line up everyone’s flights.',
+  description: 'Plan a golf trip with your group. Set the place and dates, pick lodging and tee times together, and line up everyone’s flights.',
   applicationName: 'Foresome',
   appleWebApp: { capable: true, title: 'Foresome', statusBarStyle: 'default' },
   formatDetection: { telephone: false },

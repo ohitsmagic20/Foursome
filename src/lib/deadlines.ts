@@ -5,10 +5,11 @@ import { db, firstIn, loadState } from './server';
 import { notify } from './push';
 import { APP_URL, emailMembers } from './email';
 
-export const DEADLINE_KINDS = ['date', 'destination', 'lodging'] as const;
+// Only the stay has a voting deadline now: the organizer sets the dates and the place directly.
+export const DEADLINE_KINDS = ['lodging'] as const;
 export type DeadlineKind = (typeof DEADLINE_KINDS)[number];
-const TAB: Record<DeadlineKind, string> = { date: 'vote', destination: 'vote', lodging: 'stay' };
-export const DECISION: Record<DeadlineKind, string> = { date: 'dates', destination: 'where to go', lodging: 'where to stay' };
+const TAB: Record<DeadlineKind, string> = { lodging: 'stay' };
+export const DECISION: Record<DeadlineKind, string> = { lodging: 'where to stay' };
 
 function labelOf(kind: Kind, data: Record<string, unknown>, trip: Trip): string {
   if (kind === 'date') return rangeLabel(String(data.start), nightsOf(trip, data as { start: string; nights?: number }));

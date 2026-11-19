@@ -484,6 +484,7 @@ export function openVotes(state: TripState): Record<Kind, number> {
   // A kind is settled once something's locked: dates and places trip-wide, a stay per place.
   const settled = (o: Option) => state.options.some((x) => x.locked && x.kind === o.kind && x.kind !== 'round' && (o.kind !== 'lodging' || (placeOf(state, x) || '') === (placeOf(state, o) || '')));
   for (const o of state.options) {
+    if (o.kind === 'date' || o.kind === 'destination') continue; // the organizer sets these; nobody votes
     if (o.locked || settled(o)) continue;
     // Once the place is picked, other places' stays and rounds are off the table.
     if (dest && PLACED.includes(o.kind)) { const p = placeOf(state, o); if (p && p !== dest.id) continue; }

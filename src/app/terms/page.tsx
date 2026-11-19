@@ -9,7 +9,7 @@ export default function Terms() {
       <p>By using Foresome you agree to these terms. If you don’t agree, please don’t use it. Questions: <strong>support@foresomes.net</strong>.</p>
 
       <h2>What Foresome is</h2>
-      <p>Foresome is a planning tool. It helps a group vote on dates, a destination, a place to stay and rounds of golf, and shows each person an estimated cost. <strong>Foresome doesn’t book or sell anything.</strong> Flights, lodging and tee times are booked directly with the airline, rental site, hotel or golf course, under their terms and prices.</p>
+      <p>Foresome is a planning tool. It helps a group settle on dates, a destination, a place to stay and rounds of golf, and shows each person an estimated cost. <strong>Foresome doesn’t book or sell anything.</strong> Flights, lodging and tee times are booked directly with the airline, rental site, hotel or golf course, under their terms and prices.</p>
 
       <h2>Prices and information are estimates</h2>
       <p>Flight prices, greens fees (including ranges other groups entered), weather, course lists and airport suggestions come from third parties or other users and can be wrong or out of date. Always confirm prices, availability and details with the seller before you book or pay. Cost splits in the app are estimates for planning; how your group actually pays is up to you.</p>

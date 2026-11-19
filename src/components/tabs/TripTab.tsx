@@ -4,15 +4,15 @@ import type { DateData, DestinationData, LodgingData, Member } from '@/lib/share
 import { andList, packingTips, tripAwards, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
-import { Callout, Chip, ConfirmButton, Fold, Icon, useTrip, type TripCtx } from '../ui';
-import { meSheet } from '../sheets';
+import { Callout, Chip, ConfirmButton, Icon, MoreMenu, useTrip, type TripCtx } from '../ui';
+import { meSheet, whenSheet, whereSheet } from '../sheets';
 import { NotifyCard, useNudge } from '../notify';
 import { openItems } from '@/lib/openItems';
 import { SettleUp } from '../SettleUp';
 import { TodayCard } from '../TodayCard';
 import { OnePagerButton } from '../OnePager';
-import { When, Where } from './VoteTab';
-import { useWeather } from '../live';
+import { TripBasics } from './VoteTab';
+import { useWeather, WeatherStrip } from '../live';
 import { AppFooter } from '../Feedback';
 
 export function TripTab() {
@@ -35,8 +35,8 @@ export function TripTab() {
 
   const status = (done: boolean, open: string) => done ? <Chip kind="good">Done</Chip> : <Chip kind="warn">{open}</Chip>;
   const steps = [
-    { tab: 'vote' as const, title: 'Dates', meta: date.option ? `${rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data))} ${date.locked ? 'locked' : 'leading'}` : 'Nobody has suggested dates yet', chip: status(date.locked, date.option ? 'Voting' : 'To do') },
-    { tab: 'vote' as const, title: 'Destination', meta: dest.option ? `${dest.option.data.name} ${dest.locked ? 'locked' : 'leading'}` : 'Nobody has suggested a place yet', chip: status(dest.locked, dest.option ? 'Voting' : 'To do') },
+    { tab: 'vote' as const, title: 'Dates', meta: date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : 'The organizer sets them', chip: status(date.locked, 'To do') },
+    { tab: 'vote' as const, title: 'Destination', meta: dest.locked && dest.option ? dest.option.data.name : 'The organizer sets it', chip: status(dest.locked, 'To do') },
     { tab: 'stay' as const, title: 'Where we’re staying', meta: stay.option ? `${stay.option.data.name} ${stay.locked ? 'locked' : 'leading'}` : 'Suggest a house or hotel', chip: status(stay.locked, stay.option ? 'Voting' : 'To do') },
     { tab: 'golf' as const, title: 'Tee times', meta: rounds.length ? `${booked} of ${rounds.length} rounds booked · ${teeTimesNeeded(n)} tee times each` : 'No rounds in the plan yet', chip: status(rounds.length > 0 && booked === rounds.length, rounds.length ? `${rounds.length - booked} to book` : 'To do') },
     { tab: 'flights' as const, title: 'Flights', meta: `${flown} of ${n} have picked a flight${state.members.some((m) => 'flight_booked' in m) && flown ? ` · ${state.members.filter((m) => m.flight_booked).length} booked` : ''}`, chip: status(flown === n, `${n - flown} left`) },
@@ -47,7 +47,7 @@ export function TripTab() {
   return (
     <>
       <div className="summary">
-        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)).split(/[–-]/)[0].trim() + '?' : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : date.option ? 'Leading' : 'Still voting'}</span></div>
+        <div className="stat"><span className="k">{date.locked ? 'Tee off in' : 'Dates'}</span><span className="v">{countdown !== null ? (countdown >= 0 ? `${countdown}d` : 'Done') : 'TBD'}</span><span className="n">{date.locked && date.option ? rangeLabel(date.option.data.start, nightsOf(state.trip, date.option.data)) : 'Not set yet'}</span></div>
         <div className="stat"><span className="k">Crew</span><span className="v">{n}</span><span className="n">{teeTimesNeeded(n)} foursome{teeTimesNeeded(n) > 1 ? 's' : ''}</span></div>
         <div className="stat"><span className="k">Per person</span><span className="v">{money(avg)}</span><span className="n">avg. so far</span></div>
       </div>
@@ -55,14 +55,14 @@ export function TripTab() {
       {countdown !== null && countdown < -tripNights(state) ? <Recap /> : null}
       {countdown !== null && countdown > 0 && countdown <= 14 ? <BeforeYouGo days={countdown} /> : null}
       <TodayCard />
+      <TripBasics />
       <GetStarted />
       <TripPlan />
       <YourTurn />
       <WaitingOn />
-      <Decide />
       <ToBook />
 
-      {(countdown === null || countdown > 0) && state.options.some((o) => o.kind === 'destination' || o.kind === 'date') && <section className="section">
+      {(countdown === null || countdown > 0) && date.locked && dest.locked && <section className="section">
         <div className="section-head"><h2>Trip checklist</h2><span className="sub">{doneCount} of {steps.length} settled</span></div>
         <div className="list">
           {steps.map((s) => (
@@ -90,23 +90,6 @@ export function TripTab() {
  * Where and when, on Home (this used to be the Plan tab). Still being decided: the full vote, right here.
  * Locked: folded into one line (the plan card above already shows it), with the other options inside.
  */
-function Decide() {
-  const { state } = useTrip();
-  const date = pickOf<DateData>(state, 'date'), dest = pickOf<DestinationData>(state, 'destination');
-  const dests = state.options.filter((o) => o.kind === 'destination').length;
-  const dates = state.options.filter((o) => o.kind === 'date').length;
-  return (
-    <div id="decide" className="decide">
-      {dest.locked
-        ? <Fold title={`Where: ${dest.option!.data.name}`} meta={dests > 1 ? `Locked · ${dests - 1} other option${dests > 2 ? 's' : ''} and the comparison` : 'Locked'} icon={Icon.vote}><Where /></Fold>
-        : <Where />}
-      {date.locked
-        ? <Fold title={`When: ${rangeLabel(date.option!.data.start, nightsOf(state.trip, date.option!.data))}`} meta={dates > 1 ? `Locked · everyone’s availability` : 'Locked'} icon={Icon.calendar}><When /></Fold>
-        : <When />}
-    </div>
-  );
-}
-
 /** Once dates and destination are locked: the whole trip on one card, plus calendar and share. */
 function TripPlan() {
   const ctx = useTrip();
@@ -129,9 +112,18 @@ function TripPlan() {
   return (
     <section className="plan">
       <div className="plan-head">
-        <div className="eyebrow">The plan</div>
-        <div className="plan-title">{dest.option.data.name}</div>
+        <div className="plan-head-row">
+          <div style={{ minWidth: 0 }}>
+            <div className="eyebrow">The plan</div>
+            <div className="plan-title">{dest.option.data.name}</div>
+          </div>
+          {me?.is_organizer && <MoreMenu label="Change where or when" items={[
+            { label: 'Change where', onClick: () => whereSheet(ctx, dest.option!) },
+            { label: 'Change the dates', onClick: () => whenSheet(ctx, date.option!) },
+          ]} />}
+        </div>
         <div className="row-meta">{rangeLabel(start, tripNights(state))} · {tripNights(state)} nights · {state.members.length} {state.members.length === 1 ? 'golfer' : 'golfers'}</div>
+        {(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return parseDay(start).getTime() + tripNights(state) * 864e5 >= t.getTime(); })() && <WeatherStrip place={dest.option.data.name} start={start} nights={tripNights(state)} />}
       </div>
       <div className="plan-rows">
         <div className="plan-row"><span className="k">Stay</span><span>{stay.option ? <>{stay.option.data.url ? <a href={stay.option.data.url} target="_blank" rel="noopener noreferrer">{stay.option.data.name}</a> : stay.option.data.name}{!stay.locked && <span className="row-meta"> · still voting</span>}</> : <span className="row-meta">Not picked yet</span>}</span></div>
@@ -287,8 +279,6 @@ function YourTurn() {
   const { state, go } = useTrip();
   const o = openVotes(state);
   const rows = [
-    { n: o.date, tab: 'vote' as const, one: 'date option', many: 'date options' },
-    { n: o.destination, tab: 'vote' as const, one: 'destination', many: 'destinations' },
     { n: o.lodging, tab: 'stay' as const, one: 'place to stay', many: 'places to stay' },
     { n: o.round, tab: 'golf' as const, one: 'round of golf', many: 'rounds of golf' },
   ].filter((r) => r.n > 0);
@@ -561,30 +551,24 @@ function EmailPlan() {
   );
 }
 
-/** First-time guide on a new trip: what to do, in order, with ticks as things get done. Hides once
- *  dates and destination are locked, or when dismissed on this phone. */
+/** The organizer's first-time guide after where and when (which have their own card): invite, stays, golf.
+ *  Hides once all three are done, or when dismissed on this phone. */
 function GetStarted() {
   const ctx = useTrip();
   const { state, me, go } = ctx;
   const key = `foursome:intro:${state.trip.code}`;
   const [hidden, setHidden] = useState(true);
   useEffect(() => { try { setHidden(localStorage.getItem(key) === '1'); } catch { setHidden(false); } }, [key]);
-  const date = pickOf<DateData>(state, 'date');
-  const dest = pickOf<DestinationData>(state, 'destination');
-  if (hidden || !me || (date.locked && dest.locked)) return null;
+  if (hidden || !me || !me.is_organizer) return null;
   const has = (k: string) => state.options.some((o) => o.kind === k);
-  const voted = (k: string) => state.options.some((o) => o.kind === k && state.votes.some((v) => v.option_id === o.id && v.member_id !== o.created_by));
-  const org = me.is_organizer;
   const steps: { done: boolean; title: string; meta: string; action?: React.ReactNode }[] = [
     { done: state.members.length > 1, title: 'Invite the group', meta: 'One link. Friends join with their name and home city, no app or password.',
-      action: org ? <InviteButton ctx={ctx} className="btn small" label="Share invite link" /> : undefined },
-    { done: has('destination'), title: 'Suggest where', meta: 'Add a destination or two. The closest airports fill in for you.', action: <button className="btn small ghost" onClick={() => go('vote')}>Suggest a place</button> },
-    { done: has('date'), title: 'Suggest when', meta: 'Add a few date options. Each can be a different length: a long weekend next to a full week.' },
-    { done: voted('date') || voted('destination'), title: 'Everyone votes', meta: 'Tap in, maybe or out on each option. You can see who hasn’t answered.' },
-    { done: date.locked || dest.locked, title: org ? 'Lock the winners' : 'The organizer locks the winners', meta: 'Then pick a place to stay, add rounds of golf, and line up flights.' },
+      action: <InviteButton ctx={ctx} className="btn small" label="Share invite link" /> },
+    { done: has('lodging'), title: 'Find a place to stay', meta: 'Paste an Airbnb, Vrbo or hotel link and the details fill in.', action: <button className="btn small ghost" onClick={() => go('stay')}>Stays</button> },
+    { done: has('round'), title: 'Add rounds of golf', meta: 'Courses near the destination show up on the Golf tab.', action: <button className="btn small ghost" onClick={() => go('golf')}>Golf</button> },
   ];
+  if (steps.every((x) => x.done)) return null;
   const next = steps.findIndex((s) => !s.done);
-  if (steps.filter((s) => s.done).length >= 3) return null;
   return (
     <section className="card get-started">
       <div className="section-head">

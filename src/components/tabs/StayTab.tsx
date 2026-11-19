@@ -2,7 +2,6 @@
 
 import type { DateData, DestinationData, LodgingData, Option } from '@/lib/shared';
 import { andList, bedsNeeded, destAirports, inPlace, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
-import { PlaceSwitcher, usePlaces } from '../Places';
 import { firstName } from '@/lib/client';
 import { PackagesNear } from '../Packages';
 import { StaySearch } from '../live';
@@ -18,12 +17,10 @@ export function StayTab() {
   const opts = inPlace<LodgingData>(state, 'lodging', place);
   const locked = lockedOf<LodgingData>(state, 'lodging', place);
   const leader = leaderOf<LodgingData>(state, 'lodging', place);
-  const choosing = usePlaces().length > 1;
   const need = bedsNeeded(state.members);
   const own = state.members.find((m) => m.bed === 'own');
   const share = state.members.find((m) => m.bed === 'share');
   const dest = (optionsOf<DestinationData>(state, 'destination').find((d) => d.id === place) || null) as Option<DestinationData> | null;
-  const where = dest ? dest.data.name.split(',')[0] : '';
   const date = pickOf<DateData>(state, 'date').option;
   const shown = locked ? [locked, ...opts.filter((o) => o.id !== locked.id)] : opts.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
   const dist = useStayDistances(dest, shown);
@@ -47,7 +44,7 @@ export function StayTab() {
           <div className="fee">{money(o.data.total)}<small>total</small></div>
         </div>
         <div className="opt-status">
-          {o.locked ? <span className="good">{choosing ? `Picked for ${where}` : 'Locked'}</span> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <span className="flag">Leading</span> : null}
+          {o.locked ? <span className="good">Locked</span> : !locked && leader?.id === o.id && tally(state, o.id).yes > 0 ? <span className="flag">Leading</span> : null}
           <BookingTag option={o} />
           {o.data.beds > 0 && (fits ? <span className="good">Fits everyone</span> : <span className="bad">{need - o.data.beds} bed{need - o.data.beds > 1 ? 's' : ''} short</span>)}
           <span>{own ? money(lodgingShare(state.members, o.data.total, own)) : ''}{own && share ? ' / ' : ''}{share ? `${money(lodgingShare(state.members, o.data.total, share))} sharing` : ''} each</span>
@@ -56,7 +53,7 @@ export function StayTab() {
         {!locked && <Tally option={o} />}
         <div className="opt-foot">
           {o.locked && <BookButton option={o} />}
-          {!o.locked && <LockButton option={o} lockLabel={choosing ? `Pick for ${where}` : undefined} />}
+          {!o.locked && <LockButton option={o} />}
           {o.data.url && <a className="btn small" href={o.data.url} target="_blank" rel="noopener noreferrer">Open listing</a>}
           <span style={{ marginLeft: 'auto' }} />
           <MoreMenu items={[
@@ -71,22 +68,21 @@ export function StayTab() {
 
   return (
     <section className="section">
-      <PlaceSwitcher kind="lodging" />
-      <div className="section-head"><h2>{choosing && where ? `Stays in ${where}` : 'Where we stay'}</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
+      <div className="section-head"><h2>Where we stay</h2><button className="btn small" onClick={() => lodgingSheet(ctx)}>{Icon.plus} Place</button></div>
       <p className="sub">Paste an Airbnb, Vrbo or hotel link and the total. Need {need} bed{need === 1 ? '' : 's'}.</p>
       <Deadline kind="lodging" />
       {dest && date
         ? <StaySearch dest={dest.data.name} start={date.data.start} />
         : <p className="hint">Pick dates and a destination to search rentals.</p>}
       {dest && opts.length > 0 && <StayMap dest={dest} stays={shown} />}
-      {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>{choosing && where ? `Suggest the first place to stay in ${where}.` : 'Suggest the first place to stay.'}</button>}
-      {(locked && !choosing ? [locked] : shown).map((o) => card(o))}
-      {locked && !choosing && shown.length > 1 && (
+      {opts.length === 0 && <button className="card empty dashed" onClick={() => lodgingSheet(ctx)}>Suggest the first place to stay.</button>}
+      {(locked ? [locked] : shown).map((o) => card(o))}
+      {locked && shown.length > 1 && (
         <Fold title={`Other options (${shown.length - 1})`} meta="Not picked. Kept here in case plans change.">
           <div className="stack" style={{ gap: 10 }}>{shown.filter((o) => o.id !== locked.id).map((o) => card(o))}</div>
         </Fold>
       )}
-      {locked && !choosing && <Rooms stay={locked} />}
+      {locked && <Rooms stay={locked} />}
       {!locked && dest && <PackagesNear dest={dest.data.name} airports={destAirports(dest.data)} />}
     </section>
   );

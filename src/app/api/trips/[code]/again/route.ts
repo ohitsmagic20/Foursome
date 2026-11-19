@@ -27,7 +27,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
 
     const dest = pickOf<DestinationData>(state, 'destination').option;
     const rows = [
-      ...(dest ? [{ kind: 'destination', data: dest.data }] : []),
+      ...(dest ? [{ kind: 'destination', locked: true, data: dest.data }] : []),
       ...plannedRounds(state).map((r) => {
         const d = r.data as RoundData;
         // Last year's booking details don't carry over; the fee is last year's, so say so.

@@ -23,8 +23,8 @@ export default async function Image({ params }: { params: Promise<{ code: string
     const p = await tripPreview(trip);
     name = trip.name;
     lines = [
-      p.place || (p.placeOptions ? `${p.placeOptions} place${p.placeOptions > 1 ? 's' : ''} in the running` : 'Where: up for a vote'),
-      p.dates || (p.dateOptions ? `${p.dateOptions} date option${p.dateOptions > 1 ? 's' : ''}` : 'When: up for a vote'),
+      p.place || 'Where: to be decided',
+      p.dates || 'When: to be decided',
     ];
     who = p.count > 1 ? `${p.names.slice(0, 4).join(', ')}${p.count > 4 ? ` +${p.count - 4}` : ''} ${p.count === 1 ? 'is' : 'are'} in` : p.organizer ? `${p.organizer} is organizing` : '';
   } catch { /* unknown code: show the generic card */ }

@@ -6,7 +6,7 @@ describe('trip one-pager', () => {
   it('works for a brand-new trip with nothing decided', () => {
     const d = buildOnePager(trip(3), new Date('2026-11-18T12:00:00'));
     expect(d.facts.map((f) => f.value)).toEqual(['TBD', 'TBD', '3', '$100']); // just the food budget so far
-    expect(d.todo[0]).toBe('Suggest some dates');
+    expect(d.todo.slice(0, 2)).toEqual(['The organizer sets the dates', 'The organizer sets the destination']);
     expect(d.days).toHaveLength(0);
   });
   it('caps lists so a big trip fits on one page', () => {

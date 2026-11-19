@@ -171,6 +171,7 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
       case 'add_option': {
         const kind = b.kind as Kind;
         if (!KINDS.includes(kind)) throw new HttpError(400, 'Unknown option type.');
+        if (kind === 'date' || kind === 'destination') throw new HttpError(400, 'The organizer sets where and when now. Update the app and try again.');
         const { count } = await db().from('options').select('id', { count: 'exact', head: true }).eq('trip_id', trip.id).eq('kind', kind);
         if ((count || 0) >= MAX_OPTIONS) throw new HttpError(400, 'This list is full. Remove an option first.');
         const data = cleanData(kind, b.data, trip);
@@ -180,6 +181,48 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         // Adding something counts as a yes from the person who suggested it.
         await db().from('votes').upsert({ option_id: row.id, member_id: me.id, value: 'yes' });
         pings.push(['others', { title: trip.name, body: `${first(me.name)} suggested ${label(kind, data, trip)}. Are you in?`, url: url(TAB[kind]), tag: `new-${kind}` }, 15]);
+        break;
+      }
+      case 'set_plan': {
+        // The organizer decides where and when; nobody votes on them. One locked option of each kind:
+        // editing it keeps its id, so the stays and rounds tied to the place stay with it.
+        mustOrganize(me);
+        const kind = b.kind === 'date' ? 'date' : b.kind === 'destination' ? 'destination' : null;
+        if (!kind) throw new HttpError(400, 'Set where or when?');
+        const data = b.data ? cleanData(kind, b.data, trip) : null;
+        const useId = str(b.optionId, 40);
+        if (!data && !useId) throw new HttpError(400, kind === 'date' ? 'Pick the dates.' : 'Pick the place.');
+        const { data: rows } = await db().from('options').select('id,locked,data').eq('trip_id', trip.id).eq('kind', kind);
+        const current = (rows || []).find((o) => o.locked) || (useId ? (rows || []).find((o) => o.id === useId) : null);
+        let id: string;
+        if (current) {
+          id = current.id;
+          const r = await db().from('options').update(data ? { data, locked: true } : { locked: true }).eq('id', id);
+          if (r.error) throw r.error;
+        } else {
+          const { data: row, error } = await db().from('options').insert({ trip_id: trip.id, kind, data, created_by: me.id, locked: true }).select('id').single();
+          if (error) throw error;
+          id = row.id;
+        }
+        // Earlier suggestions of this kind are gone; for places, so are their own stays and rounds.
+        const others = (rows || []).filter((o) => o.id !== id).map((o) => o.id);
+        if (others.length) {
+          const r = await db().from('options').delete().in('id', others);
+          if (r.error) throw r.error;
+          if (kind === 'destination') await db().from('options').delete().eq('trip_id', trip.id).in('kind', ['lodging', 'round']).in('data->>dest', others).eq('locked', false);
+        }
+        if (trip.deadlines?.[kind]) {
+          const next = { ...trip.deadlines };
+          delete next[kind];
+          await db().from('trips').update({ deadlines: next }).eq('id', trip.id);
+        }
+        const { data: saved } = await db().from('options').select('data').eq('id', id).single();
+        const what = label(kind, (saved?.data || data || {}) as Record<string, unknown>, trip);
+        const text = kind === 'date' ? `The dates are set: ${what}.` : `The trip is going to ${what}.`;
+        pings.push(['others', { title: trip.name, body: text, url: url('trip'), tag: `plan-${kind}` }, 0]);
+        if (await firstIn(`planmail:${trip.id}:${kind}`, 30)) {
+          emails.push(['others', { subject: `${trip.name}: ${text}`, heading: text, lines: [`${first(me.name)} set it for ${trip.name}.`, 'Time to look at flights.'], button: { label: 'Open the trip', url: link('trip') } }]);
+        }
         break;
       }
       case 'add_idea_rounds': {

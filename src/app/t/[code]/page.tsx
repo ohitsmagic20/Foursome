@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
     const trip = await tripByCode(code);
     const p = await tripPreview(trip);
     const facts = [p.place, p.dates, `${p.count} going`].filter(Boolean).join(' · ');
-    const description = `${p.organizer ? `${p.organizer} invited you.` : 'You’re invited.'} ${facts}. Vote on dates, where to stay and where to play.`;
+    const description = `${p.organizer ? `${p.organizer} invited you.` : 'You’re invited.'} ${facts}. Pick where to stay and where to play.`;
     return {
       title: `${trip.name} · Foresome`,
       description,

@@ -59,19 +59,21 @@ export function meSheet(ctx: TripCtx) {
   });
 }
 
-export function dateSheet(ctx: TripCtx) {
+/** The organizer sets the trip's dates (no vote). */
+export function whenSheet(ctx: TripCtx, opt?: Option<DateData>) {
   const d = new Date();
   d.setMonth(d.getMonth() + 4);
-  const iso = d.toISOString().slice(0, 10);
+  const iso = opt?.data.start || d.toISOString().slice(0, 10);
+  const nights = String(opt?.data.nights || ctx.state.trip.nights);
   ctx.sheet({
-    title: 'Suggest dates',
+    title: opt ? 'Change the dates' : 'When',
     body: (
-      <SheetForm submit="Add to the vote" onSubmit={(fd) => save(ctx, 'add_option', { kind: 'date', data: { start: fd.start, nights: num(fd.nights) } }, 'Dates added to the vote')}>
+      <SheetForm submit="Save" onSubmit={(fd) => save(ctx, 'set_plan', { kind: 'date', data: { start: fd.start, nights: num(fd.nights) } }, 'Dates set')}>
         <div className="grid2">
           <Field name="start" label="Arrival date" type="date" defaultValue={iso} required />
-          <Select name="nights" label="Nights" defaultValue={String(ctx.state.trip.nights)} options={Array.from({ length: 14 }, (_, i) => [String(i + 1), `${i + 1} night${i ? 's' : ''}`] as [string, string])} />
+          <Select name="nights" label="Nights" defaultValue={nights} options={Array.from({ length: 14 }, (_, i) => [String(i + 1), `${i + 1} night${i ? 's' : ''}`] as [string, string])} />
         </div>
-
+        {opt && <p className="hint">Rounds keep their day of the trip (day 1, day 2…), so they move with the new dates. Everyone gets a heads-up.</p>}
       </SheetForm>
     ),
   });
@@ -119,13 +121,11 @@ function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationD
   const shown = [...found, ...picked.filter((c) => !found.some((f) => f.code === c)).map((c) => ({ code: c, name: 'Added by hand', city: '', miles: -1, major: false, suggested: false }))];
 
   return (
-    <SheetForm submit={opt ? 'Save' : 'Add to the vote'}
+    <SheetForm submit="Save"
       onSubmit={() => {
         if (!picked.length) throw new Error('Pick at least one airport to fly into.');
-        const data = { name: name.trim(), airports: picked };
-        return opt ? save(ctx, 'update_option', { optionId: opt.id, data }, 'Saved') : save(ctx, 'add_option', { kind: 'destination', data }, 'Destination added');
-      }}
-      extra={opt ? <ConfirmButton label="Remove" onConfirm={() => save(ctx, 'delete_option', { optionId: opt.id }, 'Removed')} /> : undefined}>
+        return save(ctx, 'set_plan', { kind: 'destination', data: { name: name.trim(), airports: picked } }, opt ? 'Saved' : 'Destination set');
+      }}>
       <div className="field">
         <label htmlFor="f-name">Destination</label>
         <input id="f-name" name="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Myrtle Beach, SC" required autoComplete="off" />
@@ -167,8 +167,9 @@ function DestinationForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<DestinationD
   );
 }
 
-export function destSheet(ctx: TripCtx, opt?: Option<DestinationData>) {
-  ctx.sheet({ title: opt ? 'Edit destination' : 'Suggest a destination', body: <DestinationForm ctx={ctx} opt={opt} /> });
+/** The organizer sets where the trip is going (no vote). Changing it keeps the stays and rounds. */
+export function whereSheet(ctx: TripCtx, opt?: Option<DestinationData>) {
+  ctx.sheet({ title: opt ? 'Change where' : 'Where', body: <DestinationForm ctx={ctx} opt={opt} /> });
 }
 
 function LodgingForm({ ctx, opt }: { ctx: TripCtx; opt?: Option<LodgingData> }) {

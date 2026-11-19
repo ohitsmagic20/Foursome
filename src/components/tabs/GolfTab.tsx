@@ -5,7 +5,6 @@ import type { CoursePrices, DateData, DestinationData, LodgingData, Option, Roun
 import { ACCESS_LABEL, type CourseAccess } from '@/lib/shared';
 import { TeeStats } from '../TeeTable';
 import { bookingOpens, dayLabel, groupNames, inPlace, teeAfter, money, optionsOf, pickOf, plannedRounds, tally, teeMinutes, teeTimesNeeded, tripNights } from '@/lib/shared';
-import { PlaceSwitcher, usePlaces } from '../Places';
 import { BookButton, BookingTag, Callout, Chip, Fold, Icon, LockButton, DriveLine, MoreMenu, Tally, Tier, VoteControl, bookingItems, canEdit, useTrip, type TripCtx } from '../ui';
 import { pairingsSheet, roundSheet } from '../sheets';
 import { CoursesNearby, DayWeather, WeatherCredit, useWeather } from '../live';
@@ -27,7 +26,6 @@ export function GolfTab() {
   const rounds = inPlace<RoundData>(state, 'round', ctx.place);
   const plan = plannedRounds(state, ctx.place);
   const destOpt = viewedPlace(state, ctx.place);
-  const choosing = usePlaces().length > 1;
   const where = destOpt ? destOpt.data.name.split(',')[0] : '';
   const wx = useWeather(destOpt?.data.name, date?.data.start, tripNights(state));
   const perPerson = plan.reduce((s, r) => s + (Number(r.data.fee) || 0), 0);
@@ -75,13 +73,12 @@ export function GolfTab() {
 
   return (
     <>
-      <PlaceSwitcher kind="round" />
-      <Callout>{choosing && where ? <>{where}: </> : null}<strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far{unpriced ? ` · ${unpriced} round${unpriced === 1 ? '' : 's'} without a price yet` : ''}</Callout>
+      <Callout><strong>{teeTimesNeeded(n)} tee time{teeTimesNeeded(n) > 1 ? 's' : ''}</strong> per round · <strong>{money(perPerson)}</strong> per person so far{unpriced ? ` · ${unpriced} round${unpriced === 1 ? '' : 's'} without a price yet` : ''}</Callout>
       {destOpt && rounds.length > 0 && !all.failed && (
         <TripMap place={destOpt.data.name} airport={airport} data={all.data} stops={(plan.length ? plan : rounds).slice().sort(byTime).map((r, i) => stopOf(r, String(i + 1)))}
           homes={stay?.data.lat && stay.data.lon ? [{ label: '', name: stay.data.name, lat: stay.data.lat, lon: stay.data.lon }] : []} />
       )}
-      <div className="section-head"><h2>{choosing && where ? `Rounds in ${where}` : 'Rounds'}</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
+      <div className="section-head"><h2>Rounds</h2><button className="btn small" onClick={() => roundSheet(ctx)}>{Icon.plus} Round</button></div>
       <p className="sub">Suggest a round, vote, and the organizer adds the winners.</p>
       {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
         const rs = rounds.filter((r) => r.data.day === d).sort((a, b) => Number(b.locked) - Number(a.locked) || teeMinutes(a.data.time) - teeMinutes(b.data.time));
@@ -146,7 +143,6 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
   const ctx = useTrip();
   const { state, me } = ctx;
   const dest = viewedPlace(state, ctx.place);
-  const plans = usePlaces().length > 1 && dest ? `${dest.data.name.split(',')[0]} plan` : 'plan';
   const t = tally(state, r.id);
   const ap = (r.data.time.match(/AM|PM/i) || [''])[0].toUpperCase();
   const early = first && teeMinutes(r.data.time) < 13 * 60;
@@ -176,7 +172,7 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
       {info?.tees?.length ? <TeeStats tees={info.tees} /> : null}
       {(r.locked || t.yes > state.members.length / 2) && (
         <div className="opt-status">
-          {r.locked ? <span className="good">In the {plans}</span> : <span className="flag">Most are in</span>}
+          {r.locked ? <span className="good">In the plan</span> : <span className="flag">Most are in</span>}
           {r.locked && <BookingTag option={r} />}
         </div>
       )}
@@ -189,7 +185,7 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
       {!r.locked && <Tally option={r} />}
       <div className="opt-foot">
         {r.locked && <BookButton option={r} />}
-        {!r.locked && <LockButton option={r} lockLabel={`Add to ${plans}`} />}
+        {!r.locked && <LockButton option={r} lockLabel="Add to plan" />}
         <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
         <span style={{ marginLeft: 'auto' }} />
         <MoreMenu items={[

@@ -1,124 +1,61 @@
 'use client';
 
-import type { DateData, DestinationData, VoteValue } from '@/lib/shared';
-import { destAirports, leaderOf, lockedOf, optionsOf, pickOf, rangeLabel, tally, votesFor, nightsOf, tripNights } from '@/lib/shared';
-import { WeatherCredit, WeatherStrip } from '../live';
+import type { DateData, DestinationData } from '@/lib/shared';
+import { destAirports, nightsOf, optionsOf, pickOf, rangeLabel, tripNights } from '@/lib/shared';
 import { firstName } from '@/lib/client';
-import { Chip, Icon, LockButton, Tally, VoteControl, canEdit, useTrip } from '../ui';
-import { dateSheet, destSheet } from '../sheets';
-import { Deadline } from '../Deadline';
-import { CompareDestinations } from '../Compare';
-import { PlacePackage } from '../Places';
+import { Icon, useTrip } from '../ui';
+import { whenSheet, whereSheet } from '../sheets';
+import { WeatherStrip } from '../live';
 
-const NEXT: Record<string, VoteValue | null> = { none: 'yes', yes: 'maybe', maybe: 'no', no: null };
-const SYM: Record<string, string> = { yes: '✓', maybe: '?', no: '✕', none: '' };
-
-export function When() {
+/**
+ * Where and when: the organizer sets them; nobody votes. Shown on Home until both are set,
+ * after that they're in the plan card (where the organizer can change them).
+ */
+export function TripBasics() {
   const ctx = useTrip();
-  const { state, me, vote } = ctx;
-  const dates = optionsOf<DateData>(state, 'date').slice().sort((a, b) => a.data.start.localeCompare(b.data.start));
-  const locked = lockedOf<DateData>(state, 'date');
-  const leader = leaderOf<DateData>(state, 'date');
-  const colClass = (id: string) => (locked ? (locked.id === id ? 'won' : '') : leader?.id === id ? 'best' : '');
-  const members = state.members.slice().sort((a, b) => (a.id === me?.id ? -1 : b.id === me?.id ? 1 : 0));
-
-  return (
-    <section className="section">
-      <div className="section-head"><h2>When</h2><button className="btn small" onClick={() => dateSheet(ctx)}>{Icon.plus} Dates</button></div>
-      <Deadline kind="date" />
-      {dates.length === 0 ? (
-        <button className="card empty dashed" onClick={() => dateSheet(ctx)}>Suggest the first set of dates. Everyone else marks if they’re in.</button>
-      ) : (
-        <>
-          <p className="sub">Tap your row: in, maybe or out.</p>
-          <div className="scroll">
-            <table className="sc">
-              <thead><tr><th className="name">Golfer</th>{dates.map((d) => <th key={d.id} className={colClass(d.id)}>{rangeLabel(d.data.start, nightsOf(state.trip, d.data))}</th>)}</tr></thead>
-              <tbody>
-                {members.map((m) => {
-                  const mine = m.id === me?.id;
-                  return (
-                    <tr key={m.id} className={mine ? 'me' : ''}>
-                      <td className="name">{firstName(m.name)}{mine && <span className="row-meta"> (you)</span>}</td>
-                      {dates.map((d) => {
-                        const v = (votesFor(state, d.id)[m.id] as VoteValue | undefined) ?? 'none';
-                        const mark = <span className={`mark ${v}`}>{SYM[v]}</span>;
-                        return (
-                          <td key={d.id} className={colClass(d.id)}>
-                            {mine && !locked
-                              ? <button className="cell" aria-label={`${rangeLabel(d.data.start, nightsOf(state.trip, d.data))}: ${v === 'none' ? 'not voted' : v}. Tap to change.`} onClick={() => vote(d.id, NEXT[v])}>{mark}</button>
-                              : <div className="cell" aria-label={`${m.name}: ${v}`}>{mark}</div>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot><tr><td className="name">In</td>{dates.map((d) => <td key={d.id} className={colClass(d.id)}>{tally(state, d.id).yes}/{state.members.length}</td>)}</tr></tfoot>
-            </table>
-          </div>
-          <div className="list">
-            {dates.map((d) => {
-              const t = tally(state, d.id);
-              return (
-                <div className="row" key={d.id}>
-                  <div className="grow">
-                    <div className="row-title">{rangeLabel(d.data.start, nightsOf(state.trip, d.data))} {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && t.yes > 0 ? <Chip kind="flag">Leading</Chip> : null}</div>
-                    <div className="row-meta">{t.yes} in{t.maybe ? ` · ${t.maybe} maybe` : ''}{t.no ? ` · ${t.no} out` : ''}{t.waiting ? ` · ${t.waiting} waiting` : ''}</div>
-                  </div>
-                  <LockButton option={d} />
-                  {canEdit(me, d) && !d.locked && <button className="btn small ghost danger" onClick={() => ctx.act('delete_option', { optionId: d.id })} aria-label="Remove these dates">Remove</button>}
-                </div>
-              );
-            })}
-          </div>
-
-        </>
-      )}
-    </section>
+  const { state, me, act, toast } = ctx;
+  const date = pickOf<DateData>(state, 'date');
+  const dest = pickOf<DestinationData>(state, 'destination');
+  if (date.locked && dest.locked) return null;
+  const org = !!me?.is_organizer;
+  const organizer = state.members.find((m) => m.is_organizer);
+  // Trips from before the organizer decided: what people had suggested, one tap to use it.
+  const oldDests = dest.locked ? [] : optionsOf<DestinationData>(state, 'destination');
+  const oldDates = date.locked ? [] : optionsOf<DateData>(state, 'date');
+  const use = async (kind: 'date' | 'destination', id: string, what: string) => { if (await act('set_plan', { kind, optionId: id })) toast(`${what} it is`); };
+  const row = (k: string, icon: React.ReactNode, value: React.ReactNode, meta: string, edit: () => void, setLabel: string, isSet: boolean) => (
+    <div className="basic-row">
+      <span className="basic-icon" aria-hidden="true">{icon}</span>
+      <div className="grow" style={{ minWidth: 0 }}>
+        <div className="k">{k}</div>
+        {isSet ? <div className="row-title">{value}</div> : <div className="row-meta">{org ? 'Not set yet' : `${organizer ? firstName(organizer.name) : 'The organizer'} hasn’t set it yet`}</div>}
+        {isSet && meta && <div className="row-meta">{meta}</div>}
+      </div>
+      {org && <button className={`btn small${isSet ? ' ghost' : ' primary'}`} onClick={edit}>{isSet ? 'Change' : setLabel}</button>}
+    </div>
   );
-}
-
-export function Where() {
-  const ctx = useTrip();
-  const { state, me } = ctx;
-  const dests = optionsOf<DestinationData>(state, 'destination');
-  const locked = lockedOf<DestinationData>(state, 'destination');
-  const leader = leaderOf<DestinationData>(state, 'destination');
-  const wxDate = pickOf<DateData>(state, 'date').option?.data.start;
-  const shown = locked ? [locked, ...dests.filter((d) => d.id !== locked.id)] : dests.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score);
   return (
-    <section className="section">
-      <div className="section-head"><h2>Where</h2><button className="btn small" onClick={() => destSheet(ctx)}>{Icon.plus} Place</button></div>
-      <Deadline kind="destination" />
-      {dests.length > 1 && !locked && <p className="sub">Each place has its own stays and rounds. Plan them all, then vote on the whole trip: place, stay and golf together.</p>}
-      <CompareDestinations />
-      {dests.length === 0 && <button className="card empty dashed" onClick={() => destSheet(ctx)}>Suggest a destination, like Myrtle Beach, Scottsdale or Pinehurst.</button>}
-      {shown.map((d) => (
-        <div key={d.id} className={`card opt ${d.locked ? 'locked' : ''}`} style={locked && !d.locked ? { opacity: .6 } : undefined}>
-          <div className="opt-head">
-            <div style={{ minWidth: 0 }}>
-              <div className="row-title" style={{ fontSize: 17 }}>{d.data.name}</div>
-              <div className="row-meta">{destAirports(d.data).length ? `Fly into ${destAirports(d.data).join(' or ')}` : 'No airport yet: tap Edit to pick one'}</div>
+    <section id="decide" className="section">
+      <div className="section-head"><h2>Where and when</h2>{org && <span className="sub">You decide</span>}</div>
+      <div className="card basics">
+        {row('Where', Icon.pin, dest.locked ? dest.option!.data.name : null,
+          dest.locked && destAirports(dest.option!.data).length ? `Fly into ${destAirports(dest.option!.data).join(' or ')}` : '',
+          () => whereSheet(ctx, dest.locked ? dest.option! : undefined), 'Set where', dest.locked)}
+        {row('When', Icon.calendar, date.locked ? rangeLabel(date.option!.data.start, nightsOf(state.trip, date.option!.data)) : null,
+          date.locked ? `${nightsOf(state.trip, date.option!.data)} nights` : '',
+          () => whenSheet(ctx, date.locked ? date.option! : undefined), 'Set dates', date.locked)}
+        {org && (oldDests.length > 0 || oldDates.length > 0) && (
+          <div className="basic-old">
+            <div className="row-meta">Suggested earlier. Tap one to use it:</div>
+            <div className="pick-row">
+              {oldDests.map((d) => <button key={d.id} className="btn small" onClick={() => use('destination', d.id, d.data.name.split(',')[0])}>{d.data.name}</button>)}
+              {oldDates.map((d) => <button key={d.id} className="btn small" onClick={() => use('date', d.id, rangeLabel(d.data.start, nightsOf(state.trip, d.data)))}>{rangeLabel(d.data.start, nightsOf(state.trip, d.data))}</button>)}
             </div>
-            {d.locked ? <Chip kind="good">Locked</Chip> : !locked && leader?.id === d.id && tally(state, d.id).yes > 0 ? <Chip kind="flag">Leading</Chip> : null}
           </div>
-          {dests.length > 1 && !locked && <PlacePackage d={d} />}
-          {wxDate && <WeatherStrip place={d.data.name} start={wxDate} nights={tripNights(state)} />}
-          {!locked && <VoteControl option={d} />}
-          <Tally option={d} />
-          {(me?.is_organizer || canEdit(me, d)) && (
-            <div className="opt-foot">
-              <LockButton option={d} />
-              {canEdit(me, d) && <button className="btn small ghost" style={{ marginLeft: 'auto' }} onClick={() => destSheet(ctx, d)}>Edit</button>}
-            </div>
-          )}
-        </div>
-      ))}
-      {dests.length > 0 && (wxDate
-        ? <WeatherCredit />
-        : <p className="hint">Add dates to see the weather.</p>)}
+        )}
+        {dest.locked && date.option && <WeatherStrip place={dest.option!.data.name} start={date.option.data.start} nights={tripNights(state)} />}
+      </div>
+      {!org && <p className="hint">The organizer picks the place and dates. Once they’re set you can line up flights.</p>}
     </section>
   );
 }

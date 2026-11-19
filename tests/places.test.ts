@@ -49,3 +49,15 @@ describe('when tee times open', () => {
     expect(bookingOpens(t, opt('round', { course: 'X', day: 1, time: '9:00 AM', fee: 0 }) as never)).toBeNull();
   });
 });
+
+describe('the organizer sets where and when', () => {
+  it('nobody is asked to vote on dates or places', async () => {
+    const { openVotes } = await import('@/lib/shared');
+    const { trip, opt } = await import('./fixtures');
+    const s = trip(3, [opt('date', { start: '2027-03-11' }), opt('destination', { name: 'Scottsdale, AZ', airports: ['PHX'] }), opt('lodging', { name: 'House', total: 900 })]);
+    const o = openVotes(s);
+    expect(o.date).toBe(0);
+    expect(o.destination).toBe(0);
+    expect(o.lodging).toBe(1);
+  });
+});

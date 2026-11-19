@@ -1,7 +1,7 @@
 // What goes on the trip one-pager: a snapshot of the plan, decided or not, plus what's still open.
 import type { DateData, DestinationData, LodgingData, Option, RoundData, TripState } from './shared';
 import {
-  andList, bookingOpens, costOf, dayLabel, duelRecord, money, nightsOf, optionsOf, parseDay, pickOf, placePlan,
+  andList, bookingOpens, costOf, dayLabel, duelRecord, money, nightsOf, optionsOf, parseDay, pickOf,
   plannedRounds, priceTier, pts, rangeLabel, tally, teeMinutes, teeTimesNeeded, cupScore,
 } from './shared';
 
@@ -36,8 +36,6 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   const date = pickOf<DateData>(state, 'date');
   const dest = pickOf<DestinationData>(state, 'destination');
   const stay = pickOf<LodgingData>(state, 'lodging');
-  const dests = optionsOf<DestinationData>(state, 'destination');
-  const dates = optionsOf<DateData>(state, 'date');
   const nights = date.option ? nightsOf(state.trip, date.option.data) : state.trip.nights;
   const range = date.option ? rangeLabel(date.option.data.start, nights) : '';
 
@@ -71,7 +69,7 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   const byDay = new Map<number, Option<RoundData>[]>();
   for (const r of rounds) byDay.set(r.data.day, [...(byDay.get(r.data.day) || []), r]);
   // Room for about 8 rounds on the page; a longer trip shows the first ones and says how many more.
-  let room = (!dest.locked && dests.length > 1 ? 6 : 8) - (withMap ? 3 : 0);
+  let room = 8 - (withMap ? 3 : 0);
   const days: PlanDay[] = [...byDay.entries()].filter(([, all]) => all.length > 0).map(([d, all]) => { const rs = all.slice(0, Math.min(3, room)); room -= rs.length; return [d, rs] as const; }).map(([d, rs]) => ({
     label: date.option ? dayLabel(date.option.data.start, d) : `Day ${d}`,
     rounds: rs.map((r) => ({
@@ -112,8 +110,8 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   const total = avg('stay') + avg('golf') + avg('food') + avgFlight;
 
   const facts: Fact[] = [
-    { label: 'Where', value: placeName ? short(placeName) : 'TBD', note: dest.locked ? 'Locked in' : dests.length > 1 ? `Leading of ${dests.length}` : dest.option ? 'Suggested' : 'No ideas yet', status: dest.locked ? 'done' : dest.option ? 'voting' : 'todo' },
-    { label: 'When', value: range || 'TBD', note: date.locked ? `${nights} night${nights === 1 ? '' : 's'}` : dates.length > 1 ? `Leading of ${dates.length}` : date.option ? 'Suggested' : 'No dates yet', status: date.locked ? 'done' : date.option ? 'voting' : 'todo' },
+    { label: 'Where', value: dest.locked && placeName ? short(placeName) : 'TBD', note: dest.locked ? 'Set' : 'Organizer picks', status: dest.locked ? 'done' : 'todo' },
+    { label: 'When', value: date.locked && range ? range : 'TBD', note: date.locked ? `${nights} night${nights === 1 ? '' : 's'}` : 'Organizer picks', status: date.locked ? 'done' : 'todo' },
     { label: 'Crew', value: `${n}`, note: n < 4 ? `${n === 1 ? 'Solo' : n === 2 ? 'One on one' : 'A threesome'}, 1 tee time` : `${teeTimesNeeded(n)} foursome${teeTimesNeeded(n) === 1 ? '' : 's'}`, status: 'done' },
     { label: 'Per person', value: total ? money(total) : 'TBD', note: total ? (hi - lo > 50 && flights.length === n ? `${money(lo)}–${money(hi)}` : 'avg. so far') : 'Once things are picked', status: total ? 'voting' : 'todo' },
   ];
@@ -121,20 +119,15 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   const booked = planned.filter((r) => r.data.booked).length;
   const flown = state.members.filter((m) => m.flight_price !== null).length;
   const checklist = [
-    { title: 'Dates', note: date.option ? `${range} ${date.locked ? 'locked' : 'leading'}` : 'Nobody has suggested dates', status: (date.locked ? 'done' : date.option ? 'voting' : 'todo') as Status },
-    { title: 'Destination', note: dest.option ? `${short(placeName)} ${dest.locked ? 'locked' : 'leading'}` : 'Nobody has suggested a place', status: (dest.locked ? 'done' : dest.option ? 'voting' : 'todo') as Status },
+    { title: 'Dates', note: date.locked ? range : 'The organizer sets them', status: (date.locked ? 'done' : 'todo') as Status },
+    { title: 'Destination', note: dest.locked ? short(placeName) : 'The organizer sets it', status: (dest.locked ? 'done' : 'todo') as Status },
     { title: 'Stay', note: stay.option ? `${stay.option.data.name} ${stay.locked ? 'locked' : 'leading'}` : 'No houses or hotels yet', status: (stay.locked ? 'done' : stay.option ? 'voting' : 'todo') as Status },
     { title: 'Tee times', note: planned.length ? `${booked} of ${planned.length} booked` : 'No rounds in the plan', status: (planned.length && booked === planned.length ? 'done' : planned.length ? 'voting' : 'todo') as Status },
     { title: 'Flights', note: `${flown} of ${n} picked`, status: (flown === n ? 'done' : flown ? 'voting' : 'todo') as Status },
   ];
 
-  // Places still being compared: each one's whole trip.
-  const places = !dest.locked && dests.length > 1
-    ? dests.slice().sort((a, b) => tally(state, b.id).score - tally(state, a.id).score).slice(0, 4).map((d, i) => {
-      const p = placePlan(state, d.id);
-      return { name: d.data.name, yes: tally(state, d.id).yes, each: p.stay && p.golfRounds.length ? `${money(p.each)} stay + golf` : p.stay ? `${money(p.stayEach)} stay` : p.golfRounds.length ? `${money(p.golfEach)} golf` : 'Not planned yet', leading: i === 0 };
-    })
-    : null;
+  // No more comparing places: the organizer sets the destination.
+  const places: OnePager['places'] = null;
 
   // The cup or match play.
   let cup: OnePager['cup'] = null;
@@ -166,28 +159,17 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   if (stay.option && (stay.option.data.bedrooms || 0) >= 3) highlights.push(`${stay.option.data.bedrooms}-bedroom ${/hotel|resort|inn|lodge|suite|room/i.test(stay.option.data.name) ? 'stay' : 'house'}${stay.locked ? '' : ' (leading)'}`);
   else if (stay.option) highlights.push(`Staying at ${stay.option.data.name}${stay.locked ? '' : ' (leading)'}`);
   if (cup) highlights.push(cup.title);
-  if (places) highlights.push(`${places.length} places on the table`);
 
   // What still needs doing, most important first.
   const todo: string[] = [];
-  const voted = (kind: string) => {
-    const open = state.options.filter((o) => o.kind === kind && !o.locked);
-    if (!open.length || state.options.some((o) => o.kind === kind && o.locked)) return [];
-    return state.members.filter((m) => !open.some((o) => state.votes.some((v) => v.option_id === o.id && v.member_id === m.id)));
-  };
   const deadline = (k: 'date' | 'destination' | 'lodging') => {
     const d = state.trip.deadlines?.[k];
     if (!d) return '';
     const t = new Date(d);
     return Number.isNaN(t.getTime()) ? '' : `, voting closes ${t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
-  // "Ben, Luke, Ryan and 2 more"
-  const few = (w: { name: string }[]) => andList([...w.slice(0, w.length > 4 ? 3 : 4).map((m) => first(m.name)), ...(w.length > 4 ? [`${w.length - 3} more`] : [])]);
-  const waiting = (w: { name: string }[]) => (w.length ? `. Still to vote: ${few(w)}` : '');
-  if (!date.option) todo.push('Suggest some dates');
-  else if (!date.locked) { const w = voted('date'); todo.push(`Pick the dates${deadline('date')}${waiting(w)}`); }
-  if (!dest.option) todo.push('Suggest a destination');
-  else if (!dest.locked) { const w = voted('destination'); todo.push(`Pick the place${dests.length > 1 ? ` from ${dests.length} options` : ''}${deadline('destination')}${waiting(w)}`); }
+  if (!date.locked) todo.push('The organizer sets the dates');
+  if (!dest.locked) todo.push('The organizer sets the destination');
   if (!stay.option) todo.push('Find a house or hotel');
   else if (!stay.locked) todo.push(`Lock in the stay${deadline('lodging')}`);
   else if (!stay.option.data.booked) todo.push(`Book ${stay.option.data.name}`);
@@ -200,7 +182,7 @@ export function buildOnePager(state: TripState, now = new Date(), withMap = fals
   if (unpriced) todo.push(`Get prices for ${unpriced} round${unpriced === 1 ? '' : 's'}`);
   if (flown < n) {
     const left = state.members.filter((m) => m.flight_price === null);
-    todo.push(`Flights still to pick: ${few(left)}`);
+    todo.push(`Flights still to pick: ${andList([...left.slice(0, left.length > 4 ? 3 : 4).map((m) => first(m.name)), ...(left.length > 4 ? [`${left.length - 3} more`] : [])])}`);
   }
   if (!c && n >= 4) todo.push('Set up the cup (optional)');
   if (!c && n === 2) todo.push('Start match play (optional)');
