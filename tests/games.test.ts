@@ -44,3 +44,45 @@ describe('side games', () => {
     expect(s.trip.games!.list[0].skins).toEqual([]);
   });
 });
+
+describe('trip recap', () => {
+  it('names the match play winner and the side-game leaders', async () => {
+    const { tripAwards } = await import('@/lib/shared');
+    const { duel } = await import('./fixtures');
+    const cup = duel({ teams: [{ name: 'Matt', captain: 'm1', members: ['m1'] }, { name: 'Joe', captain: 'm2', members: ['m2'] }], matches: [
+      { id: '1', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: 'a', play: ['a', 'a', 'a', 'half', 'a', 'a', null, null, null] },
+      { id: '2', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: 'b' },
+      { id: '3', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: 'a' },
+    ] as never });
+    const s = trip(2, [], { cup, games: { v: 1, list: [{ id: 'g', kind: 'skins', round: null, stake: 5, players: ['m1', 'm2'], by: 'm1', holes: 18, carry: true, skins: ['m2', 'm2'] }] } });
+    const r = tripAwards(s);
+    expect(r.headline).toBe('Matt wins the match play, 2–1');
+    expect(r.awards.find((a) => a.title === 'Most holes won')).toMatchObject({ who: ['m1'], detail: '5 holes' });
+    expect(r.awards.find((a) => a.title === 'Side games')).toMatchObject({ who: ['m2'], detail: 'up $10' });
+    expect(r.awards.find((a) => a.title === 'Skins')).toMatchObject({ who: ['m2'], detail: '2 skins' });
+  });
+});
+
+describe('golf across trips', () => {
+  it('records each person’s matches, holes, side games and handicap, and head to head', async () => {
+    const { tripGolf, golfTotals } = await import('@/lib/shared');
+    const { duel } = await import('./fixtures');
+    const cup = duel({ teams: [{ name: 'M', captain: 'm1', members: ['m1'] }, { name: 'J', captain: 'm2', members: ['m2'] }], hcp: { m1: 8, m2: 14 }, matches: [
+      { id: '1', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: 'b', play: ['b', 'b', 'a', 'half', 'b', 'b', null, null, null] },
+      { id: '2', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: 'a' },
+      { id: '3', round: 'r', format: 'singles', a: ['m1'], b: ['m2'], holes: 9, result: null },
+    ] as never });
+    const pid = new Map([['m1', 'P1'], ['m2', 'P2']]);
+    const t = tripGolf({ code: 'c', name: 'Jan', start: '2026-01-10', cup, games: { v: 1, list: [{ id: 'g', kind: 'ctp', round: null, stake: 10, players: ['m1', 'm2'], by: 'm1', prizes: [{ label: 'x', winner: 'm1' }] }] } }, 'm1', pid)!;
+    expect(t.matches).toEqual([
+      { opp: ['P2'], res: 'l', holes: { won: 1, lost: 4, halved: 1 } },
+      { opp: ['P2'], res: 'w', holes: { won: 0, lost: 0, halved: 0 } },
+    ]);
+    expect(t.games).toBe(10);
+    expect(t.hcp).toBe(8);
+    expect(golfTotals([t])).toMatchObject({ trips: 1, w: 1, l: 1, h: 0, won: 1, lost: 4, games: 10 });
+    expect(golfTotals([t], 'P2')).toMatchObject({ w: 1, l: 1 });
+    expect(golfTotals([t], 'P9')).toMatchObject({ w: 0, l: 0 });
+    expect(tripGolf({ code: 'x', name: 'x', start: null }, 'm1', pid)).toBeNull();
+  });
+});

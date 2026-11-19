@@ -936,3 +936,21 @@ p .link-btn, .hint .link-btn, .callout .link-btn, .sub .link-btn, .row-meta .lin
 .side-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
 .side-row .seg-small { min-width: 210px; }
 .prize.nassau .seg { width: 100%; min-width: 0; }
+
+/* trip recap */
+.recap-headline { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #1d4a35, #24573f 60%, #6b5b1e); color: #fff; font-family: var(--font-display), sans-serif; font-size: 20px; line-height: 1.15; }
+.recap-headline span { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(180deg, #f0c75e, #c9962c); color: #3b2a06; }
+.recap-headline span svg { width: 20px; height: 20px; }
+.recap-awards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 10px 0 6px; }
+.recap-award { display: grid; gap: 1px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
+.recap-award .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.recap-award b { font-size: 16px; }
+
+/* golf history */
+.hcp-past { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+.h2h { margin: 8px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+.h2h b { color: var(--ink); }
+.golf-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.golf-totals > div { display: grid; gap: 2px; }
+.golf-totals .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+.golf-totals b { font-family: var(--font-display), sans-serif; font-size: 24px; font-variant-numeric: tabular-nums; }

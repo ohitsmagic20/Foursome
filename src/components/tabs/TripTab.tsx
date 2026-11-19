@@ -1,7 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Member } from '@/lib/shared';
-import { andList, packingTips, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
+import { andList, packingTips, tripAwards, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
 import { Callout, Chip, ConfirmButton, Fold, Icon, useTrip, type TripCtx } from '../ui';
@@ -216,13 +216,19 @@ function Recap() {
   const { payments } = settleUp(state);
   const mineOwed = me ? payments.filter((p) => p.from === me.id) : [];
   const start = date.data.start;
+  const { headline, awards } = tripAwards(state);
+  const first = (id: string) => (id === me?.id ? 'You' : firstName(state.members.find((m) => m.id === id)?.name || '?'));
+  const firstPlain = (id: string) => firstName(state.members.find((m) => m.id === id)?.name || '?');
   const text = [
     `⛳ ${state.trip.name}: that’s a wrap`,
     `${dest.data.name} · ${rangeLabel(start, tripNights(state))} · ${n} golfers`,
+    headline ? `🏆 ${headline}` : '',
+    ...awards.map((a) => `• ${a.title}: ${andList(a.who.map(firstPlain))} (${a.detail})`),
+    '',
     ...rounds.map((r) => `${dayLabel(start, r.data.day)}: ${r.data.course}`),
     stay ? `Stayed at ${stay.data.name}` : '',
     `About ${money(avg)} each`,
-  ].filter(Boolean).join('\n');
+  ].filter((x, i, arr) => x !== '' || (i > 0 && arr[i - 1] !== '')).join('\n');
   return (
     <section className="plan recap">
       <div className="plan-head">
@@ -230,6 +236,18 @@ function Recap() {
         <div className="plan-title">{dest.data.name}</div>
         <div className="row-meta">{rangeLabel(start, tripNights(state))} · {n} golfers · {rounds.length} round{rounds.length === 1 ? '' : 's'}</div>
       </div>
+      {headline && <div className="recap-headline"><span aria-hidden="true">{Icon.cup}</span>{headline}</div>}
+      {awards.length > 0 && (
+        <div className="recap-awards">
+          {awards.map((a) => (
+            <div key={a.title} className="recap-award">
+              <span className="k">{a.title}</span>
+              <b>{andList(a.who.map(first))}</b>
+              <span className="row-meta">{a.detail}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="plan-rows">
         {rounds.map((r) => <div className="plan-row" key={r.id}><span className="k">{dayLabel(start, r.data.day)}</span><span>{r.data.course}</span></div>)}
         {stay && <div className="plan-row"><span className="k">Stay</span><span>{stay.data.name}</span></div>}

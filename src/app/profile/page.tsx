@@ -1,5 +1,6 @@
 'use client';
 
+import { YourGolf } from '@/components/History';
 import { useEffect, useState } from 'react';
 import { ProfileForm, SignIn, signOut, useMe } from '@/components/account';
 import { api, clearSession } from '@/lib/client';
@@ -35,6 +36,7 @@ export default function ProfilePage() {
               <ProfileForm profile={me.profile} onSaved={(r) => { setMe({ ...me, ...r }); setSaved(true); window.scrollTo({ top: 0 }); }} />
             </div>
             <EmailSwitch on={me.profile.email_updates !== false} onChange={(profile) => setMe({ ...me, profile })} />
+            <YourGolf />
             <section className="section">
               <h2>Linked accounts</h2>
               <div className="list">

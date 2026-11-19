@@ -1,6 +1,7 @@
 'use client';
 
 import { SideGames } from './SideGames';
+import { HeadToHead, useTripHistory } from './History';
 import { useEffect, useState } from 'react';
 import type { Cup as CupT, CupFormat, CupMatch, CupResult, Option, RoundData } from '@/lib/shared';
 import { CUP_FORMATS, DEFAULT_SI, HCP_RULE, matchStrokes, marginsFor, segLabel, duelRecord, andList, cupLive, cupPlayerPoints, cupScore, dayLabel, draftTurn, matchStatus, pickOf, plannedRounds, pts, statusLabel, teeMinutes } from '@/lib/shared';
@@ -328,6 +329,7 @@ function Board({ cup }: { cup: CupT }) {
             </div>
           </>
         )}
+        {rec && <HeadToHead />}
         {rec && <div className="row-meta cup-status">Record is wins–losses{rec.h ? '–halves' : ''}.{rec.holes.a + rec.holes.b + rec.holes.half ? ` ${rec.holes.half} hole${rec.holes.half === 1 ? '' : 's'} halved.` : ''}</div>}
         {!rec && <details className="cup-teams">
           <summary>Teams</summary>
@@ -525,10 +527,13 @@ function HcpForm({ ctx }: { ctx: TripCtx }) {
   const { state, me } = ctx;
   const cup = state.trip.cup!;
   const players = cup.teams.flatMap((t) => t.members);
+  const hist = useTripHistory();
+  const mine = (id: string) => id === me?.id || !!me?.is_organizer;
   const [vals, setVals] = useState<Record<string, string>>(Object.fromEntries(players.map((id) => [id, cup.hcp?.[id] !== undefined ? String(cup.hcp[id]) : ''])));
+  // Handicaps from earlier trips, for anyone who hasn't entered one here yet.
+  const lastTime = players.filter((id) => !vals[id] && mine(id) && typeof hist?.people[id]?.hcp === 'number');
   const [net, setNet] = useState(cup.net ?? true);
   const [busy, setBusy] = useState(false);
-  const mine = (id: string) => id === me?.id || !!me?.is_organizer;
   return (
     <form className="form" onSubmit={async (e) => {
       e.preventDefault(); setBusy(true);
@@ -542,12 +547,19 @@ function HcpForm({ ctx }: { ctx: TripCtx }) {
           const m = state.members.find((x) => x.id === id);
           return (
             <label key={id} className="hcp-row">
-              <span className="grow">{id === me?.id ? 'You' : m?.name || '?'}</span>
+              <span className="grow">{id === me?.id ? 'You' : m?.name || '?'}
+                {hist?.people[id] && <small className="hcp-past">{[typeof hist.people[id].hcp === 'number' ? `${hist.people[id].hcp} on ${hist.people[id].hcpFrom}` : '', hist.people[id].w + hist.people[id].l + hist.people[id].h ? `${hist.people[id].w}–${hist.people[id].l}${hist.people[id].h ? `–${hist.people[id].h}` : ''} on past trips` : ''].filter(Boolean).join(' · ')}</small>}
+              </span>
               <input type="number" inputMode="numeric" step={1} min={-10} max={54} value={vals[id] ?? ''} disabled={!mine(id)} placeholder="—" onChange={(e) => setVals((v) => ({ ...v, [id]: e.target.value }))} />
             </label>
           );
         })}
       </div>
+      {lastTime.length > 0 && (
+        <button type="button" className="btn small ghost" onClick={() => setVals((v) => ({ ...v, ...Object.fromEntries(lastTime.map((id) => [id, String(hist!.people[id].hcp)])) }))}>
+          Use handicaps from the last trip ({lastTime.length})
+        </button>
+      )}
       {me?.is_organizer && (
         <label className="check-row"><input type="checkbox" checked={net} onChange={(e) => setNet(e.target.checked)} /> Play off handicaps (give strokes)</label>
       )}

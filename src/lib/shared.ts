@@ -739,7 +739,6 @@ export function duelRecord(cup: Cup) {
   return { w, l, h, holes: { a: ha, b: hb, half: hh } };
 }
 
-/** Where a match stands from its hole-by-hole card: holes up (positive = side a), holes entered, and whether it's over. */
 /** Apply one score action to a match, in place: a hole tap, a whole-match result, or clearing it.
  *  The server saves with this; the phone uses it to show taps still waiting for signal. */
 export function applyScore(m: CupMatch, a: { op: string; hole?: unknown; winner?: unknown; result?: unknown; margin?: string }) {
@@ -782,6 +781,7 @@ export function withQueuedScores(state: TripState, queued: { body: Record<string
   return { ...state, trip: { ...state.trip, cup: { ...cup, matches } } };
 }
 
+/** Where a match stands from its hole-by-hole card: holes up (positive = side a), holes entered, and whether it's over. */
 export function matchStatus(m: CupMatch) {
   // Walk the holes in order and stop the moment it's decided (a 10&8 rout doesn't keep counting).
   let lead = 0, thru = 0, last = 0, decided = false;
@@ -947,4 +947,105 @@ export function bookingOpens(state: TripState, r: Option<RoundData>, now = new D
   const daysAway = Math.round((opens.getTime() - today.getTime()) / 864e5);
   const label = opens.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   return { iso: isoDay(opens), label, at: b.at || '', days: b.days, daysAway, locked: date.locked };
+}
+
+/* ---------- trip recap ---------- */
+export interface Award { title: string; who: string[]; detail: string }
+
+/** What happened on the trip, for the recap: the cup or match play result and a few awards. */
+export function tripAwards(state: TripState): { headline: string | null; awards: Award[] } {
+  const awards: Award[] = [];
+  let headline: string | null = null;
+  const top = (scores: Map<string, number>) => {
+    const best = Math.max(0, ...scores.values());
+    return { best, who: best > 0 ? [...scores].filter(([, v]) => v === best).map(([id]) => id) : [] };
+  };
+  const cup = state.trip.cup;
+  if (cup && cup.matches.some((m) => m.result)) {
+    const [ta, tb] = cup.teams;
+    if (cup.duel) {
+      const r = duelRecord(cup);
+      const rec = `${r.w}–${r.l}${r.h ? `–${r.h}` : ''}`;
+      headline = r.w === r.l ? `${ta.name} and ${tb.name} split the matches, ${rec}` : `${r.w > r.l ? ta.name : tb.name} wins the match play, ${r.w > r.l ? rec : `${r.l}–${r.w}${r.h ? `–${r.h}` : ''}`}`;
+    } else {
+      const sc = cupScore(cup);
+      headline = sc.a === sc.b ? `${cup.name} is tied, ${pts(sc.a)}–${pts(sc.b)}` : `${sc.a > sc.b ? ta.name : tb.name} wins ${cup.name}, ${pts(Math.max(sc.a, sc.b))}–${pts(Math.min(sc.a, sc.b))}`;
+      // MVP: the most points earned in matches.
+      const p = new Map<string, number>();
+      for (const m of cup.matches) {
+        if (!m.result) continue;
+        for (const id of m.a) p.set(id, (p.get(id) || 0) + (m.result === 'a' ? 1 : m.result === 'half' ? 0.5 : 0));
+        for (const id of m.b) p.set(id, (p.get(id) || 0) + (m.result === 'b' ? 1 : m.result === 'half' ? 0.5 : 0));
+      }
+      const t = top(p);
+      if (t.who.length && t.who.length <= 3) awards.push({ title: 'Cup MVP', who: t.who, detail: `${pts(t.best)} point${t.best === 1 ? '' : 's'}` });
+    }
+    // Most holes won, from the hole-by-hole cards (singles only, so each hole is one person's).
+    const holes = new Map<string, number>();
+    for (const m of cup.matches) {
+      if (m.a.length !== 1 || m.b.length !== 1) continue;
+      for (const h of m.play || []) {
+        if (h === 'a') holes.set(m.a[0], (holes.get(m.a[0]) || 0) + 1);
+        if (h === 'b') holes.set(m.b[0], (holes.get(m.b[0]) || 0) + 1);
+      }
+    }
+    const t = top(holes);
+    if (t.who.length && t.who.length <= 2 && t.best >= 3) awards.push({ title: 'Most holes won', who: t.who, detail: `${t.best} holes` });
+  }
+  const games = state.trip.games?.list || [];
+  if (games.length) {
+    const t = top(gamesNet(state));
+    if (t.who.length && t.who.length <= 2) awards.push({ title: 'Side games', who: t.who, detail: `up ${money(t.best / 100)}` });
+    const skins = new Map<string, number>();
+    for (const g of games) if (g.kind === 'skins') for (const s of skinsTable(g).won) skins.set(s.who, (skins.get(s.who) || 0) + s.worth);
+    const sk = top(skins);
+    if (sk.who.length && sk.who.length <= 2) awards.push({ title: 'Skins', who: sk.who, detail: `${sk.best} skin${sk.best === 1 ? '' : 's'}` });
+    const ctp = new Map<string, number>(), long = new Map<string, number>();
+    for (const g of games) for (const p of g.prizes || []) if (p.winner) { const m = g.kind === 'ctp' ? ctp : long; m.set(p.winner, (m.get(p.winner) || 0) + 1); }
+    const c = top(ctp), l = top(long);
+    if (c.who.length && c.who.length <= 2) awards.push({ title: 'Closest to the pin', who: c.who, detail: `${c.best} won` });
+    if (l.who.length && l.who.length <= 2) awards.push({ title: 'Long drive', who: l.who, detail: `${l.best} won` });
+  }
+  return { headline, awards };
+}
+
+/* ---------- golf history across trips (signed-in people only: their trips are linked by profile) ---------- */
+export interface HistoryMatch { opp: string[]; res: 'w' | 'l' | 'h'; holes: { won: number; lost: number; halved: number } }
+export interface TripGolf {
+  code: string; name: string; start: string | null;
+  matches: HistoryMatch[];      // opponents are profile ids ('' for someone not signed in)
+  games: number;                // side-game total, dollars
+  hcp: number | null;           // the handicap this person played off, if the cup had them
+}
+export interface GolfTotals { trips: number; w: number; l: number; h: number; won: number; lost: number; halved: number; games: number }
+
+/** One person's golf on one trip, from that trip's cup and side games. `pid` maps member id → profile id. */
+export function tripGolf(t: { code: string; name: string; start: string | null; cup?: Cup | null; games?: Games | null }, memberId: string, pid: Map<string, string>): TripGolf | null {
+  const matches: HistoryMatch[] = [];
+  for (const m of t.cup?.matches || []) {
+    if (!m.result) continue;
+    const side = m.a.includes(memberId) ? 'a' : m.b.includes(memberId) ? 'b' : null;
+    if (!side) continue;
+    const opp = (side === 'a' ? m.b : m.a).map((id) => pid.get(id) || '');
+    const holes = { won: 0, lost: 0, halved: 0 };
+    for (const h of m.play || []) { if (h === side) holes.won++; else if (h === 'half') holes.halved++; else if (h) holes.lost++; }
+    matches.push({ opp, res: m.result === 'half' ? 'h' : m.result === side ? 'w' : 'l', holes });
+  }
+  const g = t.games?.list.reduce((s, x) => s + (gameNet(x).get(memberId) || 0), 0) || 0;
+  const h = t.cup?.hcp?.[memberId];
+  if (!matches.length && !g && typeof h !== 'number') return null;
+  return { code: t.code, name: t.name, start: t.start, matches, games: g / 100, hcp: typeof h === 'number' ? h : null };
+}
+
+export function golfTotals(list: TripGolf[], vs?: string): GolfTotals {
+  const t: GolfTotals = { trips: list.length, w: 0, l: 0, h: 0, won: 0, lost: 0, halved: 0, games: 0 };
+  for (const x of list) {
+    t.games += vs ? 0 : x.games;
+    for (const m of x.matches) {
+      if (vs && !(m.opp.length === 1 && m.opp[0] === vs)) continue;
+      if (m.res === 'w') t.w++; else if (m.res === 'l') t.l++; else t.h++;
+      t.won += m.holes.won; t.lost += m.holes.lost; t.halved += m.holes.halved;
+    }
+  }
+  return t;
 }
