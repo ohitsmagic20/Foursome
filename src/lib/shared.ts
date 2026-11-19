@@ -119,6 +119,7 @@ export interface Car {
   total: number;        // the whole rental, with taxes and fees
   riders: string[];     // member ids
   booked?: boolean;
+  confirmation?: string;
   by: string;           // who added it
 }
 
@@ -143,6 +144,8 @@ export interface Member {
   cashapp?: string;
   /** They've bought the flight they picked (migration 007). */
   flight_booked?: boolean;
+  /** Migration 011. Only sent to its owner; others see '•' if there is one. */
+  flight_confirmation?: string | null;
 }
 
 /** Money someone paid for the group, split equally among `split_with` (everyone when empty). */
@@ -1049,4 +1052,46 @@ export function golfTotals(list: TripGolf[], vs?: string): GolfTotals {
     }
   }
   return t;
+}
+
+/* ---------- booking happens on the real sites; the app links there and records what was booked ---------- */
+const AIRLINES: [RegExp, string, string][] = [
+  [/american/i, 'American', 'https://www.aa.com/booking/find-flights'],
+  [/delta/i, 'Delta', 'https://www.delta.com/flight-search/book-a-flight'],
+  [/united/i, 'United', 'https://www.united.com/en/us/book-flight'],
+  [/southwest/i, 'Southwest', 'https://www.southwest.com/air/booking/'],
+  [/alaska/i, 'Alaska', 'https://www.alaskaair.com/search'],
+  [/jetblue/i, 'JetBlue', 'https://www.jetblue.com/booking/flights'],
+  [/spirit/i, 'Spirit', 'https://www.spirit.com/'],
+  [/frontier/i, 'Frontier', 'https://www.flyfrontier.com/'],
+  [/allegiant/i, 'Allegiant', 'https://www.allegiantair.com/'],
+  [/sun country/i, 'Sun Country', 'https://www.suncountry.com/'],
+  [/hawaiian/i, 'Hawaiian', 'https://www.hawaiianairlines.com/'],
+  [/breeze/i, 'Breeze', 'https://www.flybreeze.com/'],
+  [/air canada/i, 'Air Canada', 'https://www.aircanada.com/'],
+];
+
+/** Where to book a picked flight: the airline's own site when we know it. */
+export function airlineSite(summary: string | null | undefined): { name: string; url: string } | null {
+  const a = AIRLINES.find(([re]) => re.test(summary || ''));
+  return a ? { name: a[1], url: a[2] } : null;
+}
+
+/** Where a stay is booked, from its listing link: "Airbnb", "Vrbo", or the hotel's own site. */
+export function listingSite(url: string | undefined): string {
+  if (!url) return '';
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, '');
+    if (/airbnb\./.test(h)) return 'Airbnb';
+    if (/vrbo\.|homeaway\./.test(h)) return 'Vrbo';
+    if (/booking\.com$/.test(h)) return 'Booking.com';
+    if (/expedia\./.test(h)) return 'Expedia';
+    if (/hotels\.com$/.test(h)) return 'Hotels.com';
+    return 'their site';
+  } catch { return ''; }
+}
+
+/** Kayak's rental car search at the destination airport for the trip's dates. */
+export function carSearchUrl(airport: string, start: string, nights: number): string {
+  return `https://www.kayak.com/cars/${encodeURIComponent(airport)}/${start}/${isoDay(addDays(parseDay(start), nights))}?sort=price_a`;
 }

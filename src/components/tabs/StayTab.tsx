@@ -1,6 +1,7 @@
 'use client';
 
 import type { DateData, DestinationData, LodgingData, Option } from '@/lib/shared';
+import { listingSite } from '@/lib/shared';
 import { andList, bedsNeeded, destAirports, inPlace, leaderOf, lockedOf, lodgingShare, money, optionsOf, pickOf, tally } from '@/lib/shared';
 import { firstName } from '@/lib/client';
 import { PackagesNear } from '../Packages';
@@ -54,7 +55,7 @@ export function StayTab() {
         <div className="opt-foot">
           {o.locked && <BookButton option={o} />}
           {!o.locked && <LockButton option={o} />}
-          {o.data.url && <a className="btn small" href={o.data.url} target="_blank" rel="noopener noreferrer">Open listing</a>}
+          {o.data.url && <a className="btn small" href={o.data.url} target="_blank" rel="noopener noreferrer">{o.locked && !o.data.booked ? `Book on ${listingSite(o.data.url)} ↗` : 'Open listing'}</a>}
           <span style={{ marginLeft: 'auto' }} />
           <MoreMenu items={[
             ...bookingItems(ctx, o),

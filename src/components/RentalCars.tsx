@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { Car, DestinationData, TripState } from '@/lib/shared';
-import { andList, carShare, destAirports, money, pickOf, rideGroups } from '@/lib/shared';
+import type { Car, DateData, DestinationData, TripState } from '@/lib/shared';
+import { andList, carSearchUrl, carShare, destAirports, money, pickOf, rideGroups, tripNights } from '@/lib/shared';
 import { firstName } from '@/lib/client';
-import { Chip, ConfirmButton, Fold, useTrip, type TripCtx } from './ui';
+import { Chip, ConfLine, ConfirmButton, Fold, useTrip, type TripCtx } from './ui';
 
 const carIcon = (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -37,6 +37,11 @@ export function RentalCars() {
     : 'Optional. Add one if the group is renting';
   const drives = driving(state);
   const inCar = new Set(cars.flatMap((c) => c.riders));
+  // Kayak at the destination airport for the trip's dates; book there, then mark it booked here.
+  const date = pickOf<DateData>(state, 'date');
+  const dest = pickOf<DestinationData>(state, 'destination');
+  const ap = dest.locked && dest.option ? destAirports(dest.option.data)[0] : '';
+  const search = ap && date.locked && date.option ? carSearchUrl(ap, date.option.data.start, tripNights(state)) : '';
   const without = state.members.filter((m) => !inCar.has(m.id) && !drives.has(m.id));
   return (
     <section className="section">
@@ -46,7 +51,10 @@ export function RentalCars() {
             {cars.map((c, i) => <CarRow key={c.id} car={c} n={i + 1} ctx={ctx} />)}
           </div>
         )}
-        <button className="btn block" onClick={() => carSheet(ctx)}>+ Add a rental car</button>
+        <div className="btn-row">
+          <button className="btn" style={{ flex: 1 }} onClick={() => carSheet(ctx)}>+ Add a rental car</button>
+          {search && <a className="btn" href={search} target="_blank" rel="noopener noreferrer">Search cars ↗</a>}
+        </div>
         <p className="hint">
           Each car’s total splits evenly between the people in it and shows up in everyone’s cost on Home.
           {cars.length > 0 && without.length > 0 ? ` Not in a car yet: ${andList(without.map((m) => firstName(m.name)))}.` : ''}
@@ -57,7 +65,7 @@ export function RentalCars() {
 }
 
 function CarRow({ car, n, ctx }: { car: Car; n: number; ctx: TripCtx }) {
-  const { state, me, act, toast } = ctx;
+  const { state, me, act } = ctx;
   const name = (id: string) => { const m = state.members.find((x) => x.id === id); return m ? (m.id === me?.id ? 'You' : firstName(m.name)) : ''; };
   const riders = car.riders.filter((id) => state.members.some((m) => m.id === id));
   const canEdit = !!me && (me.is_organizer || car.by === me.id);
@@ -67,11 +75,12 @@ function CarRow({ car, n, ctx }: { car: Car; n: number; ctx: TripCtx }) {
       <div className="grow" style={{ minWidth: 0 }}>
         <div className="row-title">{car.company || `Car ${n}`} {car.booked ? <Chip kind="good">Booked</Chip> : <Chip kind="warn">Not booked</Chip>}</div>
         <div className="row-meta">{riders.length ? andList(riders.map(name)) : 'No one in it yet'}</div>
+        {car.booked && car.confirmation && <ConfLine label="Confirmation" value={car.confirmation} />}
         {(canEdit || canBook) && (
           <div className="car-actions">
             {canBook && (car.booked
               ? <button className="btn small ghost" onClick={() => act('car', { op: 'booked', id: car.id, booked: false })}>Mark not booked</button>
-              : <button className="btn small" onClick={async () => { if (await act('car', { op: 'booked', id: car.id, booked: true })) toast('Car marked booked'); }}>Mark booked</button>)}
+              : <button className="btn small primary" onClick={() => ctx.sheet({ title: `Booked ${car.company || 'the car'}`, body: <CarBookedForm ctx={ctx} car={car} /> })}>Mark booked</button>)}
             {canEdit && <button className="btn small ghost" onClick={() => carSheet(ctx, car)}>Edit</button>}
           </div>
         )}
@@ -138,4 +147,38 @@ function CarForm({ ctx, car }: { ctx: TripCtx; car?: Car }) {
 
 export function carSheet(ctx: TripCtx, car?: Car) {
   ctx.sheet({ title: car ? 'Edit rental car' : 'Add a rental car', body: <CarForm ctx={ctx} car={car} /> });
+}
+
+/** "Mark booked" for a car: the confirmation number, and what you paid (into Settle up, split between the riders). */
+function CarBookedForm({ ctx, car }: { ctx: TripCtx; car: Car }) {
+  const [conf, setConf] = useState('');
+  const [prepaid, setPrepaid] = useState(true);
+  const [paid, setPaid] = useState(String(car.total));
+  const [busy, setBusy] = useState(false);
+  return (
+    <form className="form" onSubmit={async (e) => {
+      e.preventDefault();
+      setBusy(true);
+      const ok = await ctx.act('car', { op: 'booked', id: car.id, booked: true, confirmation: conf, paid: prepaid ? Number(paid) || 0 : 0 });
+      setBusy(false);
+      if (ok) { ctx.sheet(null); ctx.toast(prepaid && Number(paid) ? 'Booked, and added to settle up' : 'Car marked booked'); }
+    }}>
+      <div className="field">
+        <label htmlFor="cb-conf">Confirmation number <span style={{ fontWeight: 400 }}>(optional)</span></label>
+        <input id="cb-conf" value={conf} onChange={(e) => setConf(e.target.value)} maxLength={40} autoComplete="off" />
+      </div>
+      <label className="check-row">
+        <input type="checkbox" checked={prepaid} onChange={(e) => setPrepaid(e.target.checked)} />
+        <span>I paid for it</span>
+      </label>
+      {prepaid && (
+        <div className="field">
+          <label htmlFor="cb-paid">Amount paid ($)</label>
+          <input id="cb-paid" type="number" inputMode="decimal" min={0} step="0.01" value={paid} onChange={(e) => setPaid(e.target.value)} />
+          <p className="hint">Goes into Settle up, split between the {car.riders.length} people in the car.</p>
+        </div>
+      )}
+      <button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : 'Mark booked'}</button>
+    </form>
+  );
 }

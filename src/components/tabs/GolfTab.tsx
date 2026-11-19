@@ -186,7 +186,7 @@ function RoundCard({ r, first, info, known, drive }: { r: Option<RoundData>; fir
       <div className="opt-foot">
         {r.locked && <BookButton option={r} />}
         {!r.locked && <LockButton option={r} lockLabel="Add to plan" />}
-        <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{url ? 'Course site' : 'Tee times'}</a>
+        <a className="btn small" href={url || search} target="_blank" rel="noopener noreferrer">{r.locked && !r.data.booked ? 'Book tee time ↗' : url ? 'Course site' : 'Tee times'}</a>
         <span style={{ marginLeft: 'auto' }} />
         <MoreMenu items={[
           r.locked && organizer && state.members.length > 1 && { label: pairs.length ? 'Change pairings' : 'Set pairings', onClick: () => pairingsSheet(ctx, r) },

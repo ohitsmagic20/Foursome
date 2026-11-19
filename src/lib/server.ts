@@ -156,7 +156,7 @@ export async function memberFromRequest(req: Request, tripId: string, required =
 
 /** Member columns added by later migrations; each is skipped while the database doesn't have it yet,
  *  and checked again every few minutes. */
-const OPTIONAL_MEMBER_COLS = ['flight_booked'];
+const OPTIONAL_MEMBER_COLS = ['flight_booked', 'flight_confirmation'];
 const missingCols = new Map<string, number>();
 async function tripMembers(tripId: string) {
   for (const [c, at] of missingCols) if (Date.now() - at > 5 * 60000) missingCols.delete(c);
@@ -188,7 +188,9 @@ export async function loadState(trip: Trip, me: Member | null): Promise<TripStat
   const ex = await db().from('expenses').select('id,paid_by,amount,note,split_with,created_at').eq('trip_id', trip.id).order('created_at');
   const expenses = ex.error ? [] : ((ex.data || []) as Expense[]).map((e) => ({ ...e, amount: Number(e.amount), split_with: e.split_with || [] }));
   const shared = await db().from('trip_ideas').select('id').eq('trip_id', trip.id).maybeSingle();
-  return { trip, members: (m.data || []) as Member[], options, votes, expenses, sharedIdea: shared.data?.id || undefined, meId: me?.id ?? null };
+  // A flight confirmation code (with a last name) can change someone's booking: only its owner gets it.
+  const members = ((m.data || []) as Member[]).map((x) => (x.id === me?.id || !('flight_confirmation' in x) ? x : { ...x, flight_confirmation: x.flight_confirmation ? '•' : null }));
+  return { trip, members, options, votes, expenses, sharedIdea: shared.data?.id || undefined, meId: me?.id ?? null };
 }
 
 /* ---------- spam limits ---------- */

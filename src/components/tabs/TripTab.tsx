@@ -4,7 +4,7 @@ import type { DateData, DestinationData, LodgingData, Member } from '@/lib/share
 import { andList, packingTips, tripAwards, clockLabel, destAirports, rideGroups, firstTee, landsTooLate, openVotes, settleUp, costOf, dayLabel, groupNames, money, parseDay, pickOf, plannedRounds, rangeLabel, teeAfter, teeMinutes, teeTimesNeeded, nightsOf, tripNights } from '@/lib/shared';
 import { api, clearToken, firstName, initials, setToken } from '@/lib/client';
 import { useEffect, useState } from 'react';
-import { Callout, Chip, ConfirmButton, Icon, MoreMenu, useTrip, type TripCtx } from '../ui';
+import { Callout, Chip, ConfLine, ConfirmButton, Icon, MoreMenu, useTrip, type TripCtx } from '../ui';
 import { meSheet, whenSheet, whereSheet } from '../sheets';
 import { NotifyCard, useNudge } from '../notify';
 import { openItems } from '@/lib/openItems';
@@ -90,6 +90,27 @@ export function TripTab() {
  * Where and when, on Home (this used to be the Plan tab). Still being decided: the full vote, right here.
  * Locked: folded into one line (the plan card above already shows it), with the other options inside.
  */
+/** Every confirmation number in one place, for check-in and the pro shop. Tap one to copy it. */
+function Confirmations() {
+  const { state, me } = useTrip();
+  const date = pickOf<DateData>(state, 'date').option;
+  const items: { label: string; value: string }[] = [];
+  const stay = pickOf<LodgingData>(state, 'lodging');
+  if (stay.locked && stay.option?.data.confirmation) items.push({ label: stay.option.data.name || 'Stay', value: stay.option.data.confirmation });
+  for (const r of plannedRounds(state)) if (r.data.confirmation) items.push({ label: `${date ? dayLabel(date.data.start, r.data.day).split(',')[0] + ' · ' : ''}${r.data.course}`, value: String(r.data.confirmation) });
+  for (const c of state.trip.cars || []) if (c.confirmation) items.push({ label: c.company ? `${c.company} car` : 'Rental car', value: c.confirmation });
+  if (me?.flight_confirmation && me.flight_confirmation !== '•') items.push({ label: 'Your flight', value: me.flight_confirmation });
+  if (!items.length) return null;
+  return (
+    <details className="confs">
+      <summary>Confirmation numbers <span className="row-meta">{items.length}</span></summary>
+      <div className="confs-list">
+        {items.map((x, i) => <ConfLine key={i} label={x.label} value={x.value} />)}
+      </div>
+    </details>
+  );
+}
+
 /** Once dates and destination are locked: the whole trip on one card, plus calendar and share. */
 function TripPlan() {
   const ctx = useTrip();
@@ -147,6 +168,7 @@ function TripPlan() {
           );
         })}
       </div>
+      <Confirmations />
       <div className="btn-row">
         {cal && <a className="btn small" href={cal}>Add to Calendar</a>}
         <button className="btn small" onClick={() => share(ctx, shareText, `${location.origin}/t/${state.trip.code}`)}>Share the plan</button>

@@ -781,7 +781,19 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
           cars.splice(i, 1);
         } else if (op === 'booked') {
           if (i < 0) throw new HttpError(400, 'Which car?');
-          cars[i] = { ...cars[i], booked: b.booked === true };
+          const conf = b.booked === true ? str(b.confirmation, 40) : '';
+          cars[i] = { ...cars[i], booked: b.booked === true, ...(conf ? { confirmation: conf } : {}) };
+          if (!conf || b.booked !== true) delete cars[i].confirmation;
+          // Whoever paid for the car: it goes into settle up, split between the riders.
+          const paid = b.booked === true ? Math.round(Number(b.paid) * 100) / 100 : 0;
+          if (paid > 0 && paid < 100000) {
+            const note = `${cars[i].company ? `${cars[i].company} rental car` : 'Rental car'}`.slice(0, 80);
+            const { data: dup } = await db().from('expenses').select('id').eq('trip_id', trip.id).eq('paid_by', me.id).eq('amount', paid).eq('note', note).limit(1);
+            if (!dup?.length) {
+              const e = await db().from('expenses').insert({ trip_id: trip.id, paid_by: me.id, amount: paid, note, split_with: cars[i].riders });
+              if (e.error) throw e.error;
+            }
+          }
         } else {
           const total = Math.round(Number(b.total) * 100) / 100;
           if (!(total > 0 && total < 100000)) throw new HttpError(400, 'Enter the total for the car.');
@@ -822,7 +834,20 @@ export function POST(req: Request, { params }: { params: Promise<{ code: string 
         break;
       }
       case 'set_flight_booked': {
-        const r = await db().from('members').update({ flight_booked: b.booked === true }).eq('id', me.id);
+        // "I booked it": optionally with the confirmation code, what it really cost, and the airline and flights.
+        const upd: Record<string, unknown> = { flight_booked: b.booked === true };
+        if (b.booked === true) {
+          const price = Number(b.price);
+          if (Number.isFinite(price) && price > 0 && price <= 50000) upd.flight_price = Math.round(price);
+          const summary = str(b.summary, 160);
+          if (summary) upd.flight_summary = summary;
+        }
+        if ('confirmation' in b) {
+          const c = await db().from('members').update({ flight_confirmation: str(b.confirmation, 24).toUpperCase() || null }).eq('id', me.id);
+          if (c.error && !/flight_confirmation/.test(c.error.message)) throw c.error;
+          if (c.error) await logError('server', 'Run supabase/011_flight_confirmation.sql: members.flight_confirmation is missing', `/t/${trip.code}`);
+        }
+        const r = await db().from('members').update(upd).eq('id', me.id);
         if (r.error) {
           if (/flight_booked/.test(r.error.message)) {
             await logError('server', 'Run supabase/007_deadlines_booked.sql: members.flight_booked is missing', `/t/${trip.code}`);

@@ -293,6 +293,15 @@ export function BookingTag({ option }: { option: Bookable }) {
     ? <span className="good">Booked{option.data.confirmation ? ` · #${option.data.confirmation}` : owner ? ` by ${owner.id === me.id ? 'you' : firstName(owner.name)}` : ''}</span>
     : <span className="warn">Not booked{who ? ` · ${who}` : ''}</span>;
 }
+/** A confirmation number, tap to copy. */
+export function ConfLine({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button type="button" className="conf-line" onClick={() => { navigator.clipboard?.writeText(value).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {}); }}>
+      <span className="row-meta">{label}</span><b>{value}</b><span className="row-meta">{copied ? 'Copied' : 'Copy'}</span>
+    </button>
+  );
+}
 /** The card's main button while it isn't booked: "Mark booked", for the organizer or whoever is booking it. */
 export function BookButton({ option }: { option: Bookable }) {
   const ctx = useTrip();

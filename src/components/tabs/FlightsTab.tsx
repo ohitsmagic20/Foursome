@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import type { DateData, DestinationData, FlightLeg, FlightOffer } from '@/lib/shared';
-import { addDays, andList, clockLabel, destAirports, firstTee, landsTooLate, LANDING_BUFFER_MIN, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
+import { addDays, airlineSite, andList, clockLabel, destAirports, firstTee, landsTooLate, LANDING_BUFFER_MIN, isoDay, money, parseDay, pickOf, rangeLabel, tripNights } from '@/lib/shared';
 import { api, firstName } from '@/lib/client';
-import { Callout, Chip, useTrip } from '../ui';
+import { Callout, Chip, ConfLine, useTrip, type TripCtx } from '../ui';
 import { manualFlightSheet, meSheet } from '../sheets';
 import { RentalCars } from '../RentalCars';
 
@@ -33,6 +33,7 @@ export function FlightsTab() {
   const ready = date.option && to && me.airport;
   const outDate = date.option?.data.start;
   const backDate = outDate ? isoDay(addDays(parseDay(outDate), tripNights(state))) : '';
+  const airline = airlineSite(me.flight_summary);
   const gflights = ready ? `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${me.airport} to ${to} on ${outDate} through ${backDate}`)}` : '';
 
   async function search() {
@@ -55,7 +56,7 @@ export function FlightsTab() {
       departAt: o.back?.depart || null,
       newPick: true,
     });
-    if (ok) { toast('Saved. Book it with the airline, then tap Booked.'); setResult(null); }
+    if (ok) { toast(`Picked. Book it on ${airlineSite(o.airline)?.name || 'the airline'}’s site, then tap “I booked it”.`); setResult(null); }
   }
 
   return (
@@ -75,12 +76,19 @@ export function FlightsTab() {
               <div className="fee">{money(me.flight_price)}<small>round trip</small></div>
             </div>
             {landsTooLate(state, me.flight_arrive_at) && tee && <Callout kind="bad">This lands too late for the {tee.time} tee time on arrival day. Allow {LANDING_BUFFER_MIN} minutes to get bags, a car and to the course.</Callout>}
+            {me.flight_booked && me.flight_confirmation && <ConfLine label="Confirmation" value={me.flight_confirmation} />}
+            {me.flight_summary !== 'Driving' && !me.flight_booked && (
+              <p className="hint" style={{ margin: 0 }}>Book it on {airline ? `${airline.name}’s site` : 'the airline’s site'}, then tap “I booked it” so the group knows.</p>
+            )}
             <div className="opt-foot">
+              {me.flight_summary !== 'Driving' && !me.flight_booked && (
+                <a className="btn small" href={airline?.url || gflights} target="_blank" rel="noopener noreferrer">Book on {airline?.name || 'Google Flights'} ↗</a>
+              )}
               {me.flight_summary !== 'Driving' && 'flight_booked' in me && (me.flight_booked
-                ? <button className="btn small booked" aria-pressed="true" onClick={() => act('set_flight_booked', { booked: false })}>✓ Booked</button>
-                : <button className="btn small primary" onClick={async () => { if (await act('set_flight_booked', { booked: true })) toast('Marked booked. The group can see it.'); }}>I booked it</button>)}
-              <button className="btn small" onClick={() => manualFlightSheet(ctx)}>Edit</button>
-              <button className="btn small ghost" onClick={() => act('clear_flight')}>Clear</button>
+                ? <button className="btn small booked" aria-pressed="true" onClick={() => flightBookedSheet(ctx)}>✓ Booked</button>
+                : <button className="btn small primary" onClick={() => flightBookedSheet(ctx)}>I booked it</button>)}
+              <button className="btn small ghost" onClick={() => manualFlightSheet(ctx)}>Edit</button>
+              {!me.flight_booked && <button className="btn small ghost" onClick={() => act('clear_flight')}>Clear</button>}
             </div>
           </div>
         ) : (
@@ -134,7 +142,7 @@ export function FlightsTab() {
                 </div>
               ))}
             </div>
-            <p className="hint">Book with the airline after picking.</p>
+            <p className="hint">Picking saves it to the trip. You book it yourself on the airline’s site; the app links you there.</p>
           </>
         )}
       </section>
@@ -163,4 +171,46 @@ export function FlightsTab() {
       </section>
     </>
   );
+}
+
+/** "I booked it": the confirmation code (only you ever see it), what it really cost, and the flights. */
+function FlightBookedForm({ ctx }: { ctx: TripCtx }) {
+  const me = ctx.me!;
+  const [conf, setConf] = useState(me.flight_confirmation && me.flight_confirmation !== '•' ? me.flight_confirmation : '');
+  const [price, setPrice] = useState(me.flight_price ? String(me.flight_price) : '');
+  const [summary, setSummary] = useState(me.flight_summary || '');
+  const [busy, setBusy] = useState(false);
+  const save = async (booked: boolean) => {
+    setBusy(true);
+    const ok = await ctx.act('set_flight_booked', booked ? { booked, confirmation: conf, price: Number(price) || undefined, summary } : { booked, confirmation: '' });
+    setBusy(false);
+    if (ok) { ctx.sheet(null); ctx.toast(booked ? 'Booked. The group can see you’re set.' : 'Marked not booked'); }
+  };
+  return (
+    <form className="form" onSubmit={(e) => { e.preventDefault(); save(true); }}>
+      <div className="field">
+        <label htmlFor="fb-conf">Confirmation code <span style={{ fontWeight: 400 }}>(optional)</span></label>
+        <input id="fb-conf" value={conf} onChange={(e) => setConf(e.target.value.toUpperCase())} maxLength={24} autoComplete="off" autoCapitalize="characters" placeholder="ABC123" />
+        <p className="hint">Only you see it. Handy at the airport.</p>
+      </div>
+      <div className="grid2">
+        <div className="field">
+          <label htmlFor="fb-price">What you paid ($)</label>
+          <input id="fb-price" type="number" inputMode="decimal" min={0} step="1" value={price} onChange={(e) => setPrice(e.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor="fb-sum">Airline and flights</label>
+          <input id="fb-sum" value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={160} placeholder="Delta 1423 / 1890" />
+        </div>
+      </div>
+      <div className="btn-row" style={{ marginTop: 4 }}>
+        <button className="btn primary" style={{ flex: 1 }} disabled={busy}>{busy ? <span className="spinner" /> : me.flight_booked ? 'Save' : 'I booked it'}</button>
+        {me.flight_booked && <button type="button" className="btn ghost" disabled={busy} onClick={() => save(false)}>Not booked</button>}
+      </div>
+    </form>
+  );
+}
+
+function flightBookedSheet(ctx: TripCtx) {
+  ctx.sheet({ title: ctx.me?.flight_booked ? 'Your flight booking' : 'You booked your flight', body: <FlightBookedForm ctx={ctx} /> });
 }
